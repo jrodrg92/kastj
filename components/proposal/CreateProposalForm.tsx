@@ -1,4 +1,5 @@
 import toast from "react-hot-toast";
+import { NETWORK } from "../../lib/network";
 
 type Props = {
   title: string;
@@ -51,7 +52,7 @@ export function CreateProposalForm({
         </div>
 
         <span className="rounded-full bg-green-500/10 px-3 py-1 text-sm text-green-400">
-          MVP Local
+          {NETWORK.name}
         </span>
       </div>
 
@@ -80,7 +81,7 @@ export function CreateProposalForm({
         <div className="grid gap-4 md:grid-cols-2">
           <input
             className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-            placeholder="Objetivo en ETH fake"
+            placeholder={`Objetivo en ${NETWORK.currency}`}
             value={goal}
             onChange={(e) => onGoalChange(e.target.value)}
           />

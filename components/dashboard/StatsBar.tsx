@@ -1,3 +1,5 @@
+import { NETWORK } from "../../lib/network";
+
 type Proposal = {
   id: number;
   goal: string;
@@ -21,7 +23,7 @@ export function StatsBar({ proposals }: { proposals: Proposal[] }) {
     { label: "Activas", value: active },
     { label: "Exitosas", value: succeeded },
     { label: "Fallidas", value: failed },
-    { label: "Recaudado", value: `${raised.toFixed(2)} ETH` },
+    { label: "Recaudado", value: `${raised.toFixed(2)} ${NETWORK.currency}` },
   ];
 
   return (

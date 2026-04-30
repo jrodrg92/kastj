@@ -8,6 +8,7 @@ import { useSupabaseProposals } from "../hooks/useSupabaseProposals";
 import { StatsBar } from "../components/dashboard/StatsBar";
 import { CreateProposalForm } from "../components/proposal/CreateProposalForm";
 import { ProposalCard } from "../components/proposal/ProposalCard";
+import { NETWORK } from "../lib/network";
 
 type Filter = "all" | "active" | "succeeded" | "failed";
 type Sort = "newest" | "raised" | "ending";
@@ -154,7 +155,7 @@ export default function HomePage() {
         <header className="flex flex-col gap-6 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-2xl md:flex-row md:items-center md:justify-between">
           <div>
             <div className="mb-2 inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-sm text-green-400">
-              Kastj MVP · Supabase Indexer
+              Kastj · {NETWORK.name}
             </div>
 
             <h1 className="text-5xl font-black tracking-tight">Kastj</h1>
@@ -251,7 +252,7 @@ export default function HomePage() {
 
           <input
             className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-blue-500"
-            placeholder="Cantidad para apoyar en ETH fake"
+            placeholder={`Cantidad para apoyar en ${NETWORK.currency}`}
             value={fundAmount}
             onChange={(e) => setFundAmount(e.target.value)}
           />

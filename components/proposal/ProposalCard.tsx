@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { NETWORK } from "../../lib/network";
+
 type Proposal = {
   id: number;
   creator: string;
@@ -91,6 +94,7 @@ export function ProposalCard({
   const canWithdraw = connected && !loading && p.status === 2;
 
   return (
+
     <article className="group rounded-3xl border border-zinc-800 bg-zinc-900/80 p-6 shadow-xl transition hover:border-zinc-700 hover:bg-zinc-900">
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -114,15 +118,14 @@ export function ProposalCard({
           Creador: <span className="text-white">{short(p.creator)}</span>
         </p>
         <p>
-          Destinatario:{" "}
-          <span className="text-white">{short(p.recipient)}</span>
+          Destinatario: <span className="text-white">{short(p.recipient)}</span>
         </p>
       </div>
 
       <div className="mt-5">
         <div className="mb-2 flex justify-between text-sm">
           <span className="font-medium">
-            {p.totalRaised} / {p.goal} ETH
+            {p.totalRaised} / {p.goal} {NETWORK.currency}
           </span>
           <span className="text-zinc-400">{percent.toFixed(1)}%</span>
         </div>
@@ -154,12 +157,19 @@ export function ProposalCard({
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
+        <Link
+          href={`/proposal/${p.id}`}
+          className="rounded-xl bg-white px-5 py-3 font-bold text-black transition hover:bg-zinc-200"
+        >
+          Ver detalle
+        </Link>
+
         <button
           disabled={!canFund}
           onClick={() => onFund(p.id)}
           className="rounded-xl bg-blue-500 px-5 py-3 font-bold text-black transition hover:bg-blue-400 disabled:opacity-40"
         >
-          {loading ? "Procesando..." : `Apoyar ${fundAmount} ETH`}
+          {loading ? "Procesando..." : `Apoyar ${fundAmount} ${NETWORK.currency}`}
         </button>
 
         <button
@@ -181,5 +191,6 @@ export function ProposalCard({
         )}
       </div>
     </article>
+
   );
 }

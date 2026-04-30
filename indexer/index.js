@@ -75,19 +75,33 @@ contract.on(
 );
 
 contract.on("ProposalFunded", async (id, supporter, amount, totalRaised) => {
-  const { error } = await supabase
+  const proposalId = Number(id);
+
+  const { error: fundingError } = await supabase.from("fundings").insert({
+    proposal_id: proposalId,
+    supporter,
+    amount: amount.toString(),
+    created_at: Date.now(),
+  });
+
+  if (fundingError) {
+    console.error("Error guardando funding:", fundingError);
+    return;
+  }
+
+  const { error: proposalError } = await supabase
     .from("proposals")
     .update({
       total_raised: totalRaised.toString(),
     })
-    .eq("id", Number(id));
+    .eq("id", proposalId);
 
-  if (error) {
-    console.error("Error actualizando ProposalFunded:", error);
+  if (proposalError) {
+    console.error("Error actualizando ProposalFunded:", proposalError);
     return;
   }
 
-  console.log("Actualizado funding:", Number(id));
+  console.log("Funding guardado:", proposalId);
 });
 
 contract.on("ProposalFinalized", async (id, success, totalRaised) => {
