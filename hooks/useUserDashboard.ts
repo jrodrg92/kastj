@@ -55,6 +55,8 @@ export function useUserDashboard(address?: string) {
 
     const supportedIds = new Set<number>();
 
+    const withdrawableIds: number[] = [];
+
     for (const funding of fundings ?? []) {
       const amount = BigInt(funding.amount);
       const proposalStatus = (funding.proposals as any)?.status;
@@ -68,6 +70,7 @@ export function useUserDashboard(address?: string) {
 
       if (proposalStatus === "failed") {
         withdrawable += amount;
+        withdrawableIds.push(Number(funding.proposal_id));
       }
     }
 
@@ -78,6 +81,7 @@ export function useUserDashboard(address?: string) {
       createdCount: created?.length ?? 0,
       supportedCount: supportedIds.size,
       supportedIds: Array.from(supportedIds),
+      withdrawableIds,
     });
   }
 

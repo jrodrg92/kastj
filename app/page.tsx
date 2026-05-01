@@ -130,6 +130,17 @@ export default function HomePage() {
     setSupportedIds(ids);
   }
 
+  async function handleWithdrawAll(ids: number[]) {
+    for (const id of ids) {
+      try {
+        await kastj.withdraw(id);
+      } catch (err) {
+        console.error("Withdraw failed for", id, err);
+      }
+    }
+
+    await refreshDbSoon();
+  }
 
   useEffect(() => {
     if (wallet.connected) {
@@ -336,6 +347,7 @@ export default function HomePage() {
           <UserDashboard
             dashboard={userDashboard.dashboard}
             loading={userDashboard.loadingUserDashboard}
+            onWithdrawAll={handleWithdrawAll}
           />
         )}
 
