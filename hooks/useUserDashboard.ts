@@ -13,6 +13,7 @@ export function useUserDashboard(address?: string) {
     createdCount: 0,
     supportedCount: 0,
     supportedIds: [] as number[],
+    withdrawableIds: [] as number[],
   });
 
   async function loadUserDashboard() {
@@ -72,6 +73,11 @@ export function useUserDashboard(address?: string) {
         withdrawable += amount;
         withdrawableIds.push(Number(funding.proposal_id));
       }
+
+      if (proposalStatus === "failed") {
+        withdrawable += amount;
+        withdrawableIds.push(Number(funding.proposal_id));
+      }
     }
 
     setDashboard({
@@ -81,7 +87,7 @@ export function useUserDashboard(address?: string) {
       createdCount: created?.length ?? 0,
       supportedCount: supportedIds.size,
       supportedIds: Array.from(supportedIds),
-      withdrawableIds,
+      withdrawableIds: Array.from(new Set(withdrawableIds)),
     });
   }
 

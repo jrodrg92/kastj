@@ -18,7 +18,7 @@ contract EscrowVault {
         withdrawalsEnabled[proposalId] = true;
     }
 
-    function withdraw(uint256 proposalId) external {
+    function withdraw(uint256 proposalId) public {
         require(withdrawalsEnabled[proposalId], "Not allowed");
 
         Deposit storage d = deposits[proposalId][msg.sender];
@@ -47,5 +47,11 @@ contract EscrowVault {
         payable(recipient).transfer(recipientPayout);
         payable(creator).transfer(creatorReward);
         payable(treasury).transfer(platformFee);
+    }
+
+    function withdrawMany(uint256[] calldata proposalIds) external {
+        for (uint256 i = 0; i < proposalIds.length; i++) {
+            withdraw(proposalIds[i]);
+        }
     }
 }

@@ -257,7 +257,7 @@ export default function ProposalDetailPage() {
   const isExpired = hasExpired(Number(proposal.deadline));
   const isActive = proposal.status === "active";
   const canFund = wallet.connected && isActive && !isExpired;
-  const canFinalize = wallet.connected && isActive && isExpired;
+  const canFinalize = wallet.connected && isActive && isExpired && !proposal.executed;
 
   const canWithdraw =
     wallet.connected &&
@@ -279,34 +279,28 @@ export default function ProposalDetailPage() {
     toast.success("Link copiado 📋");
   }
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#182131,_#09090b_45%)] p-6 text-white md:p-10">
-      <div className="mx-auto max-w-5xl space-y-8">
-        <button
-          onClick={() => router.push("/")}
-          className="rounded-xl bg-zinc-800 px-4 py-2 font-semibold hover:bg-zinc-700"
-        >
-          ← Volver
-        </button>
+ return (
+  <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#182131,_#09090b_45%)] p-6 text-white md:p-10">
+    <div className="mx-auto max-w-7xl space-y-8">
+      <button
+        onClick={() => router.push("/")}
+        className="rounded-xl bg-zinc-800 px-4 py-2 font-semibold hover:bg-zinc-700"
+      >
+        ← Back to proposals
+      </button>
 
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-8 shadow-2xl">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-sm text-zinc-500">Propuesta #{proposal.id}</p>
-              <h1 className="mt-2 text-4xl font-black">{metadata.title}</h1>
-              <p className="mt-3 max-w-3xl text-zinc-400">
-                {metadata.description}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
+      <section className="grid gap-8 lg:grid-cols-[1fr_420px]">
+        {/* LEFT CONTENT */}
+        <div className="space-y-8">
+          <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-8 shadow-2xl">
+            <div className="mb-5 flex flex-wrap gap-2">
               <span className="rounded-full bg-zinc-800 px-4 py-2 text-sm font-bold">
                 {statusLabel(proposal.status)}
               </span>
 
               {isCreator && (
                 <span className="rounded-full bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-400">
-                  Eres el creador
+                  You are the creator
                 </span>
               )}
 
@@ -316,208 +310,257 @@ export default function ProposalDetailPage() {
                 </span>
               )}
             </div>
-          </div>
 
-          <div className="mt-8 grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 text-sm text-zinc-400 md:grid-cols-2">
-            <p>
-              {t.creator}:{" "}
-              <span className="text-white">{short(proposal.creator)}</span>
-            </p>
-            <p>
-              {t.receiver}:{" "}
-              <span className="text-white">{short(proposal.recipient)}</span>
-            </p>
-            <p>
-              Deadline:{" "}
-              <span className="text-white">
-                {isExpired ? "Expired" : formatRemainingTime(Number(proposal.deadline))}
-              </span>
-            </p>
-            <p>
-              {t.exitDiv}
-            </p>
-            <p>
-              Supporters:{" "}
-              <span className="text-white">{supportersCount}</span>
-            </p>
-            <p>
-              {t.shareProp}:{" "}
-              <button
-                onClick={copyLink}
-                className="font-semibold text-green-400 hover:text-green-300"
-              >
-                Copiar link
-              </button>
-            </p>
-          </div>
+            <p className="text-sm text-zinc-500">Proposal #{proposal.id}</p>
 
-          <div className="mt-8 rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-            <div className="mb-3 flex justify-between text-lg font-bold">
-              <span>
-                {raised.toFixed(4)} / {goal.toFixed(4)} {NETWORK.currency}
-              </span>
-              <span>{percent.toFixed(1)}%</span>
+            <h1 className="mt-3 max-w-4xl text-5xl font-black tracking-tight">
+              {metadata.title}
+            </h1>
+
+            <p className="mt-5 max-w-3xl text-lg leading-8 text-zinc-300">
+              {metadata.description}
+            </p>
+
+            <div className="mt-8 grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 text-sm text-zinc-400 md:grid-cols-2">
+              <p>
+                Creator:{" "}
+                <span className="text-white">{short(proposal.creator)}</span>
+              </p>
+
+              <p>
+                Recipient:{" "}
+                <span className="text-white">{short(proposal.recipient)}</span>
+              </p>
+
+              <p>
+                Deadline:{" "}
+                <span className="text-white">
+                  {isExpired
+                    ? "Expired"
+                    : formatRemainingTime(Number(proposal.deadline))}
+                </span>
+              </p>
+
+              <p>
+                Supporters:{" "}
+                <span className="text-white">{supportersCount}</span>
+              </p>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold">Why trust this proposal?</h2>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <p className="font-bold">Escrow protected</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Funds stay locked until the deadline is reached.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <p className="font-bold">Automatic settlement</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Success distributes funds. Failure enables withdrawals.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <p className="font-bold">Transparent history</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Funding and status changes are indexed and visible.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* FUNDING HISTORY */}
+          <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold">Funding history</h2>
+
+            {fundings.length === 0 && (
+              <p className="mt-4 text-zinc-400">No contributions yet.</p>
+            )}
+
+            <div className="mt-5 space-y-3">
+              {fundings.map((funding) => (
+                <div
+                  key={funding.id}
+                  className="flex flex-col justify-between gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 md:flex-row md:items-center"
+                >
+                  <div>
+                    <p className="font-semibold">{short(funding.supporter)}</p>
+                    <p className="text-sm text-zinc-400">
+                      {new Date(Number(funding.created_at)).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <p className="text-lg font-bold text-green-400">
+                    +{formatEther(BigInt(funding.amount))} {NETWORK.currency}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ACTIVITY */}
+          <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold">Proposal activity</h2>
+
+            {activity.length === 0 && (
+              <p className="mt-4 text-zinc-400">No activity yet.</p>
+            )}
+
+            <div className="mt-5 space-y-3">
+              {activity.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4"
+                >
+                  <span className="text-xl">{activityIcon(item.type)}</span>
+
+                  <div>
+                    <p className="font-semibold">{item.message}</p>
+
+                    <p className="text-sm text-zinc-400">
+                      {item.actor ? short(item.actor) : "System"} ·{" "}
+                      {new Date(Number(item.created_at)).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* RIGHT SIDEBAR */}
+        <aside className="space-y-5 lg:sticky lg:top-8 lg:self-start">
+          <section className="rounded-3xl border border-zinc-800 bg-zinc-950/80 p-6 shadow-2xl">
+            <p className="text-sm text-zinc-400">Raised</p>
+
+            <div className="mt-2 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-4xl font-black">
+                  {raised.toFixed(4)}
+                </p>
+                <p className="text-sm text-zinc-400">
+                  of {goal.toFixed(4)} {NETWORK.currency}
+                </p>
+              </div>
+
+              <p className="text-2xl font-black text-green-400">
+                {percent.toFixed(1)}%
+              </p>
             </div>
 
-            <div className="h-6 overflow-hidden rounded-full bg-zinc-800">
+            <div className="mt-5 h-6 overflow-hidden rounded-full bg-zinc-800">
               <div
                 className="h-6 rounded-full bg-green-500 transition-all duration-700"
                 style={{ width: `${percent}%` }}
               />
             </div>
-          </div>
 
-          <div className="mt-6 rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-            <p className="text-sm text-zinc-400">{t.yourSup}</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-zinc-900 p-4">
+                <p className="text-sm text-zinc-400">Supporters</p>
+                <p className="mt-1 text-2xl font-black">{supportersCount}</p>
+              </div>
 
-            <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-3xl font-black">
-                  {Number(myContribution).toFixed(4)} {NETWORK.currency}
-                </p>
-
-                <p className="mt-1 text-sm text-zinc-400">
-                  {Number(myContribution) > 0
-                    ? "Has apoyado esta propuesta."
-                    : t.nptSupYet}
+              <div className="rounded-2xl bg-zinc-900 p-4">
+                <p className="text-sm text-zinc-400">Status</p>
+                <p className="mt-1 text-lg font-black">
+                  {proposal.status}
                 </p>
               </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+              <p className="text-sm text-zinc-400">Your contribution</p>
+              <p className="mt-1 text-3xl font-black">
+                {Number(myContribution).toFixed(4)} {NETWORK.currency}
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {isActive && !isExpired && (
+                <>
+                  <input
+                    className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none focus:border-blue-500"
+                    placeholder={`Amount ${NETWORK.currency}`}
+                    value={fundAmount}
+                    onChange={(e) => setFundAmount(e.target.value)}
+                  />
+
+                  <button
+                    disabled={!canFund || kastj.loading}
+                    onClick={handleFund}
+                    className="w-full rounded-2xl bg-blue-500 px-5 py-4 font-bold text-black hover:bg-blue-400 disabled:opacity-40"
+                  >
+                    {kastj.loading
+                      ? "Processing..."
+                      : `Support ${fundAmount} ${NETWORK.currency}`}
+                  </button>
+                </>
+              )}
+
+              {isActive && isExpired && (
+                <button
+                  disabled={!canFinalize || kastj.loading}
+                  onClick={handleFinalize}
+                  className="w-full rounded-2xl bg-yellow-500 px-5 py-4 font-bold text-black hover:bg-yellow-400 disabled:opacity-40"
+                >
+                  {kastj.loading ? "Finalizing..." : "Finalize proposal"}
+                </button>
+              )}
+
+              {proposal.status === "succeeded" && (
+                <div className="rounded-2xl bg-green-500/10 px-5 py-4 text-center font-bold text-green-400">
+                  Funds distributed successfully
+                </div>
+              )}
 
               {proposal.status === "failed" && Number(myContribution) > 0 && (
-                <span className="rounded-full bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-400">
-                  Puedes retirar tus fondos
-                </span>
+                <button
+                  disabled={!canWithdraw || kastj.loading}
+                  onClick={handleWithdraw}
+                  className="w-full rounded-2xl bg-red-500 px-5 py-4 font-bold text-white hover:bg-red-400 disabled:opacity-40"
+                >
+                  {kastj.loading
+                    ? "Withdrawing..."
+                    : `Withdraw ${Number(myContribution).toFixed(4)} ${
+                        NETWORK.currency
+                      }`}
+                </button>
               )}
-            </div>
-          </div>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5">
-              <p className="text-sm text-zinc-400">{t.unicSup}</p>
-              <p className="mt-2 text-3xl font-black">{supportersCount}</p>
-            </div>
-
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5">
-              <p className="text-sm text-zinc-400">{t.progres}</p>
-              <p className="mt-2 text-3xl font-black">
-                {percent.toFixed(1)}%
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5">
-              <p className="text-sm text-zinc-400">{t.status}</p>
-              <p className="mt-2 text-2xl font-black">
-                {isTrending ? "🔥 Trending" : "En progreso"}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 md:flex-row">
-            <input
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none focus:border-blue-500 md:w-56"
-              placeholder={`Cantidad ${NETWORK.currency}`}
-              value={fundAmount}
-              onChange={(e) => setFundAmount(e.target.value)}
-            />
-
-            <button
-              disabled={!canFund || kastj.loading}
-              onClick={handleFund}
-              className="rounded-2xl bg-blue-500 px-5 py-3 font-bold text-black hover:bg-blue-400 disabled:opacity-40"
-            >
-              {kastj.loading ? "Procesando..." : t.supp}
-            </button>
-
-            <button
-              disabled={!canFinalize || kastj.loading}
-              onClick={handleFinalize}
-              className="rounded-2xl bg-yellow-500 px-5 py-3 font-bold text-black hover:bg-yellow-400 disabled:opacity-40"
-            >
-              Finalizar
-            </button>
-
-            {proposal.status === "failed" && (
-              <button
-                disabled={!canWithdraw || kastj.loading}
-                onClick={handleWithdraw}
-                className="rounded-2xl bg-red-500 px-5 py-3 font-bold text-white hover:bg-red-400 disabled:opacity-40"
-              >
-                {Number(myContribution) > 0
-                  ? `Retirar ${Number(myContribution).toFixed(4)} ${
-                      NETWORK.currency
-                    }`
-                  : "Sin fondos para retirar"}
-              </button>
-            )}
-
-            {!wallet.connected && (
-              <button
-                onClick={wallet.connect}
-                className="rounded-2xl bg-white px-5 py-3 font-bold text-black hover:bg-zinc-200"
-              >
-                {t.connectWallet}
-
-              </button>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
-          <h2 className="text-2xl font-bold">{t.hist}</h2>
-
-          {fundings.length === 0 && (
-            <p className="mt-4 text-zinc-400">Todavía no hay aportaciones.</p>
-          )}
-
-          <div className="mt-5 space-y-3">
-            {fundings.map((funding) => (
-              <div
-                key={funding.id}
-                className="flex flex-col justify-between gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 md:flex-row md:items-center"
-              >
-                <div>
-                  <p className="font-semibold">{short(funding.supporter)}</p>
-                  <p className="text-sm text-zinc-400">
-                    {new Date(Number(funding.created_at)).toLocaleString()}
-                  </p>
+              {proposal.status === "failed" && Number(myContribution) <= 0 && (
+                <div className="rounded-2xl bg-zinc-800 px-5 py-4 text-center font-bold text-zinc-400">
+                  No funds to withdraw
                 </div>
+              )}
 
-                <p className="text-lg font-bold text-green-400">
-                  +{formatEther(BigInt(funding.amount))} {NETWORK.currency}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+              {!wallet.connected && (
+                <button
+                  onClick={wallet.connect}
+                  className="w-full rounded-2xl bg-white px-5 py-4 font-bold text-black hover:bg-zinc-200"
+                >
+                  Connect wallet
+                </button>
+              )}
 
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
-          <h2 className="text-2xl font-bold">{t.propAct}</h2>
-
-          {activity.length === 0 && (
-            <p className="mt-4 text-zinc-400">Sin actividad todavía.</p>
-          )}
-
-          <div className="mt-5 space-y-3">
-            {activity.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4"
+              <button
+                onClick={copyLink}
+                className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-5 py-4 font-bold text-white hover:bg-zinc-800"
               >
-                <span className="text-xl">{activityIcon(item.type)}</span>
+                Copy share link
+              </button>
+            </div>
+          </section>
+        </aside>
+      </section>
+    </div>
+  </main>
+);
 
-                <div>
-                  <p className="font-semibold">{item.message}</p>
-
-                  <p className="text-sm text-zinc-400">
-                    {item.actor ? short(item.actor) : "Sistema"} ·{" "}
-                    {new Date(Number(item.created_at)).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-    </main>
-  );
 }

@@ -222,6 +222,14 @@ export default function HomePage() {
     await loadMySupportedProposals();
   }
 
+  async function handleWithdrawAll(ids: number[]) {
+    if (ids.length === 0) return;
+
+    await kastj.withdrawMany(ids);
+    await refreshDbSoon();
+    await userDashboard.loadUserDashboard();
+  }
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#182131,_#09090b_45%)] p-6 text-white md:p-10">
       <div className="mx-auto max-w-6xl space-y-8">
@@ -469,6 +477,7 @@ export default function HomePage() {
                 fundAmount={fundAmount}
                 loading={kastj.loading}
                 connected={wallet.connected}
+                isSupported={supportedIdsSet.has(proposal.id)}
                 onFund={handleFund}
                 onFinalize={handleFinalize}
                 onWithdraw={handleWithdraw}

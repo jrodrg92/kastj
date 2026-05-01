@@ -11,6 +11,7 @@ export function UserDashboard({
     withdrawable: string;
     createdCount: number;
     supportedCount: number;
+    withdrawableIds: number[];
   };
   loading: boolean;
 }) {
@@ -86,6 +87,14 @@ export function UserDashboard({
               Withdraw {Number(dashboard.withdrawable).toFixed(4)} {NETWORK.currency}
             </button>
           </div>
+        )}
+        {Number(dashboard.withdrawable) > 0 && onWithdrawAll && (
+          <button
+            onClick={() => onWithdrawAll(dashboard.withdrawableIds)}
+            className="mt-6 w-full rounded-2xl bg-red-500 px-6 py-4 text-lg font-bold text-white transition hover:bg-red-400"
+          >
+            Withdraw {Number(dashboard.withdrawable).toFixed(4)} {NETWORK.currency}
+          </button>
         )}
       </div>
     </section>

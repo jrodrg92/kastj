@@ -68,4 +68,11 @@ export class ZkEvmProposalEngine {
     const manager = this.getManager(providerOrSigner);
     return manager.proposalCount();
   }
+
+  async withdrawMany(signer: any, proposalIds: number[]) {
+    const vault = this.getVault(signer);
+    const tx = await vault.withdrawMany(proposalIds);
+    return tx.wait();
+  }
+
 }

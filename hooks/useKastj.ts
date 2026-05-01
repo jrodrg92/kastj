@@ -135,6 +135,25 @@ export function useKastj(signer: any) {
     }
   }
 
+  async function withdrawMany(proposalIds: number[]) {
+    if (!signer) throw new Error("Wallet not connected");
+
+    setLoading(true);
+    const toastId = toast.loading("Withdrawing available funds...");
+
+    try {
+      await engine.withdrawMany(signer, proposalIds);
+
+      toast.success("Funds withdrawn ✅", { id: toastId });
+      await loadProposals();
+    } catch (e) {
+      console.error(e);
+      toast.error("Withdraw failed", { id: toastId });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return {
     proposals,
     withdraw,
@@ -143,5 +162,6 @@ export function useKastj(signer: any) {
     createProposal,
     fundProposal,
     finalizeProposal,
+    withdrawMany
   };
 }
