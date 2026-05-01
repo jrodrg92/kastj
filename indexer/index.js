@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 dotenv.config();
 
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -20,8 +21,23 @@ const ABI = [
 const contract = new ethers.Contract(
   process.env.MANAGER_ADDRESS,
   ABI,
-  provider
+  wallet
 );
+
+async function saveActivity({ type, proposalId, actor, amount, message }) {
+  const { error } = await supabase.from("activity").insert({
+    type,
+    proposal_id: proposalId,
+    actor,
+    amount,
+    message,
+    created_at: Date.now(),
+  });
+
+  if (error) {
+    console.error("Error guardando activity:", error);
+  }
+}
 
 function parseMetadata(uri) {
   if (!uri?.startsWith("local://")) {
@@ -70,7 +86,15 @@ contract.on(
       return;
     }
 
-    console.log("Guardada propuesta:", Number(id));
+    await saveActivity({
+      type: "created",
+      proposalId: Number(id),
+      actor: creator,
+      amount: null,
+      message: `New proposal created #${Number(id)}`,
+    });
+
+    console.log("Save proposal:", Number(id));
   }
 );
 
@@ -101,6 +125,14 @@ contract.on("ProposalFunded", async (id, supporter, amount, totalRaised) => {
     return;
   }
 
+  await saveActivity({
+    type: "funded",
+    proposalId: proposalId,
+    actor: supporter,
+    amount: amount.toString(),
+    message: `Proposal #${proposalId} received support`,
+  });
+
   console.log("Funding guardado:", proposalId);
 });
 
@@ -119,5 +151,98 @@ contract.on("ProposalFinalized", async (id, success, totalRaised) => {
     return;
   }
 
+  await saveActivity({
+    type: success ? "succeeded" : "failed",
+    proposalId: Number(id),
+    actor: null,
+    amount: totalRaised.toString(),
+    message: success
+      ? `Propuesta #${Number(id)} finalizada con éxito`
+      : `Propuesta #${Number(id)} falló y permite retiradas`,
+  });
+
   console.log("Finalizada propuesta:", Number(id));
 });
+
+async function autoFinalize() {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+
+    const { data, error } = await supabase
+      .from("proposals")
+      .select("id")
+      .eq("status", "active")
+      .lte("deadline", now);
+
+    if (error) {
+      console.error("Auto-finalize fetch error:", error);
+      return;
+    }
+
+    for (const p of data) {
+      try {
+        console.log("Auto-finalizing proposal", p.id);
+
+        const tx = await manager.finalize(p.id);
+        await tx.wait();
+
+        console.log("Finalized:", p.id);
+      } catch (err) {
+        console.error("Finalize error for", p.id, err.message);
+      }
+    }
+  } catch (err) {
+    console.error("Auto-finalize loop error:", err);
+  }
+}
+
+setInterval(autoFinalize, 3000); // cada 10 segundos
+
+async function autoFinalizeExpiredProposals() {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+
+    const { data, error } = await supabase
+      .from("proposals")
+      .select("id, deadline, total_raised, goal")
+      .eq("status", "active")
+      .lte("deadline", now);
+
+    if (error) {
+      console.error("Auto-finalizer fetch error:", error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      return;
+    }
+
+    for (const proposal of data) {
+      try {
+        console.log(`Auto-finalizing proposal #${proposal.id}...`);
+
+        const tx = await contract.finalize(proposal.id);
+        await tx.wait();
+
+        const success = BigInt(proposal.total_raised) >= BigInt(proposal.goal);
+
+        console.log(
+          `Proposal #${proposal.id} finalized as ${
+            success ? "succeeded" : "failed"
+          }`
+        );
+      } catch (err) {
+        console.error(
+          `Auto-finalize failed for proposal #${proposal.id}:`,
+          err.message
+        );
+      }
+    }
+  } catch (err) {
+    console.error("Auto-finalizer loop error:", err.message);
+  }
+}
+
+setInterval(autoFinalizeExpiredProposals, 10_000);
+
+console.log("Auto-finalizer running every 10 seconds...");

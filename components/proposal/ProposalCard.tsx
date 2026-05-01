@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { NETWORK } from "../../lib/network";
+import { formatRemainingTime, isExpired as hasExpired } from "../../lib/time";
+import { useLang } from "../../hooks/useLang";
 
 type Proposal = {
   id: number;
@@ -41,15 +43,6 @@ function statusClass(status: number) {
   return "bg-zinc-700 text-white";
 }
 
-function formatTime(seconds: number) {
-  if (seconds <= 0) return "Expirada";
-
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-
-  return `${m}m ${s}s`;
-}
-
 function parseMetadata(uri?: string) {
   if (!uri?.startsWith("local://")) {
     return {
@@ -85,13 +78,14 @@ export function ProposalCard({
       ? Math.min((Number(p.totalRaised) / Number(p.goal)) * 100, 100)
       : 0;
 
-  const now = Math.floor(Date.now() / 1000);
-  const isExpired = now >= p.deadline;
+  const isExpired = hasExpired(p.deadline);
   const isOverfunded = Number(p.totalRaised) > Number(p.goal);
 
   const canFund = connected && !loading && p.status === 0 && !isExpired;
   const canFinalize = connected && !loading && !p.executed && isExpired;
   const canWithdraw = connected && !loading && p.status === 2;
+
+  const {t} = useLang();
 
   return (
 
@@ -115,10 +109,10 @@ export function ProposalCard({
 
       <div className="mt-5 grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 text-sm text-zinc-400 md:grid-cols-2">
         <p>
-          Creador: <span className="text-white">{short(p.creator)}</span>
+          {t.creator}: <span className="text-white">{short(p.creator)}</span>
         </p>
         <p>
-          Destinatario: <span className="text-white">{short(p.recipient)}</span>
+          {t.receiver}: <span className="text-white">{short(p.recipient)}</span>
         </p>
       </div>
 
@@ -140,9 +134,7 @@ export function ProposalCard({
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
         <span className="rounded-full bg-zinc-800 px-3 py-1 text-zinc-300">
-          {isExpired
-            ? "Finalizable"
-            : `Tiempo restante: ${formatTime(p.deadline - now)}`}
+          {isExpired ? "Finalizable" : formatRemainingTime(p.deadline)}
         </span>
 
         {isOverfunded && (
@@ -161,7 +153,7 @@ export function ProposalCard({
           href={`/proposal/${p.id}`}
           className="rounded-xl bg-white px-5 py-3 font-bold text-black transition hover:bg-zinc-200"
         >
-          Ver detalle
+          {t.showDetail}
         </Link>
 
         <button
@@ -169,15 +161,14 @@ export function ProposalCard({
           onClick={() => onFund(p.id)}
           className="rounded-xl bg-blue-500 px-5 py-3 font-bold text-black transition hover:bg-blue-400 disabled:opacity-40"
         >
-          {loading ? "Procesando..." : `Apoyar ${fundAmount} ${NETWORK.currency}`}
+          {loading ? "Procesando..." :  ` ${t.supp} ${fundAmount} ${NETWORK.currency}`}
         </button>
 
         <button
           disabled={!canFinalize}
           onClick={() => onFinalize(p.id)}
-          className="rounded-xl bg-yellow-500 px-5 py-3 font-bold text-black transition hover:bg-yellow-400 disabled:opacity-40"
-        >
-          {isExpired ? "Finalizar" : "Aún no expira"}
+          className="rounded-xl bg-yellow-500 px-5 py-3 font-bold text-black transition hover:bg-yellow-400 disabled:opacity-40">
+          {isExpired ? t.end : formatRemainingTime(p.deadline)}
         </button>
 
         {p.status === 2 && (
@@ -186,7 +177,7 @@ export function ProposalCard({
             onClick={() => onWithdraw(p.id)}
             className="rounded-xl bg-red-500 px-5 py-3 font-bold text-white transition hover:bg-red-400 disabled:opacity-40"
           >
-            Retirar fondos
+            {t.retFunds}
           </button>
         )}
       </div>

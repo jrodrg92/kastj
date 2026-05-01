@@ -1,5 +1,6 @@
 import toast from "react-hot-toast";
 import { NETWORK } from "../../lib/network";
+import { useLang } from "../../hooks/useLang";
 
 type Props = {
   title: string;
@@ -16,6 +17,14 @@ type Props = {
   onDurationChange: (value: string) => void;
   onCreate: () => Promise<void>;
 };
+
+const durationOptions = [
+  { label: "30 seg", value: "300" },
+  { label: "1 hora", value: "3600" },
+  { label: "1 día", value: "86400" },
+  { label: "7 días", value: "604800" },
+  { label: "30 dias", value: "2592000" },
+];
 
 export function CreateProposalForm({
   title,
@@ -41,13 +50,15 @@ export function CreateProposalForm({
     await onCreate();
   }
 
+  const {t} = useLang();
+
   return (
     <section className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6 shadow-2xl">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Crear propuesta</h2>
+          <h2 className="text-2xl font-bold">{t.createProposal}</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Define título, descripción, destinatario, objetivo y plazo máximo.
+            Define los datos públicos y las condiciones de financiación.
           </p>
         </div>
 
@@ -56,49 +67,76 @@ export function CreateProposalForm({
         </span>
       </div>
 
-      <div className="space-y-4">
-        <input
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-          placeholder="Título de la propuesta"
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-        />
-
-        <textarea
-          className="min-h-28 w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-          placeholder="Descripción detallada"
-          value={description}
-          onChange={(e) => onDescriptionChange(e.target.value)}
-        />
-
-        <input
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-          placeholder="Wallet destinataria 0x..."
-          value={recipient}
-          onChange={(e) => onRecipientChange(e.target.value)}
-        />
-
-        <div className="grid gap-4 md:grid-cols-2">
+      <div className="space-y-5">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-zinc-300">
+            {t.title}
+          </label>
           <input
             className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-            placeholder={`Objetivo en ${NETWORK.currency}`}
-            value={goal}
-            onChange={(e) => onGoalChange(e.target.value)}
-          />
-
-          <input
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-            placeholder="Duración en segundos"
-            value={duration}
-            onChange={(e) => onDurationChange(e.target.value)}
+            placeholder="Ej: Financiar herramienta comunitaria"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
           />
         </div>
 
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-zinc-300">
+            {t.description}
+          </label>
+          <textarea
+            className="min-h-28 w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
+            placeholder="Explica qué se quiere financiar, por qué importa y cómo se usará el dinero."
+            value={description}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-zinc-300">
+            {t.walletreceivers}
+          </label>
+          <input
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
+            placeholder="0x..."
+            value={recipient}
+            onChange={(e) => onRecipientChange(e.target.value)}
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-zinc-300">
+              {t.objetive} ({NETWORK.currency})
+            </label>
+            <input
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
+              placeholder={`Ej: 10 ${NETWORK.currency}`}
+              value={goal}
+              onChange={(e) => onGoalChange(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-zinc-300">
+              {t.timer}
+            </label>
+            <select
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
+              value={duration}
+              onChange={(e) => onDurationChange(e.target.value)}
+            >
+              {durationOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-          Reparto en éxito:{" "}
-          <span className="text-white">93% destinatario</span> ·{" "}
-          <span className="text-white">5% creador</span> ·{" "}
-          <span className="text-white">2% treasury</span>
+          {t.exitDiv}
         </div>
 
         <button
@@ -106,7 +144,7 @@ export function CreateProposalForm({
           onClick={handleSubmit}
           className="w-full rounded-xl bg-green-500 px-5 py-3 font-bold text-black transition hover:bg-green-400 disabled:opacity-40 md:w-auto"
         >
-          {loading ? "Creando..." : "Crear propuesta"}
+          {loading ? "Creando..." : t.createProposal}
         </button>
       </div>
     </section>

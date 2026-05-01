@@ -8,6 +8,8 @@ import { supabase } from "../../../lib/supabase";
 import { useLocalWallet } from "../../../hooks/useLocalWallet";
 import { useKastj } from "../../../hooks/useKastj";
 import { NETWORK } from "../../../lib/network";
+import { useLang } from "../../../hooks/useLang";
+import { formatRemainingTime, isExpired as hasExpired } from "../../../lib/time"; // o la ruta correcta
 
 function short(addr: string) {
   if (!addr) return "";
@@ -24,7 +26,6 @@ function parseMetadata(uri?: string) {
 
   try {
     const raw = uri.replace("local://", "").replace("supabase://", "");
-
     return JSON.parse(decodeURIComponent(raw));
   } catch {
     return {
@@ -41,16 +42,12 @@ function statusLabel(status: string) {
   return "❓ Desconocida";
 }
 
-function formatTime(seconds: number) {
-  if (seconds <= 0) return "Expirada";
-
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
+function activityIcon(type: string) {
+  if (type === "created") return "🆕";
+  if (type === "funded") return "💸";
+  if (type === "succeeded") return "✅";
+  if (type === "failed") return "❌";
+  return "•";
 }
 
 export default function ProposalDetailPage() {
@@ -64,9 +61,11 @@ export default function ProposalDetailPage() {
 
   const [proposal, setProposal] = useState<any>(null);
   const [fundings, setFundings] = useState<any[]>([]);
+  const [activity, setActivity] = useState<any[]>([]);
   const [myContribution, setMyContribution] = useState("0");
   const [fundAmount, setFundAmount] = useState("1");
   const [loading, setLoading] = useState(false);
+  const { t } = useLang();
 
   async function loadDetail() {
     setLoading(true);
@@ -90,6 +89,12 @@ export default function ProposalDetailPage() {
       .eq("proposal_id", proposalId)
       .order("id", { ascending: false });
 
+    const { data: activityData, error: activityError } = await supabase
+      .from("activity")
+      .select("*")
+      .eq("proposal_id", proposalId)
+      .order("id", { ascending: false });
+
     setLoading(false);
 
     if (proposalError) {
@@ -104,8 +109,15 @@ export default function ProposalDetailPage() {
       return;
     }
 
+    if (activityError) {
+      console.error(activityError);
+      toast.error("No se pudo cargar la actividad");
+      return;
+    }
+
     setProposal(proposalData);
     setFundings(fundingData ?? []);
+    setActivity(activityData ?? []);
 
     if (wallet.address && fundingData) {
       const mine = fundingData
@@ -153,9 +165,24 @@ export default function ProposalDetailPage() {
       )
       .subscribe();
 
+    const activityChannel = supabase
+      .channel(`activity-${proposalId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "activity",
+          filter: `proposal_id=eq.${proposalId}`,
+        },
+        () => loadDetail()
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(proposalsChannel);
       supabase.removeChannel(fundingsChannel);
+      supabase.removeChannel(activityChannel);
     };
   }, [proposalId, wallet.address]);
 
@@ -227,8 +254,7 @@ export default function ProposalDetailPage() {
   const raised = Number(formatEther(BigInt(proposal.total_raised)));
   const percent = goal > 0 ? Math.min((raised / goal) * 100, 100) : 0;
 
-  const now = Math.floor(Date.now() / 1000);
-  const isExpired = now >= Number(proposal.deadline);
+  const isExpired = hasExpired(Number(proposal.deadline));
   const isActive = proposal.status === "active";
   const canFund = wallet.connected && isActive && !isExpired;
   const canFinalize = wallet.connected && isActive && isExpired;
@@ -240,7 +266,7 @@ export default function ProposalDetailPage() {
 
   const supportersCount = new Set(
     fundings.map((f) => f.supporter?.toLowerCase())
-    ).size;
+  ).size;
 
   const isCreator =
     wallet.address &&
@@ -274,60 +300,54 @@ export default function ProposalDetailPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-zinc-800 px-4 py-2 text-sm font-bold">
-                    {statusLabel(proposal.status)}
+              <span className="rounded-full bg-zinc-800 px-4 py-2 text-sm font-bold">
+                {statusLabel(proposal.status)}
+              </span>
+
+              {isCreator && (
+                <span className="rounded-full bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-400">
+                  Eres el creador
                 </span>
+              )}
 
-                {isCreator && (
-                    <span className="rounded-full bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-400">
-                    Eres el creador
-                    </span>
-                )}
-
-                {isTrending && (
-                    <span className="rounded-full bg-orange-500/10 px-4 py-2 text-sm font-bold text-orange-400">
-                    🔥 Trending
-                    </span>
-                )}
+              {isTrending && (
+                <span className="rounded-full bg-orange-500/10 px-4 py-2 text-sm font-bold text-orange-400">
+                  🔥 Trending
+                </span>
+              )}
             </div>
           </div>
 
           <div className="mt-8 grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 text-sm text-zinc-400 md:grid-cols-2">
             <p>
-              Creador:{" "}
+              {t.creator}:{" "}
               <span className="text-white">{short(proposal.creator)}</span>
             </p>
             <p>
-              Destinatario:{" "}
+              {t.receiver}:{" "}
               <span className="text-white">{short(proposal.recipient)}</span>
             </p>
             <p>
               Deadline:{" "}
               <span className="text-white">
-                {isExpired
-                  ? "Expirada"
-                  : formatTime(Number(proposal.deadline) - now)}
+                {isExpired ? "Expired" : formatRemainingTime(Number(proposal.deadline))}
               </span>
             </p>
             <p>
-              Payout:{" "}
-              <span className="text-white">
-                93% destinatario · 5% creador · 2% treasury
-              </span>
+              {t.exitDiv}
             </p>
             <p>
-                Supporters:{" "}
-                <span className="text-white">{supportersCount}</span>
-                </p>
-
-                <p>
-                Compartir:{" "}
-                <button
-                    onClick={copyLink}
-                    className="font-semibold text-green-400 hover:text-green-300"
-                >
-                    Copiar link
-                </button>
+              Supporters:{" "}
+              <span className="text-white">{supportersCount}</span>
+            </p>
+            <p>
+              {t.shareProp}:{" "}
+              <button
+                onClick={copyLink}
+                className="font-semibold text-green-400 hover:text-green-300"
+              >
+                Copiar link
+              </button>
             </p>
           </div>
 
@@ -348,7 +368,7 @@ export default function ProposalDetailPage() {
           </div>
 
           <div className="mt-6 rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-            <p className="text-sm text-zinc-400">Tu aportación</p>
+            <p className="text-sm text-zinc-400">{t.yourSup}</p>
 
             <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
@@ -359,7 +379,7 @@ export default function ProposalDetailPage() {
                 <p className="mt-1 text-sm text-zinc-400">
                   {Number(myContribution) > 0
                     ? "Has apoyado esta propuesta."
-                    : "Todavía no has aportado a esta propuesta."}
+                    : t.nptSupYet}
                 </p>
               </div>
 
@@ -370,24 +390,28 @@ export default function ProposalDetailPage() {
               )}
             </div>
           </div>
+
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5">
-                <p className="text-sm text-zinc-400">Supporters únicos</p>
-                <p className="mt-2 text-3xl font-black">{supportersCount}</p>
+              <p className="text-sm text-zinc-400">{t.unicSup}</p>
+              <p className="mt-2 text-3xl font-black">{supportersCount}</p>
             </div>
 
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5">
-                <p className="text-sm text-zinc-400">Progreso</p>
-                <p className="mt-2 text-3xl font-black">{percent.toFixed(1)}%</p>
+              <p className="text-sm text-zinc-400">{t.progres}</p>
+              <p className="mt-2 text-3xl font-black">
+                {percent.toFixed(1)}%
+              </p>
             </div>
 
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5">
-                <p className="text-sm text-zinc-400">Estado social</p>
-                <p className="mt-2 text-2xl font-black">
+              <p className="text-sm text-zinc-400">{t.status}</p>
+              <p className="mt-2 text-2xl font-black">
                 {isTrending ? "🔥 Trending" : "En progreso"}
-                </p>
+              </p>
             </div>
           </div>
+
           <div className="mt-6 flex flex-col gap-3 md:flex-row">
             <input
               className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none focus:border-blue-500 md:w-56"
@@ -401,7 +425,7 @@ export default function ProposalDetailPage() {
               onClick={handleFund}
               className="rounded-2xl bg-blue-500 px-5 py-3 font-bold text-black hover:bg-blue-400 disabled:opacity-40"
             >
-              {kastj.loading ? "Procesando..." : "Apoyar"}
+              {kastj.loading ? "Procesando..." : t.supp}
             </button>
 
             <button
@@ -419,7 +443,9 @@ export default function ProposalDetailPage() {
                 className="rounded-2xl bg-red-500 px-5 py-3 font-bold text-white hover:bg-red-400 disabled:opacity-40"
               >
                 {Number(myContribution) > 0
-                  ? `Retirar ${Number(myContribution).toFixed(4)} ${NETWORK.currency}`
+                  ? `Retirar ${Number(myContribution).toFixed(4)} ${
+                      NETWORK.currency
+                    }`
                   : "Sin fondos para retirar"}
               </button>
             )}
@@ -429,14 +455,15 @@ export default function ProposalDetailPage() {
                 onClick={wallet.connect}
                 className="rounded-2xl bg-white px-5 py-3 font-bold text-black hover:bg-zinc-200"
               >
-                Conectar wallet
+                {t.connectWallet}
+
               </button>
             )}
           </div>
         </section>
 
         <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
-          <h2 className="text-2xl font-bold">Historial de funding</h2>
+          <h2 className="text-2xl font-bold">{t.hist}</h2>
 
           {fundings.length === 0 && (
             <p className="mt-4 text-zinc-400">Todavía no hay aportaciones.</p>
@@ -458,6 +485,34 @@ export default function ProposalDetailPage() {
                 <p className="text-lg font-bold text-green-400">
                   +{formatEther(BigInt(funding.amount))} {NETWORK.currency}
                 </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
+          <h2 className="text-2xl font-bold">{t.propAct}</h2>
+
+          {activity.length === 0 && (
+            <p className="mt-4 text-zinc-400">Sin actividad todavía.</p>
+          )}
+
+          <div className="mt-5 space-y-3">
+            {activity.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4"
+              >
+                <span className="text-xl">{activityIcon(item.type)}</span>
+
+                <div>
+                  <p className="font-semibold">{item.message}</p>
+
+                  <p className="text-sm text-zinc-400">
+                    {item.actor ? short(item.actor) : "Sistema"} ·{" "}
+                    {new Date(Number(item.created_at)).toLocaleString()}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

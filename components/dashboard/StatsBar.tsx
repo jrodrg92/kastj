@@ -1,4 +1,5 @@
 import { NETWORK } from "../../lib/network";
+import { useLang } from "../../hooks/useLang";
 
 type Proposal = {
   id: number;
@@ -12,6 +13,7 @@ export function StatsBar({ proposals }: { proposals: Proposal[] }) {
   const active = proposals.filter((p) => p.status === 0).length;
   const succeeded = proposals.filter((p) => p.status === 1).length;
   const failed = proposals.filter((p) => p.status === 2).length;
+  const {t} = useLang();
 
   const raised = proposals.reduce(
     (acc, p) => acc + Number(p.totalRaised || 0),
@@ -19,11 +21,11 @@ export function StatsBar({ proposals }: { proposals: Proposal[] }) {
   );
 
   const items = [
-    { label: "Total propuestas", value: total },
-    { label: "Activas", value: active },
-    { label: "Exitosas", value: succeeded },
-    { label: "Fallidas", value: failed },
-    { label: "Recaudado", value: `${raised.toFixed(2)} ${NETWORK.currency}` },
+    { label: t.total, value: total },
+    { label: t.active, value: active },
+    { label: t.succeeded, value: succeeded },
+    { label: t.failed, value: failed },
+    { label: t.recud, value: `${raised.toFixed(2)} ${NETWORK.currency}` },
   ];
 
   return (

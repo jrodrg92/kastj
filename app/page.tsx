@@ -8,10 +8,24 @@ import { useSupabaseProposals } from "../hooks/useSupabaseProposals";
 import { StatsBar } from "../components/dashboard/StatsBar";
 import { CreateProposalForm } from "../components/proposal/CreateProposalForm";
 import { ProposalCard } from "../components/proposal/ProposalCard";
+import { WalletStatus } from "../components/wallet/WalletStatus";
 import { NETWORK } from "../lib/network";
+import { useActivityFeed } from "../hooks/useActivityFeed";
+import { ActivityFeed } from "../components/activity/ActivityFeed";
+import { KastjLogo } from "../components/brand/KastjLogo";
+import { useLang } from "../hooks/useLang";
+import { LanguageSwitcher } from "../components/i18n/LanguageSwitcher";
+import { supabase } from "../lib/supabase";
 
-type Filter = "all" | "active" | "succeeded" | "failed";
-type Sort = "newest" | "raised" | "ending";
+type Filter =
+  | "all"
+  | "active"
+  | "mine"
+  | "supported"
+  | "succeeded"
+  | "failed";
+
+  type Sort = "newest" | "raised" | "ending";
 
 function short(addr: string) {
   if (!addr) return "";
@@ -36,23 +50,44 @@ export default function HomePage() {
   const wallet = useLocalWallet();
   const kastj = useKastj(wallet.signer);
   const db = useSupabaseProposals();
+  const feed = useActivityFeed();
 
   const proposals = db.dbProposals ?? [];
 
   const [filter, setFilter] = useState<Filter>("all");
+  const [supportedIds, setSupportedIds] = useState<number[]>([]);
   const [sort, setSort] = useState<Sort>("newest");
   const [search, setSearch] = useState("");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [goal, setGoal] = useState("10");
-  const [duration, setDuration] = useState("3600");
+  const [goal, setGoal] = useState("10000");
+  const [duration, setDuration] = useState("30");
   const [fundAmount, setFundAmount] = useState("1");
+
+  const { lang, changeLang, t } = useLang();
 
   const filteredProposals = proposals
     .filter((proposal) => {
+      const myAddress = wallet.address?.toLowerCase();
+
       if (filter === "active" && proposal.status !== 0) return false;
+
+      if (
+        filter === "mine" &&
+        proposal.creator?.toLowerCase() !== myAddress
+      ) {
+        return false;
+      }
+
+      if (
+        filter === "supported" &&
+        !supportedIds.includes(proposal.id)
+      ) {
+        return false;
+      }
+
       if (filter === "succeeded" && proposal.status !== 1) return false;
       if (filter === "failed" && proposal.status !== 2) return false;
 
@@ -72,13 +107,35 @@ export default function HomePage() {
       }
 
       return Number(b.id) - Number(a.id);
-    });
+  });
+
+  async function loadMySupportedProposals() {
+    if (!wallet.address) return;
+
+    const { data, error } = await supabase
+      .from("fundings")
+      .select("proposal_id")
+      .eq("supporter", wallet.address);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    const ids = Array.from(
+      new Set((data ?? []).map((item) => Number(item.proposal_id)))
+    );
+
+    setSupportedIds(ids);
+  }
+
 
   useEffect(() => {
     if (wallet.connected) {
       db.loadDbProposals();
+      loadMySupportedProposals();
     }
-  }, [wallet.connected]);
+  }, [wallet.connected, wallet.address]);
 
   async function refreshDbSoon() {
     await new Promise((resolve) => setTimeout(resolve, 800));
@@ -121,11 +178,12 @@ export default function HomePage() {
 
     await kastj.createProposal(recipient, goal, Number(duration), metadataURI);
     await refreshDbSoon();
+    await loadMySupportedProposals();
 
     setTitle("");
     setDescription("");
     setRecipient("");
-    setGoal("10");
+    setGoal("10000");
     setDuration("3600");
   }
 
@@ -137,67 +195,169 @@ export default function HomePage() {
 
     await kastj.fundProposal(id, fundAmount);
     await refreshDbSoon();
+    await loadMySupportedProposals();
   }
 
   async function handleFinalize(id: number) {
     await kastj.finalizeProposal(id);
     await refreshDbSoon();
+    await loadMySupportedProposals();
   }
 
   async function handleWithdraw(id: number) {
     await kastj.withdraw(id);
     await refreshDbSoon();
+    await loadMySupportedProposals();
   }
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#182131,_#09090b_45%)] p-6 text-white md:p-10">
       <div className="mx-auto max-w-6xl space-y-8">
-        <header className="flex flex-col gap-6 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-2xl md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="mb-2 inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-sm text-green-400">
-              Kastj · {NETWORK.name}
+        <header className="relative overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950/80 p-8 shadow-2xl">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.18),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.14),_transparent_30%)]" />
+
+          <div className="relative flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-5 flex flex-wrap gap-3">
+                <span className="rounded-full border border-green-500/30 bg-green-500/10 px-4 py-1.5 text-sm font-semibold text-green-400">
+                  Kastj · {NETWORK.name}
+                </span>
+
+                <span className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-1.5 text-sm font-semibold text-zinc-300">
+                  Escrow transparente
+                </span>
+
+                <span className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-1.5 text-sm font-semibold text-zinc-300">
+                  93% / 5% / 2%
+                </span>
+              </div>
+
+              <KastjLogo />
+
+              <p className="mt-4 max-w-2xl text-lg leading-8 text-zinc-300">
+                {t.descriptionApp}
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a
+                  href="#create"
+                  className="rounded-2xl bg-green-500 px-5 py-3 font-bold text-black transition hover:bg-green-400"
+                >
+                  {t.createProposal}
+                </a>
+
+                <a
+                  href="#proposals"
+                  className="rounded-2xl border border-zinc-700 bg-zinc-900 px-5 py-3 font-bold text-white transition hover:bg-zinc-800"
+                >
+                  {t.explore}
+                </a>
+              </div>
             </div>
 
-            <h1 className="text-5xl font-black tracking-tight">Kastj</h1>
-
-            <p className="mt-2 max-w-2xl text-zinc-400">
-              Propuestas comunitarias con crowdfunding condicional, escrow y
-              distribución automática de fondos.
-            </p>
+            <div className="rounded-3xl border border-zinc-800 bg-black/30 p-4 backdrop-blur">
+              <WalletStatus
+                connected={wallet.connected}
+                address={wallet.address}
+                connect={wallet.connect}
+                signer={wallet.signer}
+              />
+            </div>
           </div>
-
-          <button
-            onClick={wallet.connect}
-            className="rounded-2xl bg-white px-5 py-3 font-bold text-black transition hover:bg-zinc-200"
-          >
-            {wallet.connected ? short(wallet.address) : "Conectar wallet"}
-          </button>
         </header>
 
-        {wallet.connected && <StatsBar proposals={proposals} />}
+        <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          <div className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 p-8 shadow-2xl">
+            <div className="mb-4 inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-sm text-green-400">
+              Escrow comunitario · transparente · automático
+            </div>
 
-        <CreateProposalForm
-          title={title}
-          description={description}
-          recipient={recipient}
-          goal={goal}
-          duration={duration}
-          loading={kastj.loading}
-          connected={wallet.connected}
-          onTitleChange={setTitle}
-          onDescriptionChange={setDescription}
-          onRecipientChange={setRecipient}
-          onGoalChange={setGoal}
-          onDurationChange={setDuration}
-          onCreate={handleCreate}
-        />
+            <h2 className="max-w-3xl text-4xl font-black tracking-tight md:text-5xl">
+              {t.mission}
+            </h2>
 
-        <section className="space-y-5">
+            <p className="mt-4 max-w-2xl text-lg text-zinc-400">
+              {t.mission1}
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href="#create"
+                className="rounded-2xl bg-green-500 px-5 py-3 font-bold text-black transition hover:bg-green-400"
+              >
+                {t.createProposal}
+              </a>
+
+              <a
+                href="#proposals"
+                className="rounded-2xl bg-zinc-800 px-5 py-3 font-bold text-white transition hover:bg-zinc-700"
+              >
+                {t.exploreProposals}
+              </a>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
+            <h3 className="text-2xl font-bold">{t.howItWorks}</h3>
+
+            <div className="mt-5 space-y-4">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <p className="font-bold">1. {t.step1}</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {t.step11}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <p className="font-bold">2. {t.step2}</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {t.step21}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <p className="font-bold">3. {t.step3}</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {t.step31}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <StatsBar proposals={proposals} />
+
+        {wallet.connected && (
+            <ActivityFeed
+              activity={feed.activity}
+              loading={feed.loadingActivity}
+            />
+          )}
+
+        <div id="create">
+          <CreateProposalForm
+            title={title}
+            description={description}
+            recipient={recipient}
+            goal={goal}
+            duration={duration}
+            loading={kastj.loading}
+            connected={wallet.connected}
+            onTitleChange={setTitle}
+            onDescriptionChange={setDescription}
+            onRecipientChange={setRecipient}
+            onGoalChange={setGoal}
+            onDurationChange={setDuration}
+            onCreate={handleCreate}
+          />
+        </div>
+
+        <section id="proposals" className="space-y-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-3xl font-bold">Propuestas</h2>
+              <h2 className="text-3xl font-bold">{t.proposals}</h2>
               <p className="text-zinc-400">
-                Explora campañas activas, exitosas y fallidas.
+                {t.findnew}
               </p>
             </div>
 
@@ -206,16 +366,18 @@ export default function HomePage() {
               disabled={!wallet.connected || db.loadingDb || kastj.loading}
               className="rounded-xl bg-zinc-800 px-5 py-3 font-bold transition hover:bg-zinc-700 disabled:opacity-40"
             >
-              {db.loadingDb ? "Cargando..." : "Refrescar"}
+              {db.loadingDb ? "Cargando..." : t.refresh}
             </button>
           </div>
 
           <div className="flex flex-wrap gap-2">
             {[
-              { key: "all", label: "Todas" },
-              { key: "active", label: "Activas" },
-              { key: "succeeded", label: "Exitosas" },
-              { key: "failed", label: "Fallidas" },
+              { key: "all", label: t.all },
+              { key: "active", label: t.active },
+              { key: "mine", label: t.mine},
+              { key: "supported", label: t.sup },
+              { key: "succeeded", label: t.succeeded },
+              { key: "failed", label: t.failed },
             ].map((item) => (
               <button
                 key={item.key}
@@ -234,7 +396,7 @@ export default function HomePage() {
           <div className="grid gap-3 md:grid-cols-[1fr_220px]">
             <input
               className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-green-500"
-              placeholder="Buscar por título o descripción"
+              placeholder={t.search}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -244,9 +406,9 @@ export default function HomePage() {
               value={sort}
               onChange={(e) => setSort(e.target.value as Sort)}
             >
-              <option value="newest">Más nuevas</option>
-              <option value="raised">Más recaudadas</option>
-              <option value="ending">Terminan pronto</option>
+              <option value="newest">{t.newest}</option>
+              <option value="raised">{t.moreRe}</option>
+              <option value="ending">{t.endSoon}</option>
             </select>
           </div>
 
@@ -259,7 +421,7 @@ export default function HomePage() {
 
           {!wallet.connected && (
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
-              Conecta tu wallet para ver y crear propuestas.
+              {t.conectWallet}
             </div>
           )}
 
