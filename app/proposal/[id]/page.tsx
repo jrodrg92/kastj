@@ -8,8 +8,8 @@ import { supabase } from "../../../lib/supabase";
 import { useLocalWallet } from "../../../hooks/useLocalWallet";
 import { useKastj } from "../../../hooks/useKastj";
 import { NETWORK } from "../../../lib/network";
-import { useLang } from "../../../hooks/useLang";
 import { formatRemainingTime, isExpired as hasExpired } from "../../../lib/time"; // o la ruta correcta
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 function short(addr: string) {
   if (!addr) return "";
@@ -65,7 +65,7 @@ export default function ProposalDetailPage() {
   const [myContribution, setMyContribution] = useState("0");
   const [fundAmount, setFundAmount] = useState("1");
   const [loading, setLoading] = useState(false);
-  const { t } = useLang();
+  const { t } = useLanguage();
 
   async function loadDetail() {
     setLoading(true);

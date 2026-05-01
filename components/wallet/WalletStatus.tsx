@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { formatEther } from "ethers";
 import { NETWORK } from "../../lib/network";
-import { useLang } from "../../hooks/useLang";
+import { useLanguage } from "../../contexts/LanguageContext";
+
 
 function short(addr: string) {
   if (!addr) return "";
@@ -23,7 +24,7 @@ export function WalletStatus({
 }) {
   const [balance, setBalance] = useState<string>("0");
 
-  const { t } = useLang();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!signer || !connected) return;

@@ -1,0 +1,78 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="44%" r="65%">
+      <stop offset="0%" stop-color="#10382f"/>
+      <stop offset="55%" stop-color="#071315"/>
+      <stop offset="100%" stop-color="#020506"/>
+    </radialGradient>
+
+    <linearGradient id="green" x1="190" y1="155" x2="850" y2="875" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#71ffd2"/>
+      <stop offset="0.45" stop-color="#00ffa3"/>
+      <stop offset="1" stop-color="#00b86f"/>
+    </linearGradient>
+
+    <linearGradient id="tile" x1="135" y1="70" x2="890" y2="930" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#14242a"/>
+      <stop offset="1" stop-color="#03090b"/>
+    </linearGradient>
+
+    <filter id="neon" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 1  0 0 0 0 .62  0 0 0 .8 0" result="greenBlur"/>
+      <feMerge>
+        <feMergeNode in="greenBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="#000"/>
+
+  <rect x="55" y="55" width="914" height="914" rx="150" fill="url(#tile)" stroke="#24424a" stroke-width="4" filter="url(#softShadow)"/>
+  <rect x="70" y="70" width="884" height="884" rx="140" fill="url(#bgGlow)" opacity="0.75"/>
+
+  <!-- Blockchain frame -->
+  <g filter="url(#neon)" stroke="url(#green)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M495 175 L654 265 L654 628 L500 718 L346 628 L346 535"/>
+    <path d="M346 275 L495 175"/>
+  </g>
+
+  <g filter="url(#neon)" fill="url(#green)">
+    <circle cx="495" cy="175" r="24"/>
+    <circle cx="346" cy="275" r="19"/>
+    <circle cx="654" cy="265" r="19"/>
+    <circle cx="346" cy="535" r="19"/>
+    <circle cx="500" cy="718" r="24"/>
+  </g>
+
+  <!-- KTJ monogram -->
+  <g filter="url(#neon)" fill="url(#green)">
+    <!-- K -->
+    <path d="M218 285 H268 V432 L402 285 H466 L327 438 L473 620 H408 L268 449 V620 H218 Z"/>
+
+    <!-- T -->
+    <path d="M425 335 H674 V386 H576 V620 H523 V386 H425 Z"/>
+
+    <!-- J + arrow -->
+    <path d="M728 268 L801 348 H754 V534 C754 607 711 653 647 653 C610 653 577 640 553 612 L589 575 C603 593 621 603 644 603 C679 603 700 579 700 534 V348 H655 Z"/>
+  </g>
+
+  <!-- Lock -->
+  <g filter="url(#neon)" stroke="url(#green)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M704 642 V606 C704 562 735 531 777 531 C819 531 850 562 850 606 V642"/>
+    <rect x="681" y="642" width="192" height="119" rx="22" fill="#06271f"/>
+    <path d="M777 688 V724"/>
+  </g>
+  <circle cx="777" cy="683" r="13" fill="url(#green)" filter="url(#neon)"/>
+
+  <!-- Brand text -->
+  <g filter="url(#neon)" fill="url(#green)" font-family="Inter, Orbitron, Arial, sans-serif" text-anchor="middle">
+    <text x="512" y="835" font-size="72" font-weight="900" letter-spacing="36">KASTJ</text>
+    <text x="512" y="895" font-size="26" font-weight="800" letter-spacing="9">SECURE • AUTOMATED • DECENTRALIZED</text>
+  </g>
+</svg>

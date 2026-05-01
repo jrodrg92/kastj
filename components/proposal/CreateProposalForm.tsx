@@ -1,6 +1,6 @@
 import toast from "react-hot-toast";
 import { NETWORK } from "../../lib/network";
-import { useLang } from "../../hooks/useLang";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 type Props = {
   title: string;
@@ -50,7 +50,7 @@ export function CreateProposalForm({
     await onCreate();
   }
 
-  const {t} = useLang();
+  const { t } = useLanguage();
 
   return (
     <section className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6 shadow-2xl">

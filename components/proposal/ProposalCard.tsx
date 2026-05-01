@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { NETWORK } from "../../lib/network";
 import { formatRemainingTime, isExpired as hasExpired } from "../../lib/time";
-import { useLang } from "../../hooks/useLang";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 type Proposal = {
   id: number;
@@ -85,7 +85,7 @@ export function ProposalCard({
   const canFinalize = connected && !loading && !p.executed && isExpired;
   const canWithdraw = connected && !loading && p.status === 2;
 
-  const {t} = useLang();
+  const { t } = useLanguage();
 
   return (
 

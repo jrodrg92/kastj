@@ -13,9 +13,9 @@ import { NETWORK } from "../lib/network";
 import { useActivityFeed } from "../hooks/useActivityFeed";
 import { ActivityFeed } from "../components/activity/ActivityFeed";
 import { KastjLogo } from "../components/brand/KastjLogo";
-import { useLang } from "../hooks/useLang";
-import { LanguageSwitcher } from "../components/i18n/LanguageSwitcher";
 import { supabase } from "../lib/supabase";
+import { UiToggles } from "../components/settings/UiToggles";
+import { useLanguage } from "../contexts/LanguageContext";
 
 type Filter =
   | "all"
@@ -66,7 +66,7 @@ export default function HomePage() {
   const [duration, setDuration] = useState("30");
   const [fundAmount, setFundAmount] = useState("1");
 
-  const { lang, changeLang, t } = useLang();
+  const { t } = useLanguage();
 
   const filteredProposals = proposals
     .filter((proposal) => {
@@ -213,49 +213,53 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#182131,_#09090b_45%)] p-6 text-white md:p-10">
       <div className="mx-auto max-w-6xl space-y-8">
-        <header className="relative overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950/80 p-8 shadow-2xl">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.18),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.14),_transparent_30%)]" />
+        <header className="relative overflow-hidden rounded-[2rem] border border-zinc-800 bg-[#101114] p-8 text-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950/80">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.20),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.18),_transparent_30%)]" />
 
           <div className="relative flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
             <div className="max-w-3xl">
               <div className="mb-5 flex flex-wrap gap-3">
-                <span className="rounded-full border border-green-500/30 bg-green-500/10 px-4 py-1.5 text-sm font-semibold text-green-400">
+                <span className="rounded-full border border-green-500/40 bg-green-500/15 px-4 py-1.5 text-sm font-semibold text-green-300">
                   Kastj · {NETWORK.name}
                 </span>
 
-                <span className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-1.5 text-sm font-semibold text-zinc-300">
+                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-sm font-semibold text-zinc-100">
                   Escrow transparente
                 </span>
 
-                <span className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-1.5 text-sm font-semibold text-zinc-300">
+                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-sm font-semibold text-zinc-100">
                   93% / 5% / 2%
                 </span>
               </div>
 
-              <KastjLogo />
+              <div className="[&_*]:!text-white [&_.text-green-400]:!text-green-300">
+                <KastjLogo />
+              </div>
 
-              <p className="mt-4 max-w-2xl text-lg leading-8 text-zinc-300">
+              <p className="mt-4 max-w-2xl text-lg leading-8 !text-zinc-200">
                 {t.descriptionApp}
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <a
                   href="#create"
-                  className="rounded-2xl bg-green-500 px-5 py-3 font-bold text-black transition hover:bg-green-400"
+                  className="rounded-2xl bg-green-500 px-5 py-3 font-bold !text-black transition hover:bg-green-400"
                 >
                   {t.createProposal}
                 </a>
 
                 <a
                   href="#proposals"
-                  className="rounded-2xl border border-zinc-700 bg-zinc-900 px-5 py-3 font-bold text-white transition hover:bg-zinc-800"
+                  className="rounded-2xl border border-white/15 bg-white px-5 py-3 font-bold !text-black transition hover:bg-zinc-100"
                 >
                   {t.explore}
                 </a>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-zinc-800 bg-black/30 p-4 backdrop-blur">
+            <div className="flex flex-col gap-3 md:items-end">
+              <UiToggles />
+
               <WalletStatus
                 connected={wallet.connected}
                 address={wallet.address}

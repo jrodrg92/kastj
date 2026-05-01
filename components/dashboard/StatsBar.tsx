@@ -1,5 +1,5 @@
 import { NETWORK } from "../../lib/network";
-import { useLang } from "../../hooks/useLang";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 type Proposal = {
   id: number;
@@ -13,7 +13,7 @@ export function StatsBar({ proposals }: { proposals: Proposal[] }) {
   const active = proposals.filter((p) => p.status === 0).length;
   const succeeded = proposals.filter((p) => p.status === 1).length;
   const failed = proposals.filter((p) => p.status === 2).length;
-  const {t} = useLang();
+  const { t } = useLanguage();
 
   const raised = proposals.reduce(
     (acc, p) => acc + Number(p.totalRaised || 0),

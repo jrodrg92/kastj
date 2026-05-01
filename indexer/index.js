@@ -16,6 +16,7 @@ const ABI = [
   "event ProposalCreated(uint256 indexed id,address indexed creator,address indexed recipient,uint256 goal,uint256 deadline,string metadataURI)",
   "event ProposalFunded(uint256 indexed id,address indexed supporter,uint256 amount,uint256 totalRaised)",
   "event ProposalFinalized(uint256 indexed id,bool success,uint256 totalRaised)",
+  "function finalize(uint256 id) external",
 ];
 
 const contract = new ethers.Contract(
