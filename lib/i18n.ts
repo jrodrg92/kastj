@@ -58,7 +58,20 @@ export const translations = {
     progres: "Progress",
     status: "Social status",
     hist: "Funding history",
-    propAct: "Proposal activity"
+    propAct: "Proposal activity",
+    trScrow:"Transparent escrow",
+    autScrow:"Community escrow · transparent · automatic",
+    defdata:"Define the public data and funding conditions.",
+    ej1:"E.g.: Fund a community tool.",
+    ej2:"Explain what you want to fund, why it matters, and how the money will be used.",
+    actApp:"Your wallet activity across Kastj.",
+    updating:"Updating...",
+    mydsbrd:"My Dashboard",
+    totCont:"Total contributed",
+    crrnlyUnclck:"Currently locked",
+    withdrw:"Withdrawable",
+    crtdByMe:"Created by me",
+    suprtd:"Supported"
   },
 
   es: {
@@ -116,7 +129,20 @@ export const translations = {
     progres:"Progreso",
     status:"Estado social",
     hist:"Historial de funding",
-    propAct:"Actividad de la propuesta"
+    propAct:"Actividad de la propuesta",
+    trScrow:"Escrow transparente",
+    autScrow:"Escrow comunitario · transparente · automático",
+    defdata:"Define los datos públicos y las condiciones de financiación.",
+    ej1:"Ej: Financiar herramienta comunitaria",
+    ej2:"Explica qué se quiere financiar, por qué importa y cómo se usará el dinero.",
+    actApp:"La actividad de tu wallet en Kastj.",
+    updating:"Actualizando...",
+    mydsbrd:"Mi panel",
+    totCont: "Total aportado",
+    crrnlyUnclck: "Actualmente bloqueado",
+    withdrw: "Retirable",
+    crtdByMe: "Creadas por mí",
+    suprtd: "Apoyadas"
 
   },
 };

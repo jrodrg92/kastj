@@ -58,7 +58,7 @@ export function CreateProposalForm({
         <div>
           <h2 className="text-2xl font-bold">{t.createProposal}</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Define los datos públicos y las condiciones de financiación.
+            {t.defdata}
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export function CreateProposalForm({
           </label>
           <input
             className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-            placeholder="Ej: Financiar herramienta comunitaria"
+            placeholder={t.ej1}
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
           />
@@ -86,7 +86,7 @@ export function CreateProposalForm({
           </label>
           <textarea
             className="min-h-28 w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-            placeholder="Explica qué se quiere financiar, por qué importa y cómo se usará el dinero."
+            placeholder={t.ej2}
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
           />

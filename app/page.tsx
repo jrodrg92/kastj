@@ -5,16 +5,18 @@ import toast from "react-hot-toast";
 import { useLocalWallet } from "../hooks/useLocalWallet";
 import { useKastj } from "../hooks/useKastj";
 import { useSupabaseProposals } from "../hooks/useSupabaseProposals";
+import { useUserDashboard } from "../hooks/useUserDashboard";
+import { useActivityFeed } from "../hooks/useActivityFeed";
 import { StatsBar } from "../components/dashboard/StatsBar";
 import { CreateProposalForm } from "../components/proposal/CreateProposalForm";
 import { ProposalCard } from "../components/proposal/ProposalCard";
 import { WalletStatus } from "../components/wallet/WalletStatus";
-import { NETWORK } from "../lib/network";
-import { useActivityFeed } from "../hooks/useActivityFeed";
+import { UserDashboard } from "../components/dashboard/UserDashboard";
 import { ActivityFeed } from "../components/activity/ActivityFeed";
 import { KastjLogo } from "../components/brand/KastjLogo";
-import { supabase } from "../lib/supabase";
 import { UiToggles } from "../components/settings/UiToggles";
+import { NETWORK } from "../lib/network";
+import { supabase } from "../lib/supabase";
 import { useLanguage } from "../contexts/LanguageContext";
 
 type Filter =
@@ -67,25 +69,24 @@ export default function HomePage() {
   const [fundAmount, setFundAmount] = useState("1");
 
   const { t } = useLanguage();
+  const userDashboard = useUserDashboard(wallet.address);
 
+  const supportedIdsSet = new Set(
+    userDashboard.dashboard.supportedIds ?? supportedIds
+  );
+  
   const filteredProposals = proposals
     .filter((proposal) => {
       const myAddress = wallet.address?.toLowerCase();
 
       if (filter === "active" && proposal.status !== 0) return false;
 
-      if (
-        filter === "mine" &&
-        proposal.creator?.toLowerCase() !== myAddress
-      ) {
-        return false;
+      if (filter === "mine") {
+        return proposal.creator === wallet.address;
       }
 
-      if (
-        filter === "supported" &&
-        !supportedIds.includes(proposal.id)
-      ) {
-        return false;
+      if (filter === "supported") {
+        return supportedIdsSet.has(proposal.id)
       }
 
       if (filter === "succeeded" && proposal.status !== 1) return false;
@@ -224,7 +225,7 @@ export default function HomePage() {
                 </span>
 
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-sm font-semibold text-zinc-100">
-                  Escrow transparente
+                  {t.trScrow}
                 </span>
 
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-sm font-semibold text-zinc-100">
@@ -273,7 +274,7 @@ export default function HomePage() {
         <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 p-8 shadow-2xl">
             <div className="mb-4 inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-sm text-green-400">
-              Escrow comunitario · transparente · automático
+              {t.autScrow}
             </div>
 
             <h2 className="max-w-3xl text-4xl font-black tracking-tight md:text-5xl">
@@ -330,6 +331,13 @@ export default function HomePage() {
         </section>
 
         <StatsBar proposals={proposals} />
+
+        {wallet.connected && (
+          <UserDashboard
+            dashboard={userDashboard.dashboard}
+            loading={userDashboard.loadingUserDashboard}
+          />
+        )}
 
         {wallet.connected && (
             <ActivityFeed
