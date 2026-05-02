@@ -13,6 +13,7 @@ type Proposal = {
   status: number;
   executed: boolean;
   metadataURI?: string;
+  feed:string
 };
 
 type Props = {
@@ -68,7 +69,7 @@ export function ProposalCard({
   connected,
   onFund,
   onFinalize,
-  onWithdraw,
+  onWithdraw
 }: Props) {
   const p = proposal;
   const metadata = parseMetadata(p.metadataURI);

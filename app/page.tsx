@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useLocalWallet } from "../hooks/useLocalWallet";
 import { useKastj } from "../hooks/useKastj";
@@ -10,14 +10,12 @@ import { useActivityFeed } from "../hooks/useActivityFeed";
 import { StatsBar } from "../components/dashboard/StatsBar";
 import { CreateProposalForm } from "../components/proposal/CreateProposalForm";
 import { ProposalCard } from "../components/proposal/ProposalCard";
-import { WalletStatus } from "../components/wallet/WalletStatus";
 import { UserDashboard } from "../components/dashboard/UserDashboard";
 import { ActivityFeed } from "../components/activity/ActivityFeed";
-import { KastjLogo } from "../components/brand/KastjLogo";
-import { UiToggles } from "../components/settings/UiToggles";
 import { NETWORK } from "../lib/network";
 import { supabase } from "../lib/supabase";
 import { useLanguage } from "../contexts/LanguageContext";
+import { AppHeader } from "../components/layout/AppHeader";
 
 type Filter =
   | "all"
@@ -27,12 +25,7 @@ type Filter =
   | "succeeded"
   | "failed";
 
-  type Sort = "newest" | "raised" | "ending";
-
-function short(addr: string) {
-  if (!addr) return "";
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
+type Sort = "newest" | "raised" | "ending";
 
 function metadataText(metadataURI?: string) {
   if (!metadataURI?.startsWith("local://")) return "";
@@ -70,19 +63,19 @@ export default function HomePage() {
 
   const { t } = useLanguage();
   const userDashboard = useUserDashboard(wallet.address);
+  
 
-  const supportedIdsSet = new Set(
-    userDashboard.dashboard.supportedIds ?? supportedIds
-  );
+  const supportedIdsSet = useMemo(() => {
+    return new Set(userDashboard.dashboard.supportedIds ?? supportedIds);
+  }, [userDashboard.dashboard.supportedIds, supportedIds]);
   
   const filteredProposals = proposals
     .filter((proposal) => {
-      const myAddress = wallet.address?.toLowerCase();
 
       if (filter === "active" && proposal.status !== 0) return false;
 
       if (filter === "mine") {
-        return proposal.creator === wallet.address;
+        return proposal.creator.toLowerCase() === wallet.address?.toLowerCase();
       }
 
       if (filter === "supported") {
@@ -233,6 +226,13 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#182131,_#09090b_45%)] p-6 text-white md:p-10">
       <div className="mx-auto max-w-6xl space-y-8">
+        <AppHeader
+          description={t.descriptionApp}
+          connected={wallet.connected}
+          address={wallet.address}
+          connect={wallet.connect}
+          signer={wallet.signer}
+        />
         <header className="relative overflow-hidden rounded-[2rem] border border-zinc-800 bg-[#101114] p-8 text-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950/80">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.20),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.18),_transparent_30%)]" />
 
@@ -250,10 +250,6 @@ export default function HomePage() {
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-sm font-semibold text-zinc-100">
                   93% / 5% / 2%
                 </span>
-              </div>
-
-              <div className="[&_*]:!text-white [&_.text-green-400]:!text-green-300">
-                <KastjLogo />
               </div>
 
               <p className="mt-4 max-w-2xl text-lg leading-8 !text-zinc-200">
@@ -275,17 +271,6 @@ export default function HomePage() {
                   {t.explore}
                 </a>
               </div>
-            </div>
-
-            <div className="flex flex-col gap-3 md:items-end">
-              <UiToggles />
-
-              <WalletStatus
-                connected={wallet.connected}
-                address={wallet.address}
-                connect={wallet.connect}
-                signer={wallet.signer}
-              />
             </div>
           </div>
         </header>

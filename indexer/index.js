@@ -17,6 +17,7 @@ const ABI = [
   "event ProposalFunded(uint256 indexed id,address indexed supporter,uint256 amount,uint256 totalRaised)",
   "event ProposalFinalized(uint256 indexed id,bool success,uint256 totalRaised)",
   "function finalize(uint256 id) external",
+  "function proposalCount() view returns (uint256)",
 ];
 
 const contract = new ethers.Contract(
@@ -24,6 +25,12 @@ const contract = new ethers.Contract(
   ABI,
   wallet
 );
+
+console.log("Indexer manager:", process.env.MANAGER_ADDRESS);
+console.log("Indexer signer:", wallet.address);
+
+const count = await contract.proposalCount();
+console.log("On-chain proposal count:", count.toString());
 
 async function saveActivity({ type, proposalId, actor, amount, message }) {
   const { error } = await supabase.from("activity").insert({
@@ -66,6 +73,13 @@ contract.on(
   "ProposalCreated",
   async (id, creator, recipient, goal, deadline, metadataURI) => {
     const metadata = parseMetadata(metadataURI);
+
+    await supabase.from("proposal_metadata").upsert({
+      proposal_id: Number(id),
+      title: metadata.title,
+      description: metadata.description,
+      created_at: metadata.createdAt,
+    });
 
     const { error } = await supabase.from("proposals").upsert({
       id: Number(id),
@@ -165,40 +179,6 @@ contract.on("ProposalFinalized", async (id, success, totalRaised) => {
   console.log("Finalizada propuesta:", Number(id));
 });
 
-async function autoFinalize() {
-  try {
-    const now = Math.floor(Date.now() / 1000);
-
-    const { data, error } = await supabase
-      .from("proposals")
-      .select("id")
-      .eq("status", "active")
-      .lte("deadline", now);
-
-    if (error) {
-      console.error("Auto-finalize fetch error:", error);
-      return;
-    }
-
-    for (const p of data) {
-      try {
-        console.log("Auto-finalizing proposal", p.id);
-
-        const tx = await manager.finalize(p.id);
-        await tx.wait();
-
-        console.log("Finalized:", p.id);
-      } catch (err) {
-        console.error("Finalize error for", p.id, err.message);
-      }
-    }
-  } catch (err) {
-    console.error("Auto-finalize loop error:", err);
-  }
-}
-
-setInterval(autoFinalize, 3000); // cada 10 segundos
-
 async function autoFinalizeExpiredProposals() {
   try {
     const now = Math.floor(Date.now() / 1000);
@@ -214,36 +194,35 @@ async function autoFinalizeExpiredProposals() {
       return;
     }
 
-    if (!data || data.length === 0) {
-      return;
-    }
-
-    for (const proposal of data) {
+    for (const proposal of data ?? []) {
       try {
         console.log(`Auto-finalizing proposal #${proposal.id}...`);
 
         const tx = await contract.finalize(proposal.id);
         await tx.wait();
 
-        const success = BigInt(proposal.total_raised) >= BigInt(proposal.goal);
-
-        console.log(
-          `Proposal #${proposal.id} finalized as ${
-            success ? "succeeded" : "failed"
-          }`
-        );
+        console.log(`Proposal #${proposal.id} finalized`);
       } catch (err) {
-        console.error(
-          `Auto-finalize failed for proposal #${proposal.id}:`,
-          err.message
-        );
+        const msg = err?.shortMessage || err?.message || String(err);
+
+        console.error(`Auto-finalize failed for proposal #${proposal.id}:`, msg);
+
+        if (
+          msg.includes("Proposal not found") ||
+          msg.includes("Already") ||
+          msg.includes("require(false)")
+        ) {
+          await supabase
+            .from("proposals")
+            .update({ status: "stale" })
+            .eq("id", proposal.id);
+        }
       }
     }
   } catch (err) {
-    console.error("Auto-finalizer loop error:", err.message);
+    console.error("Auto-finalizer loop error:", err?.message || err);
   }
 }
 
-setInterval(autoFinalizeExpiredProposals, 10_000);
-
+setInterval(autoFinalizeExpiredProposals, 10000);
 console.log("Auto-finalizer running every 10 seconds...");

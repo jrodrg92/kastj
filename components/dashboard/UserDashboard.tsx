@@ -4,6 +4,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 export function UserDashboard({
   dashboard,
   loading,
+  onWithdrawAll,
 }: {
   dashboard: {
     totalContributed: string;
