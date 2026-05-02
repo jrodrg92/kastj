@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { isAddress } from "ethers";
+import { isAddress, parseEther, formatEther } from "ethers";
 import { createProposalSchema, fundProposalSchema } from "../lib/validation";
+import { calculateMinThreshold } from "../core/domain/ThresholdRules";
 
 import { useLocalWallet } from "../hooks/useLocalWallet";
 import { useProposalEngine } from "../hooks/useProposalEngine";
@@ -115,9 +116,28 @@ export default function HomePage() {
   const [description, setDescription] = useState("");
   const [recipient, setRecipient] = useState("");
   const [goal, setGoal] = useState("10000");
-  const [minThreshold, setMinThreshold] = useState("100");
   const [duration, setDuration] = useState("86400");
   const [fundAmount, setFundAmount] = useState("1");
+
+  const autoThresholdStr = useMemo(() => {
+    try {
+      const g = parseEther(goal || "0");
+      const d = Number(duration || "0");
+      const wei = calculateMinThreshold(g, d);
+      return formatEther(wei);
+    } catch {
+      return "0";
+    }
+  }, [goal, duration]);
+
+  const [minThreshold, setMinThreshold] = useState("4000");
+
+  // Keep minThreshold in sync if it falls below autoThreshold
+  useEffect(() => {
+    if (Number(minThreshold) < Number(autoThresholdStr)) {
+      setMinThreshold(autoThresholdStr);
+    }
+  }, [autoThresholdStr, minThreshold]);
 
   const supportedIdsSet = useMemo(() => {
     return new Set(userDashboard.dashboard.supportedIds ?? supportedIds);
@@ -218,23 +238,28 @@ export default function HomePage() {
       })
     )}`;
 
-    await createMutation.mutateAsync({
-      recipient,
-      asset: { type: "native" },
-      goal,
-      minThreshold,
-      durationSeconds: Number(duration),
-      metadataURI,
-    });
+    try {
+      await createMutation.mutateAsync({
+        recipient,
+        asset: { type: "native" },
+        goal,
+        minThreshold,
+        durationSeconds: Number(duration),
+        metadataURI,
+      });
 
-    setTitle("");
-    setDescription("");
-    setRecipient("");
-    setGoal("10000");
-    setMinThreshold("100");
-    setDuration("86400");
+      setTitle("");
+      setDescription("");
+      setRecipient("");
+      setGoal("10000");
+      setMinThreshold("100");
+      setDuration("86400");
 
-    await loadMySupportedProposals();
+      await loadMySupportedProposals();
+    } catch (e) {
+      // Error is handled by the mutation's onError toast
+      console.debug("Create mutation failed:", e);
+    }
   }
 
   async function handleFund(id: number) {
@@ -253,30 +278,46 @@ export default function HomePage() {
       return;
     }
 
-    await fundMutation.mutateAsync({
-      proposalId: id,
-      asset: proposal.asset,
-      amount: fundAmount,
-    });
+    try {
+      await fundMutation.mutateAsync({
+        proposalId: id,
+        asset: proposal.asset,
+        amount: fundAmount,
+      });
 
-    await loadMySupportedProposals();
+      await loadMySupportedProposals();
+    } catch (e) {
+      console.debug("Fund mutation failed:", e);
+    }
   }
 
   async function handleFinalize(id: number) {
-    await finalizeMutation.mutateAsync(id);
-    await loadMySupportedProposals();
+    try {
+      await finalizeMutation.mutateAsync(id);
+      await loadMySupportedProposals();
+    } catch (e) {
+      console.debug("Finalize mutation failed:", e);
+    }
   }
 
   async function handleWithdraw(id: number) {
-    await withdrawMutation.mutateAsync(id);
-    await loadMySupportedProposals();
+    try {
+      await withdrawMutation.mutateAsync(id);
+      await loadMySupportedProposals();
+    } catch (e) {
+      console.debug("Withdraw mutation failed:", e);
+    }
   }
 
   async function handleWithdrawAll(ids: number[]) {
     if (!ids.length) return;
 
-    await withdrawManyMutation.mutateAsync(ids);
-    await loadMySupportedProposals();
+    try {
+      await withdrawManyMutation.mutateAsync(ids);
+      await loadMySupportedProposals();
+    } catch (e) {
+      console.debug("Withdraw many mutation failed:", e);
+    }
   }
 
   return (
@@ -366,6 +407,7 @@ export default function HomePage() {
             recipient={recipient}
             goal={goal}
             minThreshold={minThreshold}
+            autoThreshold={autoThresholdStr}
             duration={duration}
             loading={isAnyMutationPending}
             connected={wallet.connected}
@@ -407,11 +449,10 @@ export default function HomePage() {
               <button
                 key={item.key}
                 onClick={() => setFilter(item.key as Filter)}
-                className={`rounded-xl px-4 py-2 font-semibold transition ${
-                  filter === item.key
+                className={`rounded-xl px-4 py-2 font-semibold transition ${filter === item.key
                     ? "bg-white text-black"
                     : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                }`}
+                  }`}
               >
                 {item.label}
               </button>
@@ -453,10 +494,10 @@ export default function HomePage() {
           {wallet.connected &&
             filteredProposals.length === 0 &&
             !proposalsQuery.isLoading && (
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
-              {t.noProposalsFilter}
-            </div>
-          )}
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
+                {t.noProposalsFilter}
+              </div>
+            )}
 
           {wallet.connected && proposalsQuery.isLoading && (
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">

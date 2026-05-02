@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { parseEther } from "ethers";
+import { calculateMinThreshold } from "../core/domain/ThresholdRules";
 
 export const createProposalSchema = z.object({
     title: z
@@ -21,9 +23,21 @@ export const createProposalSchema = z.object({
         .refine((v) => Number(v) >= 60, "durationTooShort"),
 }).refine(
     (data) => {
-        const threshold = Number(data.minThreshold);
-        const goal = Number(data.goal);
-        return threshold > 0 && threshold <= goal;
+        try {
+            const thresholdNum = Number(data.minThreshold);
+            const goalNum = Number(data.goal);
+
+            if (thresholdNum <= 0 || thresholdNum > goalNum) return false;
+
+            const goalWei = parseEther(data.goal);
+            const durationSecs = Number(data.duration);
+            const minAllowedWei = calculateMinThreshold(goalWei, durationSecs);
+            const thresholdWei = parseEther(data.minThreshold);
+
+            return thresholdWei >= minAllowedWei;
+        } catch {
+            return false;
+        }
     },
     {
         message: "invalidThreshold",

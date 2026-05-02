@@ -53,7 +53,7 @@ describe("Kastj escrow security", function () {
         creator,
         recipient,
         goal = "10",
-        threshold = "5",
+        threshold = "10",
         duration = 30 * 24 * 60 * 60,
     }: any) {
         const tx = await manager
@@ -98,7 +98,7 @@ describe("Kastj escrow security", function () {
             creator,
             recipient,
             goal: "10",
-            threshold: "5",
+            threshold: "10",
         });
 
         await manager.connect(supporter).fundNative(proposalId, {
@@ -124,7 +124,7 @@ describe("Kastj escrow security", function () {
             creator,
             recipient,
             goal: "10",
-            threshold: "5",
+            threshold: "10",
         });
 
         await manager.connect(supporter).fundNative(proposalId, {
@@ -158,7 +158,7 @@ describe("Kastj escrow security", function () {
             creator,
             recipient: creator,
             goal: "10",
-            threshold: "5",
+            threshold: "10",
         });
 
         await manager.connect(supporter).fundNative(proposalId, {
@@ -187,7 +187,7 @@ describe("Kastj escrow security", function () {
             creator,
             recipient,
             goal: "10",
-            threshold: "5",
+            threshold: "10",
         });
 
         await manager.connect(supporter).fundNative(proposalId, {
@@ -209,7 +209,7 @@ describe("Kastj escrow security", function () {
             creator,
             recipient,
             goal: "10",
-            threshold: "5",
+            threshold: "10",
         });
 
         await manager.connect(supporter).fundNative(proposalId, {
@@ -235,7 +235,7 @@ describe("Kastj escrow security", function () {
             creator,
             recipient,
             goal: "10",
-            threshold: "5",
+            threshold: "10",
         });
 
         await manager.connect(supporter).fundNative(proposalId, {
@@ -249,5 +249,55 @@ describe("Kastj escrow security", function () {
         await expect(vault.connect(supporter).withdraw(proposalId)).to.be.revertedWith(
             "Not allowed",
         );
+    });
+
+    describe("Auto-Threshold Enforcement", function () {
+        it("rechaza crear propuesta si el threshold es menor al calculado internamente", async function () {
+            const { manager, creator, recipient } = await deployFixture();
+
+            // Goal = 10 KAS = 10 * 10^18 wei. This is >> 50000 * 10^8 atomic units.
+            // So base percentage is 60%.
+            // Duration = 30 days. Duration modifier is +5%.
+            // Final minimum threshold should be 65%.
+            // 65% of 10 = 6.5.
+            
+            // Try with 5 KAS (< 6.5) -> Should revert
+            await expect(
+                manager.connect(creator).createProposal(
+                    recipient.address,
+                    ethers.ZeroAddress,
+                    ethers.parseEther("10"),
+                    ethers.parseEther("5"), // 50%
+                    30 * 24 * 60 * 60,
+                    "ipfs://proposal"
+                )
+            ).to.be.revertedWith("Threshold below auto-min");
+        });
+
+        it("permite crear propuesta si el threshold es igual o mayor al calculado internamente", async function () {
+            const { manager, creator, recipient } = await deployFixture();
+
+            // Try with 6.5 KAS (65%) -> Should succeed
+            const tx1 = await manager.connect(creator).createProposal(
+                recipient.address,
+                ethers.ZeroAddress,
+                ethers.parseEther("10"),
+                ethers.parseEther("6.5"),
+                30 * 24 * 60 * 60,
+                "ipfs://proposal"
+            );
+            await tx1.wait();
+
+            // Try with 10 KAS (100%) -> Should succeed
+            const tx2 = await manager.connect(creator).createProposal(
+                recipient.address,
+                ethers.ZeroAddress,
+                ethers.parseEther("10"),
+                ethers.parseEther("10"),
+                30 * 24 * 60 * 60,
+                "ipfs://proposal"
+            );
+            await tx2.wait();
+        });
     });
 });

@@ -32,6 +32,7 @@ contract ProposalManager {
     EscrowVault public vault;
 
     mapping(uint256 => Proposal) public proposals;
+    mapping(address => uint8) public tokenDecimals;
 
     event ProposalCreated(
         uint256 indexed proposalId,
@@ -57,6 +58,54 @@ contract ProposalManager {
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");
         _;
+    }
+
+    function setTokenDecimals(address token, uint8 decimals) external onlyOwner {
+        require(token != address(0), "Native KAS is fixed at 8");
+        require(decimals > 0, "Invalid decimals");
+        tokenDecimals[token] = decimals;
+    }
+
+    function _calculateMinThreshold(
+        uint256 goalAmount,
+        uint256 durationSeconds,
+        uint8 decimals
+    ) internal pure returns (uint256) {
+        uint256 oneUnit = 10 ** uint256(decimals);
+        
+        uint256 basePercentage;
+        if (goalAmount < 1000 * oneUnit) {
+            basePercentage = 30;
+        } else if (goalAmount < 10000 * oneUnit) {
+            basePercentage = 40;
+        } else if (goalAmount < 50000 * oneUnit) {
+            basePercentage = 50;
+        } else {
+            basePercentage = 60;
+        }
+
+        uint256 daysCount = durationSeconds / 1 days;
+        int256 durationModifier;
+        
+        if (daysCount <= 3) {
+            durationModifier = -5;
+        } else if (daysCount <= 14) {
+            durationModifier = 0;
+        } else if (daysCount <= 30) {
+            durationModifier = 5;
+        } else {
+            durationModifier = 10;
+        }
+
+        int256 finalPercentage = int256(basePercentage) + durationModifier;
+        
+        if (finalPercentage < 25) {
+            finalPercentage = 25;
+        } else if (finalPercentage > 80) {
+            finalPercentage = 80;
+        }
+
+        return (goalAmount * uint256(finalPercentage)) / 100;
     }
 
     modifier proposalExists(uint256 proposalId) {
@@ -87,6 +136,15 @@ contract ProposalManager {
         require(minThreshold <= goalAmount, "Threshold above goal");
         require(durationSeconds > 0, "Invalid duration");
         require(bytes(metadataURI).length > 0, "Invalid metadata");
+
+        uint8 decimals = 8;
+        if (token != address(0)) {
+            decimals = tokenDecimals[token];
+            require(decimals > 0, "Token not supported");
+        }
+
+        uint256 autoThreshold = _calculateMinThreshold(goalAmount, durationSeconds, decimals);
+        require(minThreshold >= autoThreshold, "Threshold below auto-min");
 
         proposalCount++;
 

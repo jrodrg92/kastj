@@ -8,6 +8,7 @@ type Props = {
   recipient: string;
   goal: string;
   minThreshold: string;
+  autoThreshold: string;
   duration: string;
   loading: boolean;
   connected: boolean;
@@ -34,6 +35,7 @@ export function CreateProposalForm({
   recipient,
   goal,
   minThreshold,
+  autoThreshold,
   duration,
   loading,
   connected,
@@ -122,10 +124,24 @@ export function CreateProposalForm({
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-zinc-300">
-              {t.minThreshold} ({NETWORK.currency})
-            </label>
+            <div className="mb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <label className="text-sm font-semibold text-zinc-300">
+                {t.minThreshold} ({NETWORK.currency}){" "}
+                <span className="font-normal text-zinc-500">
+                  (Min: {Number(autoThreshold).toFixed(2)})
+                </span>
+              </label>
+              {Number(minThreshold) > 0 && Number(minThreshold) >= Number(goal) && (
+                <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  🎯 All or Nothing Mode
+                </span>
+              )}
+            </div>
             <input
+              type="number"
+              min={autoThreshold}
+              max={goal}
+              step="any"
               className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
               placeholder={`Ej: 5 ${NETWORK.currency}`}
               value={minThreshold}

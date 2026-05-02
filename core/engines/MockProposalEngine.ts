@@ -59,16 +59,16 @@ export class MockProposalEngine implements ProposalEngine {
             (p) => p.id === input.proposalId,
         );
 
-        if (!proposal) {
-            throw new Error("Proposal not found");
+        // In hybrid mode (mock engine + Supabase data), the proposal
+        // may exist in DB but not in the mock's in-memory array.
+        if (proposal) {
+            proposal.totalRaised = {
+                ...proposal.totalRaised,
+                value: String(
+                    Number(proposal.totalRaised.value) + Number(input.amount),
+                ),
+            };
         }
-
-        proposal.totalRaised = {
-            ...proposal.totalRaised,
-            value: String(
-                Number(proposal.totalRaised.value) + Number(input.amount),
-            ),
-        };
 
         return { txId: `mock-fund-${input.proposalId}` };
     }
@@ -79,16 +79,14 @@ export class MockProposalEngine implements ProposalEngine {
     ): Promise<TxResult> {
         const proposal = this.proposals.find((p) => p.id === proposalId);
 
-        if (!proposal) {
-            throw new Error("Proposal not found");
+        if (proposal) {
+            const raised = Number(proposal.totalRaised.value);
+            const threshold = Number(proposal.minThreshold.value);
+
+            proposal.status = raised >= threshold ? "succeeded" : "failed";
+            proposal.canFinalize = false;
+            proposal.canWithdraw = proposal.status === "failed";
         }
-
-        const raised = Number(proposal.totalRaised.value);
-        const threshold = Number(proposal.minThreshold.value);
-
-        proposal.status = raised >= threshold ? "succeeded" : "failed";
-        proposal.canFinalize = false;
-        proposal.canWithdraw = proposal.status === "failed";
 
         return { txId: `mock-finalize-${proposalId}` };
     }

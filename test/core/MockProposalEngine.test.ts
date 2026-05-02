@@ -131,4 +131,20 @@ describe("MockProposalEngine", function () {
             expect((e as Error).message).to.equal("Proposal not found");
         }
     });
+
+    it("funds a non-existent proposal in hybrid mode (Supabase-only)", async function () {
+        // In hybrid mode, proposals exist in Supabase but not in mock memory
+        const result = await engine.fundProposal(ctx, {
+            proposalId: 42,
+            asset: { type: "native" },
+            amount: "10",
+        });
+
+        expect(result.txId).to.equal("mock-fund-42");
+    });
+
+    it("finalizes a non-existent proposal in hybrid mode", async function () {
+        const result = await engine.finalizeProposal(ctx, 42);
+        expect(result.txId).to.equal("mock-finalize-42");
+    });
 });
