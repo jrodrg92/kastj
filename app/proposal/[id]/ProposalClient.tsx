@@ -16,6 +16,8 @@ import {
 } from "../../../lib/time";
 import { AppHeader } from "../../../components/layout/AppHeader";
 import { InfoTooltip } from "../../../components/ui/InfoTooltip";
+import { History, ChevronDown } from "lucide-react";
+import { ProposalMessages } from "../../../components/proposal/ProposalMessages";
 
 import type { DbProposal, DbFunding, DbActivity } from "../../../types/supabase";
 import { useFundProposal } from "../../../features/proposals/hooks/useFundProposal";
@@ -95,7 +97,9 @@ export default function ProposalClient() {
   const [fundings, setFundings] = useState<DbFunding[]>([]);
   const [activity, setActivity] = useState<DbActivity[]>([]);
   const [myContribution, setMyContribution] = useState("0");
-  const [fundAmount, setFundAmount] = useState("1");
+  const [fundAmount, setFundAmount] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [isActivityExpanded, setIsActivityExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function loadDetail() {
@@ -258,8 +262,6 @@ export default function ProposalClient() {
     await finalizeMutation.mutateAsync(proposalId);
     await loadDetail();
   }
-
-  const [copied, setCopied] = useState(false);
 
   async function handleWithdraw() {
     if (!wallet.connected) {
@@ -436,37 +438,63 @@ export default function ProposalClient() {
               </div>
             </section>
 
-            <section className="premium-glass rounded-3xl p-8 lg:p-10">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">Proposal activity</h2>
+            <ProposalMessages
+              proposalId={proposalId}
+              currentWallet={wallet.address}
+              creatorWallet={proposal.creator}
+              recipientWallet={proposal.recipient}
+            />
 
-              {activity.length === 0 && (
-                <p className="mt-4 text-muted-foreground">No activity yet.</p>
+            <section className="premium-glass rounded-3xl p-6 lg:p-8">
+              <button 
+                onClick={() => setIsActivityExpanded(!isActivityExpanded)}
+                className="flex w-full items-center justify-between group"
+              >
+                <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-3">
+                  <History className="h-6 w-6 text-emerald-500" />
+                  Proposal activity
+                </h2>
+                <div className="flex items-center gap-3">
+                  <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-black text-emerald-500 border border-emerald-500/20">
+                    {activity.length} events
+                  </span>
+                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${isActivityExpanded ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+
+              {isActivityExpanded && (
+                <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                  {activity.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No activity yet.</p>
+                  ) : (
+                      <div className="max-h-[400px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                        {activity.map((item, index) => (
+                          <div
+                            key={item.id}
+                            className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both flex items-start gap-4 rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/20"
+                            style={{ animationDelay: `${index * 50}ms` }}
+                          >
+                            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl shadow-sm ${
+                              item.type === 'funded' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500' : 
+                              item.type === 'created' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-500' : 
+                              item.type === 'failed' ? 'bg-red-500/10 text-red-600 dark:text-red-500' : 'bg-secondary'
+                            }`}>
+                              {activityIcon(item.type)}
+                            </span>
+        
+                            <div>
+                              <p className="font-medium text-foreground">{item.message}</p>
+                              <p className="text-sm text-muted-foreground/80">
+                                {item.actor ? short(item.actor) : "System"} ·{" "}
+                                {new Date(item.created_at ?? 0).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                  )}
+                </div>
               )}
-
-              <div className="mt-5 max-h-[400px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                {activity.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both flex items-start gap-4 rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/20"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl shadow-sm ${
-                      item.type === 'funded' ? 'bg-emerald-500/10 text-emerald-500' : 
-                      item.type === 'created' ? 'bg-blue-500/10 text-blue-500' : 'bg-secondary'
-                    }`}>
-                      {activityIcon(item.type)}
-                    </span>
-
-                    <div>
-                      <p className="font-medium text-foreground">{item.message}</p>
-                      <p className="text-sm text-muted-foreground/80">
-                        {item.actor ? short(item.actor) : "System"} ·{" "}
-                        {new Date(item.created_at ?? 0).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </section>
           </div>
 
@@ -482,7 +510,7 @@ export default function ProposalClient() {
                   </p>
                 </div>
 
-                <p className={`text-3xl font-bold tracking-tight ${percent >= thresholdPercent ? 'text-emerald-500' : 'text-amber-500'}`}>
+                <p className={`text-3xl font-bold tracking-tight ${percent >= thresholdPercent ? 'text-emerald-600 dark:text-emerald-500' : 'text-amber-600 dark:text-amber-500'}`}>
                   {percent.toFixed(1)}%
                 </p>
               </div>
@@ -499,8 +527,8 @@ export default function ProposalClient() {
                 <div
                   className={`h-full rounded-full transition-all duration-1000 ease-out ${
                     percent >= thresholdPercent 
-                      ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]" 
-                      : "bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                      ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)] dark:shadow-[0_0_12px_rgba(16,185,129,0.8)]" 
+                      : "bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.2)] dark:shadow-[0_0_12px_rgba(245,158,11,0.5)]"
                   }`}
                   style={{ width: `${percent}%` }}
                 />
