@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { isAddress } from "ethers";
+import { createProposalSchema, fundProposalSchema } from "../lib/validation";
 
 import { useLocalWallet } from "../hooks/useLocalWallet";
 import { useProposalEngine } from "../hooks/useProposalEngine";
 import { useUserDashboard } from "../hooks/useUserDashboard";
 import { useActivityFeed } from "../hooks/useActivityFeed";
+import { useRealtimeNotifications } from "../hooks/useRealtimeNotifications";
 
 import { StatsBar } from "../components/dashboard/StatsBar";
 import { CreateProposalForm } from "../components/proposal/CreateProposalForm";
@@ -20,7 +22,7 @@ import { NETWORK } from "../lib/network";
 import { supabase } from "../lib/supabase";
 import { useLanguage } from "../contexts/LanguageContext";
 
-import { useProposals } from "../features/proposals/hooks/useProposals";
+import { useInfiniteProposals } from "../features/proposals/hooks/useInfiniteProposals";
 import { useCreateProposal } from "../features/proposals/hooks/useCreateProposal";
 import { useFundProposal } from "../features/proposals/hooks/useFundProposal";
 import { useFinalizeProposal } from "../features/proposals/hooks/useFinalizeProposal";
@@ -37,7 +39,7 @@ type Filter =
 
 type Sort = "newest" | "raised" | "ending";
 
-function metadataText(metadataURI?: string) {
+function metadataText(metadataURI?: string | null) {
   if (!metadataURI?.startsWith("local://")) return "";
 
   try {
@@ -56,9 +58,39 @@ export default function HomePage() {
   const { ctx } = useProposalEngine(wallet.address, wallet.signer);
   const feed = useActivityFeed();
   const { t } = useLanguage();
-  const proposalsQuery = useProposals();
-  const proposals = proposalsQuery.data ?? [];
+  const proposalsQuery = useInfiniteProposals();
+  const proposals = useMemo(
+    () => proposalsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [proposalsQuery.data],
+  );
   const userDashboard = useUserDashboard(wallet.address);
+  useRealtimeNotifications(wallet.address);
+
+  // Infinite scroll observer
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries;
+      if (
+        entry.isIntersecting &&
+        proposalsQuery.hasNextPage &&
+        !proposalsQuery.isFetchingNextPage
+      ) {
+        void proposalsQuery.fetchNextPage();
+      }
+    },
+    [proposalsQuery],
+  );
+
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(handleObserver, {
+      rootMargin: "200px",
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [handleObserver]);
 
   // Mutations via engine abstraction
   const createMutation = useCreateProposal(ctx);
@@ -164,28 +196,18 @@ export default function HomePage() {
       return;
     }
 
-    if (!title.trim()) {
-      toast.error(t.titleRequired);
-      return;
-    }
+    const result = createProposalSchema.safeParse({
+      title,
+      description,
+      recipient,
+      goal,
+      minThreshold,
+      duration,
+    });
 
-    if (!description.trim()) {
-      toast.error(t.descriptionRequired);
-      return;
-    }
-
-    if (!isAddress(recipient)) {
-      toast.error(t.invalidRecipient);
-      return;
-    }
-
-    if (Number(goal) <= 0) {
-      toast.error(t.invalidGoal);
-      return;
-    }
-
-    if (Number(minThreshold) <= 0 || Number(minThreshold) > Number(goal)) {
-      toast.error(t.invalidThreshold);
+    if (!result.success) {
+      const key = result.error.issues[0].message as keyof typeof t;
+      toast.error(t[key] ?? result.error.issues[0].message);
       return;
     }
 
@@ -223,8 +245,11 @@ export default function HomePage() {
       return;
     }
 
-    if (Number(fundAmount) <= 0) {
-      toast.error(t.invalidAmount);
+    const validation = fundProposalSchema.safeParse({ amount: fundAmount });
+
+    if (!validation.success) {
+      const key = validation.error.issues[0].message as keyof typeof t;
+      toast.error(t[key] ?? validation.error.issues[0].message);
       return;
     }
 
@@ -452,6 +477,22 @@ export default function HomePage() {
               onWithdraw={handleWithdraw}
             />
           ))}
+
+          {/* Infinite scroll sentinel */}
+          <div ref={loadMoreRef} className="py-4 text-center">
+            {proposalsQuery.isFetchingNextPage && (
+              <p className="text-zinc-400">{t.loading}</p>
+            )}
+            {proposalsQuery.hasNextPage &&
+              !proposalsQuery.isFetchingNextPage && (
+                <button
+                  onClick={() => void proposalsQuery.fetchNextPage()}
+                  className="rounded-xl bg-zinc-800 px-5 py-3 font-bold text-zinc-300 transition hover:bg-zinc-700"
+                >
+                  {t.loading}
+                </button>
+              )}
+          </div>
         </section>
       </div>
     </main>

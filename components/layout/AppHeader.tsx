@@ -34,6 +34,15 @@ export function AppHeader({
         <div className="flex shrink-0 flex-wrap items-center gap-3">
           <UiToggles />
 
+          {connected && (
+            <Link
+              href="/profile"
+              className="flex h-10 items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900 px-3 text-sm font-bold text-zinc-200 transition hover:bg-zinc-800"
+            >
+              👤
+            </Link>
+          )}
+
            <WalletStatus
                 connected={connected}
                 address={address ?? ""}

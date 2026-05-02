@@ -12,7 +12,7 @@ type Proposal = {
   totalRaised: string;
   status: number;
   executed?: boolean;
-  metadataURI?: string;
+  metadataURI?: string | null;
 };
 
 type Props = {
@@ -73,7 +73,7 @@ export function ProposalCard({
   onWithdraw
 }: Props) {
   const p = proposal;
-  const metadata = parseMetadata(p.metadataURI);
+  const metadata = parseMetadata(p.metadataURI ?? undefined);
 
   const percent =
     Number(p.goal) > 0
