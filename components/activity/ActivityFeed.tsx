@@ -36,10 +36,10 @@ export function ActivityFeed({
         <span className="font-semibold">Actividad reciente</span>
         <span>{collapsed ? 
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M6 9l9 9 10-10" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg> : 
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M6 9l9 9 10-10" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>}
         </span>
       </button>

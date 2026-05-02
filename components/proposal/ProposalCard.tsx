@@ -11,9 +11,8 @@ type Proposal = {
   deadline: number;
   totalRaised: string;
   status: number;
-  executed: boolean;
+  executed?: boolean;
   metadataURI?: string;
-  feed:string
 };
 
 type Props = {

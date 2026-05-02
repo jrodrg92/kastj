@@ -7,6 +7,7 @@ type Props = {
   description: string;
   recipient: string;
   goal: string;
+  minThreshold: string;
   duration: string;
   loading: boolean;
   connected: boolean;
@@ -14,6 +15,7 @@ type Props = {
   onDescriptionChange: (value: string) => void;
   onRecipientChange: (value: string) => void;
   onGoalChange: (value: string) => void;
+  onMinThresholdChange: (value: string) => void;
   onDurationChange?: (value: string) => void;
   onCreate: () => Promise<void>;
 };
@@ -31,6 +33,7 @@ export function CreateProposalForm({
   description,
   recipient,
   goal,
+  minThreshold,
   duration,
   loading,
   connected,
@@ -38,6 +41,7 @@ export function CreateProposalForm({
   onDescriptionChange,
   onRecipientChange,
   onGoalChange,
+  onMinThresholdChange,
   onDurationChange,
   onCreate,
 }: Props) {
@@ -94,7 +98,7 @@ export function CreateProposalForm({
 
         <div>
           <label className="mb-2 block text-sm font-semibold text-zinc-300">
-            {t.walletreceivers}
+            {t.walletreceiver}
           </label>
           <input
             className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
@@ -104,7 +108,7 @@ export function CreateProposalForm({
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <div>
             <label className="mb-2 block text-sm font-semibold text-zinc-300">
               {t.objetive} ({NETWORK.currency})
@@ -114,6 +118,18 @@ export function CreateProposalForm({
               placeholder={`Ej: 10 ${NETWORK.currency}`}
               value={goal}
               onChange={(e) => onGoalChange(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-zinc-300">
+              {t.minThreshold} ({NETWORK.currency})
+            </label>
+            <input
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
+              placeholder={`Ej: 5 ${NETWORK.currency}`}
+              value={minThreshold}
+              onChange={(e) => onMinThresholdChange(e.target.value)}
             />
           </div>
 

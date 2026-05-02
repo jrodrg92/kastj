@@ -73,11 +73,6 @@ export function useUserDashboard(address?: string) {
         withdrawable += amount;
         withdrawableIds.push(Number(funding.proposal_id));
       }
-
-      if (proposalStatus === "failed") {
-        withdrawable += amount;
-        withdrawableIds.push(Number(funding.proposal_id));
-      }
     }
 
     setDashboard({

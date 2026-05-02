@@ -65,9 +65,6 @@ export interface ProposalView {
     status: ProposalStatus;
     canWithdraw: boolean;
     canFinalize: boolean;
-    status: ProposalStatus;
-    canWithdraw: boolean;
-    canFinalize: boolean;
 }
 
 export interface ProposalEngine {

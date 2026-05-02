@@ -6,7 +6,6 @@ import { isAddress } from "ethers";
 
 import { useLocalWallet } from "../hooks/useLocalWallet";
 import { useKastj } from "../hooks/useKastj";
-import { useSupabaseProposals } from "../hooks/useSupabaseProposals";
 import { useUserDashboard } from "../hooks/useUserDashboard";
 import { useActivityFeed } from "../hooks/useActivityFeed";
 
@@ -132,9 +131,11 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!wallet.connected) return;
-    proposalsQuery.isLoading
-    proposalsQuery.refetch()
-    loadMySupportedProposals();
+
+    void (async () => {
+      await proposalsQuery.refetch();
+      await loadMySupportedProposals();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallet.connected, wallet.address]);
 
