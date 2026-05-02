@@ -1,19 +1,21 @@
+import type { Metadata } from "next";
 import "./globals.css";
-import { Toaster } from "react-hot-toast";
-import { LanguageProvider } from "../contexts/LanguageContext";
+import { Providers } from "./providers";
+
+export const metadata: Metadata = {
+  title: "Kastj",
+  description: "Conditional crowdfunding on Kaspa",
+};
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
       <body>
-        <LanguageProvider>
-          {children}
-          <Toaster position="top-right" />
-        </LanguageProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

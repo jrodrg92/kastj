@@ -28,9 +28,19 @@ contract EscrowVault {
 
     event ManagerSet(address indexed manager);
     event ProposalRegistered(uint256 indexed proposalId, address indexed token);
-    event Deposited(uint256 indexed proposalId, address indexed supporter, address indexed token, uint256 amount);
+    event Deposited(
+        uint256 indexed proposalId,
+        address indexed supporter,
+        address indexed token,
+        uint256 amount
+    );
     event WithdrawalsEnabled(uint256 indexed proposalId);
-    event Withdrawn(uint256 indexed proposalId, address indexed supporter, address indexed token, uint256 amount);
+    event Withdrawn(
+        uint256 indexed proposalId,
+        address indexed supporter,
+        address indexed token,
+        uint256 amount
+    );
     event Released(
         uint256 indexed proposalId,
         address indexed token,
@@ -82,11 +92,7 @@ contract EscrowVault {
         emit ProposalRegistered(proposalId, token);
     }
 
-    function depositNative(uint256 proposalId, address supporter)
-        external
-        payable
-        onlyManager
-    {
+    function depositNative(uint256 proposalId, address supporter) external payable onlyManager {
         require(proposalRegistered[proposalId], "Proposal not registered");
         require(proposalToken[proposalId] == address(0), "Not native proposal");
         require(supporter != address(0), "Invalid supporter");
@@ -225,12 +231,7 @@ contract EscrowVault {
         require(ok, "Token transfer failed");
     }
 
-    function _safeTransferFrom(
-        address token,
-        address from,
-        address to,
-        uint256 amount
-    ) private {
+    function _safeTransferFrom(address token, address from, address to, uint256 amount) private {
         bool ok = IKRC20(token).transferFrom(from, to, amount);
         require(ok, "Token transferFrom failed");
     }

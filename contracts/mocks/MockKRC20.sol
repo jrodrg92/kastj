@@ -39,11 +39,7 @@ contract MockKRC20 {
         return true;
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool) {
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
         uint256 currentAllowance = allowance[from][msg.sender];
         require(currentAllowance >= amount, "Insufficient allowance");
 

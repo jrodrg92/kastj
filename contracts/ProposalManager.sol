@@ -52,11 +52,7 @@ contract ProposalManager {
         uint256 totalRaised
     );
 
-    event ProposalFinalized(
-        uint256 indexed proposalId,
-        ProposalStatus status,
-        uint256 totalRaised
-    );
+    event ProposalFinalized(uint256 indexed proposalId, ProposalStatus status, uint256 totalRaised);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");
@@ -127,11 +123,7 @@ contract ProposalManager {
         return proposalId;
     }
 
-    function fundNative(uint256 proposalId)
-        external
-        payable
-        proposalExists(proposalId)
-    {
+    function fundNative(uint256 proposalId) external payable proposalExists(proposalId) {
         Proposal storage p = proposals[proposalId];
 
         require(p.status == ProposalStatus.Active, "Not active");
@@ -144,19 +136,10 @@ contract ProposalManager {
 
         vault.depositNative{value: msg.value}(proposalId, msg.sender);
 
-        emit ProposalFunded(
-            proposalId,
-            msg.sender,
-            address(0),
-            msg.value,
-            p.totalRaised
-        );
+        emit ProposalFunded(proposalId, msg.sender, address(0), msg.value, p.totalRaised);
     }
 
-    function fundKrc20(uint256 proposalId, uint256 amount)
-        external
-        proposalExists(proposalId)
-    {
+    function fundKrc20(uint256 proposalId, uint256 amount) external proposalExists(proposalId) {
         Proposal storage p = proposals[proposalId];
 
         require(p.status == ProposalStatus.Active, "Not active");
@@ -169,19 +152,10 @@ contract ProposalManager {
 
         vault.depositKrc20(proposalId, msg.sender, amount);
 
-        emit ProposalFunded(
-            proposalId,
-            msg.sender,
-            p.token,
-            amount,
-            p.totalRaised
-        );
+        emit ProposalFunded(proposalId, msg.sender, p.token, amount, p.totalRaised);
     }
 
-    function finalizeProposal(uint256 proposalId)
-        external
-        proposalExists(proposalId)
-    {
+    function finalizeProposal(uint256 proposalId) external proposalExists(proposalId) {
         Proposal storage p = proposals[proposalId];
 
         require(p.status == ProposalStatus.Active, "Not active");
@@ -197,31 +171,19 @@ contract ProposalManager {
         if (p.totalRaised >= p.minThreshold) {
             p.status = ProposalStatus.Succeeded;
 
-            vault.releaseSuccess(
-                proposalId,
-                p.recipient,
-                p.creator,
-                treasury
-            );
+            vault.releaseSuccess(proposalId, p.recipient, p.creator, treasury);
         } else {
             p.status = ProposalStatus.Failed;
 
             vault.enableWithdrawals(proposalId);
         }
 
-        emit ProposalFinalized(
-            proposalId,
-            p.status,
-            p.totalRaised
-        );
+        emit ProposalFinalized(proposalId, p.status, p.totalRaised);
     }
 
-    function getProposal(uint256 proposalId)
-        external
-        view
-        proposalExists(proposalId)
-        returns (Proposal memory)
-    {
+    function getProposal(
+        uint256 proposalId
+    ) external view proposalExists(proposalId) returns (Proposal memory) {
         return proposals[proposalId];
     }
 
