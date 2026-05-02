@@ -6,17 +6,15 @@ import { isAddress, parseEther, formatEther } from "ethers";
 import { createProposalSchema, fundProposalSchema } from "../lib/validation";
 import { calculateMinThreshold } from "../core/domain/ThresholdRules";
 
-import { useLocalWallet } from "../hooks/useLocalWallet";
+import { useWalletContext } from "../contexts/WalletContext";
 import { useProposalEngine } from "../hooks/useProposalEngine";
-import { useUserDashboard } from "../hooks/useUserDashboard";
+
 import { useActivityFeed } from "../hooks/useActivityFeed";
 import { useRealtimeNotifications } from "../hooks/useRealtimeNotifications";
 
 import { StatsBar } from "../components/dashboard/StatsBar";
 import { CreateProposalForm } from "../components/proposal/CreateProposalForm";
 import { ProposalCard } from "../components/proposal/ProposalCard";
-import { UserDashboard } from "../components/dashboard/UserDashboard";
-import { ActivityFeed } from "../components/activity/ActivityFeed";
 import { AppHeader } from "../components/layout/AppHeader";
 
 import { NETWORK } from "../lib/network";
@@ -54,17 +52,15 @@ function metadataText(metadataURI?: string | null) {
   }
 }
 
-export default function HomePage() {
-  const wallet = useLocalWallet();
+export default function Home() {
+  const wallet = useWalletContext();
   const { ctx } = useProposalEngine(wallet.address, wallet.signer);
-  const feed = useActivityFeed();
   const { t } = useLanguage();
   const proposalsQuery = useInfiniteProposals();
   const proposals = useMemo(
     () => proposalsQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [proposalsQuery.data],
   );
-  const userDashboard = useUserDashboard(wallet.address);
   useRealtimeNotifications(wallet.address);
 
   // Infinite scroll observer
@@ -98,14 +94,11 @@ export default function HomePage() {
   const fundMutation = useFundProposal(ctx);
   const finalizeMutation = useFinalizeProposal(ctx);
   const withdrawMutation = useWithdrawProposal(ctx);
-  const withdrawManyMutation = useWithdrawMany(ctx);
-
   const isAnyMutationPending =
     createMutation.isPending ||
     fundMutation.isPending ||
     finalizeMutation.isPending ||
-    withdrawMutation.isPending ||
-    withdrawManyMutation.isPending;
+    withdrawMutation.isPending;
 
   const [filter, setFilter] = useState<Filter>("all");
   const [supportedIds, setSupportedIds] = useState<number[]>([]);
@@ -140,9 +133,8 @@ export default function HomePage() {
   }, [autoThresholdStr, minThreshold]);
 
   const supportedIdsSet = useMemo(() => {
-    return new Set(userDashboard.dashboard.supportedIds ?? supportedIds);
-  }, [userDashboard.dashboard.supportedIds, supportedIds]);
-
+    return new Set(supportedIds);
+  }, [supportedIds]);
   const filteredProposals = useMemo(() => {
     const normalizedSearch = search.toLowerCase().trim();
 
@@ -321,63 +313,68 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#13231f,_#09090b_45%)] px-4 py-8 text-white md:px-8">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <AppHeader
-          connected={wallet.connected}
-          address={wallet.address}
-          connect={wallet.connect}
-          signer={wallet.signer}
-        />
+    <main className="min-h-screen bg-background px-4 py-8 text-foreground md:px-8 selection:bg-emerald-500/30">
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/5 via-background to-background"></div>
+      <div className="mx-auto max-w-7xl space-y-10">
+        <AppHeader />
 
         <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-          <div className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 p-8 shadow-2xl">
-            <div className="mb-4 inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-sm text-green-400">
+          <div className="premium-glass relative overflow-hidden rounded-3xl p-10 lg:p-12">
+            <div className="absolute -left-10 -top-10 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"></div>
+            <div className="mb-6 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-sm font-semibold text-emerald-500">
               {t.autScrow}
             </div>
 
-            <h2 className="max-w-3xl text-4xl font-black tracking-tight md:text-5xl">
+            <h1 className="text-4xl font-black tracking-tight md:text-6xl lg:text-7xl text-gradient leading-[1.1] pb-2">
               {t.mission}
-            </h2>
-
-            <p className="mt-4 max-w-2xl text-lg text-zinc-400">
+            </h1>
+            <p className="mt-6 max-w-2xl text-xl text-muted-foreground leading-relaxed">
               {t.mission1}
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap gap-4">
               <a
                 href="#create"
-                className="rounded-2xl bg-green-500 px-5 py-3 font-bold text-black transition hover:bg-green-400"
+                className="premium-btn rounded-full px-8 py-4 font-bold text-lg"
               >
                 {t.createProposal}
               </a>
 
               <a
                 href="#proposals"
-                className="rounded-2xl bg-zinc-800 px-5 py-3 font-bold text-white transition hover:bg-zinc-700"
+                className="rounded-full border border-border bg-card/50 px-8 py-4 font-bold text-foreground transition-all hover:bg-accent hover:text-accent-foreground backdrop-blur-md shadow-sm"
               >
                 {t.exploreProposals}
               </a>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
-            <h3 className="text-2xl font-bold">{t.howItWorks}</h3>
+          <div className="premium-glass rounded-3xl p-10 flex flex-col justify-center">
+            <h2 className="mb-8 text-2xl font-bold tracking-tight text-foreground">{t.howItWorks}</h2>
 
-            <div className="mt-5 space-y-4">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                <p className="font-bold">1. {t.step1}</p>
-                <p className="mt-1 text-sm text-zinc-400">{t.step11}</p>
+            <div className="space-y-4">
+              <div className="group rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                <p className="font-bold text-foreground flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-xs text-emerald-500">1</span>
+                  {t.step1}
+                </p>
+                <p className="mt-2 pl-8 text-sm text-muted-foreground leading-relaxed">{t.step11}</p>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                <p className="font-bold">2. {t.step2}</p>
-                <p className="mt-1 text-sm text-zinc-400">{t.step21}</p>
+              <div className="group rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                <p className="font-bold text-foreground flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-xs text-emerald-500">2</span>
+                  {t.step2}
+                </p>
+                <p className="mt-2 pl-8 text-sm text-muted-foreground leading-relaxed">{t.step21}</p>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                <p className="font-bold">3. {t.step3}</p>
-                <p className="mt-1 text-sm text-zinc-400">{t.step31}</p>
+              <div className="group rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                <p className="font-bold text-foreground flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-xs text-emerald-500">3</span>
+                  {t.step3}
+                </p>
+                <p className="mt-2 pl-8 text-sm text-muted-foreground leading-relaxed">{t.step31}</p>
               </div>
             </div>
           </div>
@@ -385,20 +382,7 @@ export default function HomePage() {
 
         <StatsBar proposals={proposals} />
 
-        {wallet.connected && (
-          <UserDashboard
-            dashboard={userDashboard.dashboard}
-            loading={userDashboard.loadingUserDashboard}
-            onWithdrawAll={handleWithdrawAll}
-          />
-        )}
 
-        {wallet.connected && (
-          <ActivityFeed
-            activity={feed.activity}
-            loading={feed.loadingActivity}
-          />
-        )}
 
         <div id="create">
           <CreateProposalForm
@@ -424,14 +408,14 @@ export default function HomePage() {
         <section id="proposals" className="space-y-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-3xl font-bold">{t.proposals}</h2>
-              <p className="text-zinc-400">{t.findnew}</p>
+              <h2 className="text-3xl font-bold text-foreground">{t.proposals}</h2>
+              <p className="text-muted-foreground">{t.findnew}</p>
             </div>
 
             <button
               onClick={() => proposalsQuery.refetch()}
               disabled={proposalsQuery.isFetching}
-              className="rounded-xl bg-zinc-800 px-5 py-3 font-bold transition hover:bg-zinc-700 disabled:opacity-40"
+              className="flex h-10 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground transition-all hover:bg-accent disabled:opacity-50"
             >
               {proposalsQuery.isFetching ? t.loading : t.refresh}
             </button>
@@ -449,9 +433,9 @@ export default function HomePage() {
               <button
                 key={item.key}
                 onClick={() => setFilter(item.key as Filter)}
-                className={`rounded-xl px-4 py-2 font-semibold transition ${filter === item.key
-                    ? "bg-white text-black"
-                    : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${filter === item.key
+                    ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   }`}
               >
                 {item.label}
@@ -461,16 +445,17 @@ export default function HomePage() {
 
           <div className="grid gap-3 md:grid-cols-[1fr_220px]">
             <input
-              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-green-500"
-              placeholder={t.search}
+              type="text"
+              placeholder={t.searchProp}
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-2xl border border-border bg-card/50 p-4 outline-none transition focus:border-emerald-500 focus:bg-background"
             />
 
             <select
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-green-500"
               value={sort}
-              onChange={(event) => setSort(event.target.value as Sort)}
+              onChange={(e) => setSort(e.target.value as Sort)}
+              className="rounded-2xl border border-border bg-card/50 p-4 outline-none transition focus:border-emerald-500 focus:bg-background md:w-48"
             >
               <option value="newest">{t.newest}</option>
               <option value="raised">{t.moreRe}</option>
@@ -486,7 +471,7 @@ export default function HomePage() {
           />
 
           {!wallet.connected && (
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
+            <div className="rounded-3xl border border-border bg-card/50 p-8 text-center text-muted-foreground">
               {t.conectWallet}
             </div>
           )}
@@ -494,13 +479,13 @@ export default function HomePage() {
           {wallet.connected &&
             filteredProposals.length === 0 &&
             !proposalsQuery.isLoading && (
-              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
+              <div className="rounded-3xl border border-border bg-card/50 p-8 text-center text-muted-foreground">
                 {t.noProposalsFilter}
               </div>
             )}
 
           {wallet.connected && proposalsQuery.isLoading && (
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
+            <div className="rounded-3xl border border-border bg-card/50 p-8 text-center text-muted-foreground">
               {t.loadingProposals}
             </div>
           )}

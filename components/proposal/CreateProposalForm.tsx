@@ -59,27 +59,27 @@ export function CreateProposalForm({
   const { t } = useLanguage();
 
   return (
-    <section className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6 shadow-2xl">
-      <div className="mb-6 flex items-start justify-between gap-4">
+    <section className="premium-glass rounded-3xl p-8 lg:p-10">
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">{t.createProposal}</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">{t.createProposal}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
             {t.defdata}
           </p>
         </div>
 
-        <span className="rounded-full bg-green-500/10 px-3 py-1 text-sm text-green-400">
+        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-sm font-semibold text-emerald-500">
           {NETWORK.name}
         </span>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-6">
         <div>
-          <label className="mb-2 block text-sm font-semibold text-zinc-300">
+          <label className="mb-2 block text-sm font-semibold text-foreground/90">
             {t.title}
           </label>
           <input
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
+            className="w-full rounded-xl border border-border bg-background/50 p-4 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background"
             placeholder={t.ej1}
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
@@ -87,11 +87,11 @@ export function CreateProposalForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-zinc-300">
+          <label className="mb-2 block text-sm font-semibold text-foreground/90">
             {t.description}
           </label>
           <textarea
-            className="min-h-28 w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
+            className="min-h-[140px] w-full resize-y rounded-xl border border-border bg-background/50 p-4 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
             placeholder={t.ej2}
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
@@ -99,25 +99,25 @@ export function CreateProposalForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-zinc-300">
+          <label className="mb-2 block text-sm font-semibold text-foreground/90">
             {t.walletreceiver}
           </label>
           <input
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
+            className="w-full rounded-xl border border-border bg-background/50 p-4 font-mono text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
             placeholder="0x..."
             value={recipient}
             onChange={(e) => onRecipientChange(e.target.value)}
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-zinc-300">
-              {t.objetive} ({NETWORK.currency})
+            <label className="mb-2 block text-sm font-semibold text-foreground/90">
+              {t.objetive} <span className="text-muted-foreground">({NETWORK.currency})</span>
             </label>
             <input
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-              placeholder={`Ej: 10 ${NETWORK.currency}`}
+              type="number"
+              className="w-full rounded-xl border border-border bg-background/50 p-4 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
               value={goal}
               onChange={(e) => onGoalChange(e.target.value)}
             />
@@ -125,56 +125,54 @@ export function CreateProposalForm({
 
           <div>
             <div className="mb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <label className="text-sm font-semibold text-zinc-300">
-                {t.minThreshold} ({NETWORK.currency}){" "}
-                <span className="font-normal text-zinc-500">
-                  (Min: {Number(autoThreshold).toFixed(2)})
+              <label className="block text-sm font-semibold text-foreground/90">
+                {t.minThreshold} <span className="text-muted-foreground">({NETWORK.currency})</span>{" "}
+                <span className="text-[10px] font-normal text-emerald-500/80">
+                  (Min: {autoThreshold})
                 </span>
               </label>
               {Number(minThreshold) > 0 && Number(minThreshold) >= Number(goal) && (
-                <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                  🎯 All or Nothing Mode
+                <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-500 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)] uppercase tracking-wider">
+                  🎯 All or Nothing
                 </span>
               )}
             </div>
             <input
               type="number"
-              min={autoThreshold}
-              max={goal}
-              step="any"
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-              placeholder={`Ej: 5 ${NETWORK.currency}`}
+              className="w-full rounded-xl border border-border bg-background/50 p-4 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
               value={minThreshold}
               onChange={(e) => onMinThresholdChange(e.target.value)}
             />
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-zinc-300">
-              {t.timer}
-            </label>
-            <select
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
-              value={duration}
-              onChange={(e) => onDurationChange?.(e.target.value)}
-            >
-              {durationOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {onDurationChange && (
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-foreground/90">
+                {t.timer}
+              </label>
+              <select
+                className="w-full rounded-xl border border-border bg-background/50 p-4 text-foreground outline-none transition-all focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
+                value={duration}
+                onChange={(e) => onDurationChange(e.target.value)}
+              >
+                {durationOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+        <div className="rounded-xl border border-border bg-background/50 p-4 text-center text-sm font-medium text-muted-foreground">
           {t.exitDiv}
         </div>
 
         <button
-          disabled={!connected || loading}
           onClick={handleSubmit}
-          className="w-full rounded-xl bg-green-500 px-5 py-3 font-bold text-black transition hover:bg-green-400 disabled:opacity-40 md:w-auto"
+          disabled={loading || !connected}
+          className="premium-btn mt-6 w-full rounded-xl px-5 py-4 font-bold text-lg disabled:opacity-50"
         >
           {loading ? t.creating : t.createProposal}
         </button>

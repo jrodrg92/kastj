@@ -8,24 +8,15 @@ import { UiToggles } from "../../components/settings/UiToggles";
 import { KastjLogo } from "../../components/brand/KastjLogo";
 
 
-type Props = {
-  connected: boolean;
-  address?: string;
-  signer: JsonRpcSigner | null;
-  connect: () => void | Promise<void>;
-};
+import { useWalletContext } from "../../contexts/WalletContext";
 
-export function AppHeader({
-  connected,
-  address,
-  signer,
-  connect,
-}: Props) {
+export function AppHeader() {
+  const { connected, address, signer, connect } = useWalletContext();
   const { t } = useLanguage();
   const { theme, toggleTheme } = useUiPreferences();
 
   return (
-    <header className="w-full rounded-3xl border border-zinc-800 bg-[#080a0f]/95 px-5 py-4 shadow-2xl">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/60 px-6 py-4 backdrop-blur-xl transition-all">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <KastjLogo />
@@ -34,20 +25,23 @@ export function AppHeader({
         <div className="flex shrink-0 flex-wrap items-center gap-3">
           <UiToggles />
 
-          {connected && (
-            <Link
-              href="/profile"
-              className="flex h-10 items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900 px-3 text-sm font-bold text-zinc-200 transition hover:bg-zinc-800"
-            >
-              👤
-            </Link>
-          )}
+            {connected && (
+              <Link
+                href="/profile"
+                className="flex h-9 items-center gap-2 rounded-full border border-border bg-card/50 px-4 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-[10px] text-black">
+                  👤
+                </div>
+                Profile
+              </Link>
+            )}
 
-           <WalletStatus
-                connected={connected}
-                address={address ?? ""}
-                signer={signer}
-                connect={connect}
+            <WalletStatus
+              connected={connected}
+              address={address ?? ""}
+              signer={signer}
+              connect={connect}
             />
         </div>
       </div>

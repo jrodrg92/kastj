@@ -33,10 +33,10 @@ export function StatsBar({ proposals }: { proposals: Proposal[] }) {
       {items.map((item) => (
         <div
           key={item.label}
-          className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 shadow-lg"
+          className="rounded-2xl border border-border bg-card/50 p-5 shadow-sm backdrop-blur-xl transition-all hover:bg-card/80"
         >
-          <p className="text-sm text-zinc-400">{item.label}</p>
-          <p className="mt-1 text-2xl font-bold text-white">{item.value}</p>
+          <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">{item.value}</p>
         </div>
       ))}
     </section>

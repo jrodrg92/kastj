@@ -39,7 +39,7 @@ export function WalletStatus({
     return (
       <button
         onClick={connect}
-        className="rounded-2xl bg-white px-5 py-3 font-bold text-black transition hover:bg-zinc-200"
+        className="premium-btn flex h-9 items-center justify-center rounded-full px-5 text-sm font-bold"
       >
         {t.connectWallet}
       </button>
@@ -47,19 +47,13 @@ export function WalletStatus({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-5 py-3 text-sm md:flex-row md:items-center md:gap-4">
-
-      <span className="text-zinc-400">
-        {NETWORK.name}
+    <div className="flex h-9 items-center gap-3 rounded-full border border-border bg-card/50 pl-4 pr-1 text-sm font-medium transition-colors hover:bg-accent">
+      <span className="text-muted-foreground">
+        {balance} <span className="opacity-50">{NETWORK.currency}</span>
       </span>
-
-      <span className="font-semibold text-white">
-        {balance} {NETWORK.currency}
-      </span>
-
-      {connected && address && (
-        <span>{address.slice(0, 6)}...{address.slice(-4)}</span>
-      )}
+      <div className="flex h-7 items-center rounded-full bg-background px-3 text-emerald-600 dark:text-emerald-400 border border-border shadow-sm">
+        {address.slice(0, 6)}...{address.slice(-4)}
+      </div>
     </div>
   );
 }

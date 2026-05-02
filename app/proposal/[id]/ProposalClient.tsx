@@ -6,7 +6,8 @@ import toast from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
 
 import { supabase } from "../../../lib/supabase";
-import { useLocalWallet } from "../../../hooks/useLocalWallet";
+import { useWalletContext } from "../../../contexts/WalletContext";
+import { useLanguage } from "../../../contexts/LanguageContext";
 import { useProposalEngine } from "../../../hooks/useProposalEngine";
 import { NETWORK } from "../../../lib/network";
 import {
@@ -72,7 +73,8 @@ export default function ProposalClient() {
   const params = useParams();
   const router = useRouter();
 
-  const wallet = useLocalWallet();
+  const wallet = useWalletContext();
+  const { t } = useLanguage();
   const { ctx } = useProposalEngine(wallet.address, wallet.signer);
 
   // Feature hooks for mutations
@@ -282,7 +284,7 @@ export default function ProposalClient() {
 
   if (!Number.isFinite(proposalId)) {
     return (
-      <main className="min-h-screen bg-zinc-950 p-8 text-white">
+      <main className="min-h-screen bg-background p-8 text-foreground">
         ID de propuesta inválido.
       </main>
     );
@@ -290,15 +292,15 @@ export default function ProposalClient() {
 
   if (loading && !proposal) {
     return (
-      <main className="min-h-screen bg-zinc-950 p-8 text-white">
-        Cargando propuesta...
+      <main className="min-h-screen bg-background p-8 text-foreground flex items-center justify-center">
+        {t.loadingProposal}
       </main>
     );
   }
 
   if (!proposal) {
     return (
-      <main className="min-h-screen bg-zinc-950 p-8 text-white">
+      <main className="min-h-screen bg-background p-8 text-foreground flex items-center justify-center">
         Propuesta no encontrada.
       </main>
     );
@@ -329,69 +331,68 @@ export default function ProposalClient() {
   const isTrending = percent >= 80;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#182131,_#09090b_45%)] p-6 text-white md:p-10">
+    <main className="min-h-screen bg-background px-4 py-8 text-foreground md:px-8 selection:bg-emerald-500/30">
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/5 via-background to-background"></div>
       <div className="mx-auto max-w-7xl space-y-8">
-        <AppHeader
-          connected={wallet.connected}
-          address={wallet.address}
-          connect={wallet.connect}
-          signer={wallet.signer}
-        />
+        <AppHeader />
 
-        <button
-          onClick={() => router.push("/")}
-          className="rounded-xl bg-zinc-800 px-4 py-2 font-semibold hover:bg-zinc-700"
-        >
-          ← Back to proposals
-        </button>
+        <div>
+          <button
+            onClick={() => router.push("/")}
+            className="inline-flex h-10 items-center justify-center rounded-full border border-border bg-card/50 px-5 text-sm font-semibold text-foreground transition-all hover:bg-accent hover:text-accent-foreground backdrop-blur-md shadow-sm"
+          >
+            ← {t.backToProposals}
+          </button>
+        </div>
 
         <section className="grid gap-8 lg:grid-cols-[1fr_420px]">
           <div className="space-y-8">
-            <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-8 shadow-2xl">
-              <div className="mb-5 flex flex-wrap gap-2">
-                <span className="rounded-full bg-zinc-800 px-4 py-2 text-sm font-bold">
+            <section className="premium-glass rounded-3xl p-8 lg:p-10">
+              <div className="mb-6 flex flex-wrap gap-2">
+                <span className="flex items-center gap-1.5 rounded-full border border-border bg-background/50 px-4 py-1.5 text-sm font-bold text-foreground shadow-sm">
+                  <div className={`h-2 w-2 rounded-full ${status === "active" ? "bg-yellow-500" : status === "succeeded" ? "bg-green-500" : "bg-red-500"} shadow-[0_0_8px_currentColor]`} />
                   {statusLabel(status)}
                 </span>
 
                 {isCreator && (
-                  <span className="rounded-full bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-400">
-                    You are the creator
+                  <span className="flex items-center rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-sm font-bold text-blue-500 shadow-sm">
+                    {t.youAreCreator}
                   </span>
                 )}
 
                 {isTrending && (
-                  <span className="rounded-full bg-orange-500/10 px-4 py-2 text-sm font-bold text-orange-400">
+                  <span className="flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-1.5 text-sm font-bold text-orange-500 shadow-sm">
                     🔥 Trending
                   </span>
                 )}
               </div>
 
-              <p className="text-sm text-zinc-500">Proposal #{proposal.id}</p>
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Proposal #{proposal.id}</p>
 
-              <h1 className="mt-3 max-w-4xl text-5xl font-black tracking-tight">
+              <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-gradient md:text-5xl leading-tight pb-2">
                 {metadata.title}
               </h1>
 
-              <p className="mt-5 max-w-3xl text-lg leading-8 text-zinc-300">
+              <p className="mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
                 {metadata.description}
               </p>
 
-              <div className="mt-8 grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 text-sm text-zinc-400 md:grid-cols-2">
+              <div className="mt-8 grid gap-4 rounded-2xl border border-border bg-background/50 p-5 text-sm text-muted-foreground md:grid-cols-2">
                 <p>
                   Creator:{" "}
-                  <span className="text-white">{short(proposal.creator)}</span>
+                  <span className="font-mono text-foreground/80">{short(proposal.creator)}</span>
                 </p>
 
                 <p>
                   Recipient:{" "}
-                  <span className="text-white">
+                  <span className="font-mono text-foreground/80">
                     {short(proposal.recipient)}
                   </span>
                 </p>
 
                 <p>
                   Deadline:{" "}
-                  <span className="text-white">
+                  <span className="font-medium text-foreground/80">
                     {isExpired
                       ? "Expired"
                       : formatRemainingTime(Number(proposal.deadline))}
@@ -400,56 +401,58 @@ export default function ProposalClient() {
 
                 <p>
                   Supporters:{" "}
-                  <span className="text-white">{supportersCount}</span>
+                  <span className="font-medium text-foreground/80">{supportersCount}</span>
                 </p>
               </div>
             </section>
 
-            <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
-              <h2 className="text-2xl font-bold">Why trust this proposal?</h2>
+            <section className="premium-glass rounded-3xl p-8 lg:p-10">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">Why trust this proposal?</h2>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                  <p className="font-bold">Escrow protected</p>
-                  <p className="mt-1 text-sm text-zinc-400">
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                  <p className="font-semibold text-foreground">Escrow protected</p>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                     Funds stay locked until settlement.
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                  <p className="font-bold">Automatic settlement</p>
-                  <p className="mt-1 text-sm text-zinc-400">
+                <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                  <p className="font-semibold text-foreground">Automatic settlement</p>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                     Success distributes funds. Failure enables withdrawals.
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                  <p className="font-bold">Transparent history</p>
-                  <p className="mt-1 text-sm text-zinc-400">
+                <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                  <p className="font-semibold text-foreground">Transparent history</p>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                     Funding and status changes are indexed and visible.
                   </p>
                 </div>
               </div>
             </section>
 
-            <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
-              <h2 className="text-2xl font-bold">Proposal activity</h2>
+            <section className="premium-glass rounded-3xl p-8 lg:p-10">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">Proposal activity</h2>
 
               {activity.length === 0 && (
-                <p className="mt-4 text-zinc-400">No activity yet.</p>
+                <p className="mt-4 text-muted-foreground">No activity yet.</p>
               )}
 
-              <div className="mt-5 max-h-[400px] space-y-3 overflow-y-auto pr-2">
+              <div className="mt-5 max-h-[400px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                 {activity.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4"
+                    className="flex items-start gap-3 rounded-2xl border border-border bg-background/50 p-4 transition-all hover:bg-card/80"
                   >
-                    <span className="text-xl">{activityIcon(item.type)}</span>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-lg text-secondary-foreground">
+                      {activityIcon(item.type)}
+                    </span>
 
                     <div>
-                      <p className="font-semibold">{item.message}</p>
-                      <p className="text-sm text-zinc-400">
+                      <p className="font-medium text-foreground">{item.message}</p>
+                      <p className="text-sm text-muted-foreground/80">
                         {item.actor ? short(item.actor) : "System"} ·{" "}
                         {new Date(item.created_at ?? 0).toLocaleString()}
                       </p>
@@ -460,56 +463,56 @@ export default function ProposalClient() {
             </section>
           </div>
 
-          <aside className="space-y-5 lg:sticky lg:top-8 lg:self-start">
-            <section className="rounded-3xl border border-zinc-800 bg-zinc-950/80 p-6 shadow-2xl">
-              <p className="text-sm text-zinc-400">Raised</p>
+          <aside className="space-y-6 lg:sticky lg:top-28 lg:self-start">
+            <section className="premium-glass rounded-3xl p-8 lg:p-10">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Raised</p>
 
               <div className="mt-2 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-4xl font-black">{raised.toFixed(4)}</p>
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-4xl font-black tracking-tight text-foreground">{raised.toFixed(4)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
                     of {goal.toFixed(4)} {NETWORK.currency}
                   </p>
                 </div>
 
-                <p className="text-2xl font-black text-green-400">
+                <p className="text-3xl font-bold tracking-tight text-emerald-500">
                   {percent.toFixed(1)}%
                 </p>
               </div>
 
-              <div className="mt-5 h-6 overflow-hidden rounded-full bg-zinc-800">
+              <div className="mt-8 h-2 overflow-hidden rounded-full bg-secondary ring-1 ring-inset ring-black/10 dark:ring-white/5">
                 <div
-                  className="h-6 rounded-full bg-green-500 transition-all duration-700"
+                  className="h-full rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-1000 ease-out"
                   style={{ width: `${percent}%` }}
                 />
               </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-zinc-900 p-4">
-                  <p className="text-sm text-zinc-400">Supporters</p>
-                  <p className="mt-1 text-2xl font-black">
+              <div className="mt-10 grid grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-border bg-background/50 p-5 shadow-inner">
+                  <p className="text-sm font-medium text-muted-foreground">Supporters</p>
+                  <p className="mt-2 text-2xl font-bold text-foreground">
                     {supportersCount}
                   </p>
                 </div>
 
-                <div className="rounded-2xl bg-zinc-900 p-4">
-                  <p className="text-sm text-zinc-400">Status</p>
-                  <p className="mt-1 text-lg font-black">{status}</p>
+                <div className="rounded-2xl border border-border bg-background/50 p-5 shadow-inner">
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <p className="mt-2 text-lg font-bold capitalize text-foreground">{status}</p>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                <p className="text-sm text-zinc-400">Your contribution</p>
-                <p className="mt-1 text-3xl font-black">
-                  {Number(myContribution).toFixed(4)} {NETWORK.currency}
+              <div className="mt-4 rounded-2xl border border-border bg-background/50 p-6 shadow-inner">
+                <p className="text-sm font-medium text-muted-foreground">Your contribution</p>
+                <p className="mt-2 text-3xl font-bold text-foreground">
+                  {Number(myContribution).toFixed(4)} <span className="text-xl text-muted-foreground">{NETWORK.currency}</span>
                 </p>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-8 space-y-4">
                 {isActive && !isExpired && (
                   <>
                     <input
-                      className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none focus:border-blue-500"
+                      className="w-full rounded-2xl border border-border bg-background/80 p-5 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
                       placeholder={`Amount ${NETWORK.currency}`}
                       value={fundAmount}
                       onChange={(event) => setFundAmount(event.target.value)}
@@ -518,7 +521,7 @@ export default function ProposalClient() {
                     <button
                       disabled={!canFund || isMutating}
                       onClick={handleFund}
-                      className="w-full rounded-2xl bg-blue-500 px-5 py-4 font-bold text-black hover:bg-blue-400 disabled:opacity-40"
+                      className="premium-btn w-full rounded-2xl px-5 py-4 font-bold text-lg disabled:opacity-50"
                     >
                       {fundMutation.isPending
                         ? "Processing..."
@@ -531,7 +534,7 @@ export default function ProposalClient() {
                   <button
                     disabled={!canFinalize || isMutating}
                     onClick={handleFinalize}
-                    className="w-full rounded-2xl bg-yellow-500 px-5 py-4 font-bold text-black hover:bg-yellow-400 disabled:opacity-40"
+                    className="w-full rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 font-bold text-emerald-600 transition-all hover:bg-emerald-500/20 disabled:opacity-40 dark:text-emerald-400"
                   >
                     {finalizeMutation.isPending
                       ? "Finalizing..."
@@ -540,7 +543,7 @@ export default function ProposalClient() {
                 )}
 
                 {status === "succeeded" && (
-                  <div className="rounded-2xl bg-green-500/10 px-5 py-4 text-center font-bold text-green-400">
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-center font-bold text-emerald-600 dark:text-emerald-400">
                     Funds distributed successfully
                   </div>
                 )}
@@ -549,7 +552,7 @@ export default function ProposalClient() {
                   <button
                     disabled={!canWithdraw || isMutating}
                     onClick={handleWithdraw}
-                    className="w-full rounded-2xl bg-red-500 px-5 py-4 font-bold text-white hover:bg-red-400 disabled:opacity-40"
+                    className="w-full rounded-2xl bg-destructive px-5 py-4 font-bold text-destructive-foreground transition-all hover:opacity-90 disabled:opacity-40"
                   >
                     {withdrawMutation.isPending
                       ? "Withdrawing..."
@@ -560,14 +563,14 @@ export default function ProposalClient() {
                 )}
 
                 {status === "failed" && Number(myContribution) <= 0 && (
-                  <div className="rounded-2xl bg-zinc-800 px-5 py-4 text-center font-bold text-zinc-400">
+                  <div className="rounded-2xl border border-border bg-background/50 px-5 py-4 text-center font-bold text-muted-foreground">
                     No funds to withdraw
                   </div>
                 )}
 
                 <button
                   onClick={copyLink}
-                  className="w-full rounded-2xl border border-zinc-700 bg-zinc-900 px-5 py-4 font-bold text-white hover:bg-zinc-800"
+                  className="w-full rounded-2xl border border-border bg-background/50 px-5 py-4 font-bold text-foreground transition-all hover:bg-accent backdrop-blur-sm hover:shadow-sm"
                 >
                   Copy share link
                 </button>

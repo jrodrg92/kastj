@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { formatEther } from "ethers";
 import Link from "next/link";
 
-import { useLocalWallet } from "../../hooks/useLocalWallet";
+import { useWalletContext } from "../../contexts/WalletContext";
 import { useProposalEngine } from "../../hooks/useProposalEngine";
 import { useUserDashboard } from "../../hooks/useUserDashboard";
 import { useActivityFeed } from "../../hooks/useActivityFeed";
@@ -28,7 +28,7 @@ function formatActivityAmount(amount?: string | null) {
 }
 
 export default function ProfilePage() {
-    const wallet = useLocalWallet();
+    const wallet = useWalletContext();
     const { t } = useLanguage();
     const dashboard = useUserDashboard(wallet.address);
     const feed = useActivityFeed();
@@ -63,21 +63,17 @@ export default function ProfilePage() {
 
     if (!wallet.connected) {
         return (
-            <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#13231f,_#09090b_45%)] px-4 py-8 text-white md:px-8">
+            <main className="min-h-screen bg-background px-4 py-8 text-foreground md:px-8 selection:bg-emerald-500/30">
+                <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/5 via-background to-background"></div>
                 <div className="mx-auto max-w-5xl space-y-8">
-                    <AppHeader
-                        connected={wallet.connected}
-                        address={wallet.address}
-                        connect={wallet.connect}
-                        signer={wallet.signer}
-                    />
-                    <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-12 text-center">
-                        <p className="text-xl text-zinc-400">
+                    <AppHeader />
+                    <div className="rounded-3xl border border-border bg-card/50 p-12 text-center shadow-xl backdrop-blur-xl">
+                        <p className="text-xl text-muted-foreground">
                             {t.conectWallet}
                         </p>
                         <button
                             onClick={wallet.connect}
-                            className="mt-6 rounded-2xl bg-green-500 px-8 py-4 font-bold text-black hover:bg-green-400"
+                            className="mt-6 rounded-2xl bg-emerald-600 px-8 py-4 font-bold text-white transition hover:bg-emerald-500"
                         >
                             {t.connectWallet}
                         </button>
@@ -88,86 +84,82 @@ export default function ProfilePage() {
     }
 
     return (
-        <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#13231f,_#09090b_45%)] px-4 py-8 text-white md:px-8">
+        <main className="min-h-screen bg-background px-4 py-8 text-foreground md:px-8 selection:bg-emerald-500/30">
+            <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/5 via-background to-background"></div>
             <div className="mx-auto max-w-5xl space-y-8">
-                <AppHeader
-                    connected={wallet.connected}
-                    address={wallet.address}
-                    connect={wallet.connect}
-                    signer={wallet.signer}
-                />
+                <AppHeader />
 
                 {/* Profile Header */}
-                <section className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 p-8 shadow-2xl">
-                    <div className="flex items-center gap-5">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-emerald-700 text-2xl font-black text-black">
-                            {wallet.address?.slice(2, 4).toUpperCase()}
+                <div className="premium-glass mb-8 rounded-3xl p-8 lg:p-10">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-3xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                            👤
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black">
+                            <h1 className="text-3xl font-black tracking-tight text-foreground">
                                 {t.mydsbrd}
                             </h1>
-                            <p className="mt-1 font-mono text-sm text-zinc-400">
-                                {short(wallet.address)}
+                            <p className="font-mono text-muted-foreground mt-1">
+                                {wallet.address}
                             </p>
                         </div>
                     </div>
-                </section>
+                </div>
 
                 {/* Stats Grid */}
                 <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
-                        <p className="text-sm text-zinc-400">
+                    <div className="premium-glass rounded-2xl p-6">
+                        <p className="text-sm font-medium text-muted-foreground">
                             {t.totCont}
                         </p>
-                        <p className="mt-2 text-2xl font-black">
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">
                             {Number(d.totalContributed).toFixed(4)}
                         </p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="mt-1 text-xs text-muted-foreground">
                             {NETWORK.currency}
                         </p>
                     </div>
 
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
-                        <p className="text-sm text-zinc-400">
+                    <div className="premium-glass rounded-2xl p-6">
+                        <p className="text-sm font-medium text-muted-foreground">
                             {t.crrnlyUnclck}
                         </p>
-                        <p className="mt-2 text-2xl font-black text-amber-400">
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-amber-500">
                             {Number(d.activeContributed).toFixed(4)}
                         </p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted-foreground">
                             {NETWORK.currency}
                         </p>
                     </div>
 
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
-                        <p className="text-sm text-zinc-400">{t.withdrw}</p>
-                        <p className="mt-2 text-2xl font-black text-green-400">
+                    <div className="rounded-2xl border border-border bg-card/50 p-5 shadow-sm backdrop-blur-xl">
+                        <p className="text-sm font-medium text-muted-foreground">{t.withdrw}</p>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-emerald-500">
                             {Number(d.withdrawable).toFixed(4)}
                         </p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted-foreground mt-1">
                             {NETWORK.currency}
                         </p>
                     </div>
 
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
-                        <p className="text-sm text-zinc-400">
+                    <div className="premium-glass rounded-2xl p-6">
+                        <p className="text-sm font-medium text-muted-foreground">
                             {t.crtdByMe} / {t.suprtd}
                         </p>
-                        <p className="mt-2 text-2xl font-black">
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
                             {d.createdCount}{" "}
-                            <span className="text-zinc-500">/</span>{" "}
+                            <span className="text-muted-foreground">/</span>{" "}
                             {d.supportedCount}
                         </p>
                     </div>
                 </section>
 
                 {/* My Proposals */}
-                <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
-                    <h2 className="text-2xl font-bold">{t.crtdByMe}</h2>
+                <section className="premium-glass rounded-3xl p-8 lg:p-10">
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">{t.crtdByMe}</h2>
 
                     {myProposals.length === 0 && (
-                        <p className="mt-4 text-zinc-400">
+                        <p className="mt-4 text-muted-foreground">
                             {t.noProposalsFilter}
                         </p>
                     )}
@@ -177,13 +169,13 @@ export default function ProfilePage() {
                             <Link
                                 key={p.id}
                                 href={`/proposal/${p.id}`}
-                                className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900 p-4 transition hover:border-zinc-600"
+                                className="flex items-center justify-between rounded-2xl border border-border bg-background/50 p-4 transition-all hover:bg-card/80 hover:shadow-md"
                             >
                                 <div>
-                                    <p className="font-bold">
+                                    <p className="font-semibold text-foreground">
                                         Proposal #{p.id}
                                     </p>
-                                    <p className="text-sm text-zinc-400">
+                                    <p className="text-sm text-muted-foreground">
                                         {Number(p.totalRaised).toFixed(4)} /{" "}
                                         {Number(p.goal).toFixed(4)}{" "}
                                         {NETWORK.currency}
@@ -210,18 +202,18 @@ export default function ProfilePage() {
                 </section>
 
                 {/* My Activity */}
-                <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
-                    <h2 className="text-2xl font-bold">
+                <section className="premium-glass rounded-3xl p-8 lg:p-10">
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">
                         {t.recentActivity}
                     </h2>
 
                     {myActivity.length === 0 && (
-                        <p className="mt-4 text-zinc-400">
+                        <p className="mt-4 text-muted-foreground">
                             {t.noActivityYet}
                         </p>
                     )}
 
-                    <div className="mt-4 max-h-[400px] space-y-3 overflow-y-auto pr-2">
+                    <div className="mt-5 max-h-[400px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                         {myActivity.map((item) => {
                             const amount = formatActivityAmount(
                                 item.amount,
@@ -230,29 +222,29 @@ export default function ProfilePage() {
                             return (
                                 <div
                                     key={item.id}
-                                    className="flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4"
+                                    className="flex items-start gap-3 rounded-2xl border border-border bg-background/50 p-4 transition-all hover:bg-card/80"
                                 >
-                                    <span className="text-xl">
+                                    <span className="text-xl flex items-center justify-center h-8 w-8 rounded-full bg-secondary text-secondary-foreground">
                                         {item.type === "created"
-                                            ? "🆕"
+                                            ? "✨"
                                             : item.type === "funded"
-                                              ? "💸"
+                                              ? "💎"
                                               : item.type === "succeeded"
                                                 ? "✅"
                                                 : "❌"}
                                     </span>
                                     <div className="flex-1">
-                                        <p className="font-semibold">
+                                        <p className="font-medium text-foreground">
                                             {item.message}
                                         </p>
-                                        <p className="text-sm text-zinc-400">
+                                        <p className="text-sm text-muted-foreground">
                                             Proposal #
                                             {item.proposal_id}
                                             {amount &&
                                                 ` · ${amount} ${NETWORK.currency}`}
                                         </p>
                                     </div>
-                                    <span className="text-xs text-zinc-500">
+                                    <span className="text-xs text-muted-foreground/70">
                                         {new Date(
                                             item.created_at ?? 0,
                                         ).toLocaleDateString()}
@@ -263,10 +255,10 @@ export default function ProfilePage() {
                     </div>
                 </section>
 
-                <div className="text-center">
+                <div className="text-center pt-4">
                     <Link
                         href="/"
-                        className="inline-block rounded-2xl bg-zinc-800 px-6 py-3 font-bold text-white transition hover:bg-zinc-700"
+                        className="inline-flex h-10 items-center justify-center rounded-full border border-border bg-card px-6 text-sm font-semibold text-foreground transition-all hover:bg-accent hover:text-accent-foreground"
                     >
                         {t.backToProposals}
                     </Link>

@@ -13,9 +13,9 @@ export function UiToggles() {
     <div className="flex flex-wrap gap-2">
       <button
         onClick={() => setLang(nextLang)}
-        className="flex h-10 items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900 px-3 text-sm font-bold text-zinc-200 transition hover:bg-zinc-800 light:border-zinc-300 light:bg-white light:text-zinc-900"
+        className="flex h-10 items-center gap-2 rounded-full border border-border bg-card/50 px-3 text-sm font-bold text-foreground transition hover:bg-accent"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 text-base light:bg-zinc-100">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-background text-base border border-border">
           {lang === "en" ? "🇬🇧" : "🇪🇸"}
         </span>
         {lang.toUpperCase()}
@@ -23,9 +23,9 @@ export function UiToggles() {
 
       <button
         onClick={toggleTheme}
-        className="flex h-10 items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900 px-3 text-sm font-bold text-zinc-200 transition hover:bg-zinc-800 light:border-zinc-300 light:bg-white light:text-zinc-900"
+        className="flex h-10 items-center gap-2 rounded-full border border-border bg-card/50 px-3 text-sm font-bold text-foreground transition hover:bg-accent"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 light:bg-zinc-100">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-background border border-border">
           {theme === "dark" ? "🌙" : "☀️"}
         </span>
         {theme === "dark" ? "Dark" : "Light"}
