@@ -16,6 +16,8 @@ import { NETWORK } from "../lib/network";
 import { supabase } from "../lib/supabase";
 import { useLanguage } from "../contexts/LanguageContext";
 import { AppHeader } from "../components/layout/AppHeader";
+import { isAddress } from "ethers";
+import type { Address } from "../core/domain/ProposalTypes";
 
 type Filter =
   | "all"
@@ -63,7 +65,8 @@ export default function HomePage() {
 
   const { t } = useLanguage();
   const userDashboard = useUserDashboard(wallet.address);
-  
+  const [minThreshold, setMinThreshold] = useState("");
+  const [durationSeconds, setDurationSeconds] = useState(86400);
 
   const supportedIdsSet = useMemo(() => {
     return new Set(userDashboard.dashboard.supportedIds ?? supportedIds);
@@ -123,18 +126,6 @@ export default function HomePage() {
     setSupportedIds(ids);
   }
 
-  async function handleWithdrawAll(ids: number[]) {
-    for (const id of ids) {
-      try {
-        await kastj.withdraw(id);
-      } catch (err) {
-        console.error("Withdraw failed for", id, err);
-      }
-    }
-
-    await refreshDbSoon();
-  }
-
   useEffect(() => {
     if (wallet.connected) {
       db.loadDbProposals();
@@ -181,7 +172,20 @@ export default function HomePage() {
       })
     )}`;
 
-    await kastj.createProposal(recipient, goal, Number(duration), metadataURI);
+    if (!isAddress(recipient)) {
+      toast.error("Invalid recipient address");
+      return;
+    }
+
+    await kastj.createProposal({
+      recipient: recipient as Address,
+      asset: { type: "native" },
+      goal,
+      minThreshold,
+      durationSeconds,
+      metadataURI,
+    });
+
     await refreshDbSoon();
     await loadMySupportedProposals();
 
@@ -193,15 +197,27 @@ export default function HomePage() {
   }
 
   async function handleFund(id: number) {
-    if (Number(fundAmount) <= 0) {
-      toast.error("La cantidad debe ser mayor que 0");
-      return;
-    }
-
-    await kastj.fundProposal(id, fundAmount);
-    await refreshDbSoon();
-    await loadMySupportedProposals();
+  if (Number(fundAmount) <= 0) {
+    toast.error("La cantidad debe ser mayor que 0");
+    return;
   }
+
+  const proposal = kastj.proposals.find((p) => p.id === id);
+
+  if (!proposal) {
+    toast.error("Propuesta no encontrada");
+    return;
+  }
+
+  await kastj.fundProposal({
+    proposalId: id,
+    asset: proposal.asset,
+    amount: fundAmount,
+  });
+
+  await refreshDbSoon();
+  await loadMySupportedProposals();
+}
 
   async function handleFinalize(id: number) {
     await kastj.finalizeProposal(id);

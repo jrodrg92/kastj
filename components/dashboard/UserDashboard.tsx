@@ -4,7 +4,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 export function UserDashboard({
   dashboard,
   loading,
-  onWithdrawAll,
+  onWithdrawAll
 }: {
   dashboard: {
     totalContributed: string;
@@ -13,6 +13,7 @@ export function UserDashboard({
     createdCount: number;
     supportedCount: number;
     withdrawableIds: number[];
+    onWithdrawAll: number
   };
   loading: boolean;
 }) {

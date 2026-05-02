@@ -1,26 +1,45 @@
-import { network } from "hardhat";
+import hre from "hardhat";
 
-const { ethers } = await network.connect();
+async function main() {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
 
-const [deployer] = await ethers.getSigners();
+  const [deployer] = await ethers.getSigners();
 
-console.log("Deploying with:", deployer.address);
+  console.log("Deploying with:", deployer.address);
 
-const Treasury = await ethers.getContractFactory("KastjTreasury");
-const treasury = await Treasury.deploy();
-await treasury.waitForDeployment();
+  // Vault
+  const Vault = await ethers.getContractFactory("EscrowVault");
+  const vault = await Vault.deploy();
+  await vault.waitForDeployment();
 
-const Vault = await ethers.getContractFactory("EscrowVault");
-const vault = await Vault.deploy();
-await vault.waitForDeployment();
+  const vaultAddress = await vault.getAddress();
+  console.log("Vault:", vaultAddress);
 
-const Manager = await ethers.getContractFactory("ProposalManager");
-const manager = await Manager.deploy(
-  await vault.getAddress(),
-  await treasury.getAddress()
-);
-await manager.waitForDeployment();
+  // Treasury
+  const Treasury = await ethers.getContractFactory("KastjTreasury");
+  const treasury = await Treasury.deploy(deployer.address);
+  await treasury.waitForDeployment();
 
-console.log("Treasury:", await treasury.getAddress());
-console.log("Vault:", await vault.getAddress());
-console.log("Manager:", await manager.getAddress());
+  const treasuryAddress = await treasury.getAddress();
+  console.log("Treasury:", treasuryAddress);
+
+  // Manager
+  const Manager = await ethers.getContractFactory("ProposalManager");
+  const manager = await Manager.deploy(vaultAddress, treasuryAddress);
+  await manager.waitForDeployment();
+
+  const managerAddress = await manager.getAddress();
+  console.log("Manager:", managerAddress);
+
+  // 🔥 link crítico
+  const tx = await vault.setManager(managerAddress);
+  await tx.wait();
+
+  console.log("Vault linked to manager ✅");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

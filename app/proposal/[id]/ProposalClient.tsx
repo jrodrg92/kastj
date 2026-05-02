@@ -208,7 +208,11 @@ export default function ProposalClient() {
       return;
     }
 
-    await kastj.fundProposal(proposalId, fundAmount);
+    await kastj.fundProposal({
+      proposalId,
+      asset: proposal.asset,
+      amount,
+    });
     await refreshSoon();
   }
 

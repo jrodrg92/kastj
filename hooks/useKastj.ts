@@ -3,9 +3,25 @@
 import { useState } from "react";
 import { BrowserProvider, formatEther } from "ethers";
 import { ZkEvmProposalEngine } from "../core/engines/ZkEvmProposalEngine";
+import type { Address, ProposalAsset } from "../core/domain/ProposalTypes";
 import toast from "react-hot-toast";
 
 const engine = new ZkEvmProposalEngine();
+
+export interface CreateKastjProposalInput {
+  recipient: Address;
+  asset: ProposalAsset;
+  goal: string;
+  minThreshold: string;
+  durationSeconds: number;
+  metadataURI: string;
+}
+
+export interface FundKastjProposalInput {
+  proposalId: number;
+  asset: ProposalAsset;
+  amount: string;
+}
 
 export function useKastj(signer: any) {
   const [loading, setLoading] = useState(false);
@@ -37,7 +53,9 @@ export function useKastj(signer: any) {
           id: Number(p.id),
           creator: p.creator,
           recipient: p.recipient,
+          asset: p.asset,
           goal: formatEther(p.goal),
+          minThreshold: formatEther(p.minThreshold),
           deadline: Number(p.deadline),
           totalRaised: formatEther(p.totalRaised),
           status: Number(p.status),
@@ -52,47 +70,41 @@ export function useKastj(signer: any) {
     }
   }
 
-  async function createProposal(
-    recipient: string,
-    goalEth: string,
-    durationSeconds: number,
-    metadataURI: string
-  ) {
+  async function createProposal(input: CreateKastjProposalInput) {
     if (!signer) throw new Error("Wallet not connected");
 
     setLoading(true);
     const toastId = toast.loading("Creando propuesta...");
 
     try {
-      await engine.createProposal(
-        signer,
-        recipient,
-        goalEth,
-        durationSeconds,
-        metadataURI
-      );
+      await engine.createProposal(signer, input);
 
       toast.success("Propuesta creada 🚀", { id: toastId });
       await loadProposals();
     } catch (e) {
+      console.error(e);
       toast.error("Error al crear propuesta", { id: toastId });
     } finally {
       setLoading(false);
     }
   }
 
-  async function fundProposal(proposalId: number, amountEth: string) {
+  async function fundProposal(input: FundKastjProposalInput) {
     if (!signer) throw new Error("Wallet not connected");
 
     setLoading(true);
-    const toastId = toast.loading("Apoyando propuesta...");
+    const toastId =
+      input.asset.type === "native"
+        ? toast.loading("Apoyando propuesta...")
+        : toast.loading("Aprobando token y apoyando propuesta...");
 
     try {
-      await engine.fundProposal(signer, proposalId, amountEth);
+      await engine.fundProposal(signer, input);
 
       toast.success("Apoyo enviado 💸", { id: toastId });
       await loadProposals();
     } catch (e) {
+      console.error(e);
       toast.error("Error al apoyar propuesta", { id: toastId });
     } finally {
       setLoading(false);
@@ -111,6 +123,7 @@ export function useKastj(signer: any) {
       toast.success("Propuesta finalizada ✅", { id: toastId });
       await loadProposals();
     } catch (e) {
+      console.error(e);
       toast.error("Error al finalizar propuesta", { id: toastId });
     } finally {
       setLoading(false);
@@ -129,6 +142,7 @@ export function useKastj(signer: any) {
       toast.success("Fondos retirados ✅", { id: toastId });
       await loadProposals();
     } catch (e) {
+      console.error(e);
       toast.error("No se pudo retirar", { id: toastId });
     } finally {
       setLoading(false);
@@ -139,12 +153,12 @@ export function useKastj(signer: any) {
     if (!signer) throw new Error("Wallet not connected");
 
     setLoading(true);
-    const toastId = toast.loading("Withdrawing available funds...");
+    const toastId = toast.loading("Retirando fondos disponibles...");
 
     try {
       await engine.withdrawMany(signer, proposalIds);
 
-      toast.success("Funds withdrawn ✅", { id: toastId });
+      toast.success("Fondos retirados ✅", { id: toastId });
       await loadProposals();
     } catch (e) {
       console.error(e);
@@ -156,12 +170,12 @@ export function useKastj(signer: any) {
 
   return {
     proposals,
-    withdraw,
     loading,
     loadProposals,
     createProposal,
     fundProposal,
     finalizeProposal,
-    withdrawMany
+    withdraw,
+    withdrawMany,
   };
 }

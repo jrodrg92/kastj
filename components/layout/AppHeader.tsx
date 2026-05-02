@@ -10,6 +10,7 @@ import { KastjLogo } from "../../components/brand/KastjLogo";
 
 
 type Props = {
+  description?: string;
   connected: boolean;
   address?: string;
   signer?: any;

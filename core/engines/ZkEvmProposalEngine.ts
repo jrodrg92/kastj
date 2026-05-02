@@ -1,9 +1,19 @@
-import { Contract, parseEther } from "ethers";
+import { Contract, parseEther, ZeroAddress } from "ethers";
 import { CONTRACTS } from "../../lib/contracts";
 import ProposalManagerAbi from "../../abis/ProposalManager.json";
 import EscrowVaultAbi from "../../abis/EscrowVault.json";
+import {
+  CreateProposalInput,
+  FundProposalInput,
+  ProposalEngine,
+  ProposalView,
+} from "./ProposalEngine";
 
-export class ZkEvmProposalEngine {
+const KRC20_APPROVE_ABI = [
+  "function approve(address spender, uint256 amount) external returns (bool)",
+];
+
+export class ZkEvmProposalEngine implements ProposalEngine {
   private getManager(signerOrProvider: any) {
     return new Contract(
       CONTRACTS.manager,
@@ -12,67 +22,110 @@ export class ZkEvmProposalEngine {
     );
   }
 
-  async createProposal(
-    signer: any,
-    recipient: string,
-    goalEth: string,
-    durationSeconds: number,
-    metadataURI: string
-  ) {
+  private getVault(signerOrProvider: any) {
+    return new Contract(CONTRACTS.vault, EscrowVaultAbi, signerOrProvider);
+  }
+
+  async createProposal(signer: any, input: CreateProposalInput) {
     const manager = this.getManager(signer);
 
+    const asset =
+      input.asset.type === "native"
+        ? {
+            assetType: 0,
+            token: ZeroAddress,
+          }
+        : {
+            assetType: 1,
+            token: input.asset.tokenAddress,
+          };
+
     const tx = await manager.createProposal(
-      recipient,
-      parseEther(goalEth),
-      durationSeconds,
-      metadataURI
+      input.recipient,
+      asset,
+      parseEther(input.goal),
+      parseEther(input.minThreshold),
+      input.durationSeconds,
+      input.metadataURI
     );
 
     return tx.wait();
   }
 
-  private getVault(signerOrProvider: any) {
-    return new Contract(CONTRACTS.vault, EscrowVaultAbi, signerOrProvider);
-  }
-
-  async withdraw(signer: any, proposalId: number) {
-    const vault = this.getVault(signer);
-    const tx = await vault.withdraw(proposalId);
-    return tx.wait();
-  }
-  
-  async fundProposal(signer: any, proposalId: number, amountEth: string) {
+  async fundProposal(signer: any, input: FundProposalInput) {
     const manager = this.getManager(signer);
+    const amount = parseEther(input.amount);
 
-    const tx = await manager.fund(proposalId, {
-      value: parseEther(amountEth),
-    });
+    if (input.asset.type === "native") {
+      const tx = await manager.fundNative(input.proposalId, {
+        value: amount,
+      });
 
-    return tx.wait();
+      return tx.wait();
+    }
+
+    const token = new Contract(
+      input.asset.tokenAddress,
+      KRC20_APPROVE_ABI,
+      signer
+    );
+
+    const approveTx = await token.approve(CONTRACTS.vault, amount);
+    await approveTx.wait();
+
+    const fundTx = await manager.fundKrc20(input.proposalId, amount);
+
+    return fundTx.wait();
   }
 
   async finalizeProposal(signer: any, proposalId: number) {
     const manager = this.getManager(signer);
-
     const tx = await manager.finalize(proposalId);
 
     return tx.wait();
   }
 
-  async getProposal(providerOrSigner: any, proposalId: number) {
-    const manager = this.getManager(providerOrSigner);
-    return manager.proposals(proposalId);
-  }
+  async withdraw(signer: any, proposalId: number) {
+    const vault = this.getVault(signer);
+    const tx = await vault.withdraw(proposalId);
 
-  async getProposalCount(providerOrSigner: any) {
-    const manager = this.getManager(providerOrSigner);
-    return manager.proposalCount();
+    return tx.wait();
   }
 
   async withdrawMany(signer: any, proposalIds: number[]) {
     const vault = this.getVault(signer);
     const tx = await vault.withdrawMany(proposalIds);
+
     return tx.wait();
   }
 
+  async getProposal(
+    providerOrSigner: any,
+    proposalId: number
+  ): Promise<ProposalView> {
+    const manager = this.getManager(providerOrSigner);
+    const p = await manager.getProposal(proposalId);
+
+    return {
+      id: p.id,
+      creator: p.creator,
+      recipient: p.recipient,
+      asset:
+        Number(p.asset.assetType) === 0
+          ? { type: "native" }
+          : { type: "krc20", tokenAddress: p.asset.token },
+      goal: p.goal,
+      minThreshold: p.minThreshold,
+      deadline: p.deadline,
+      totalRaised: p.totalRaised,
+      status: Number(p.status),
+      executed: p.executed,
+      metadataURI: p.metadataURI,
+    };
+  }
+
+  async getProposalCount(providerOrSigner: any): Promise<bigint> {
+    const manager = this.getManager(providerOrSigner);
+    return manager.proposalCount();
+  }
 }
