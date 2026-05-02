@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { isAddress } from "ethers";
 
 import { useLocalWallet } from "../hooks/useLocalWallet";
-import { useKastj } from "../hooks/useKastj";
+import { useProposalEngine } from "../hooks/useProposalEngine";
 import { useUserDashboard } from "../hooks/useUserDashboard";
 import { useActivityFeed } from "../hooks/useActivityFeed";
 
@@ -21,6 +21,11 @@ import { supabase } from "../lib/supabase";
 import { useLanguage } from "../contexts/LanguageContext";
 
 import { useProposals } from "../features/proposals/hooks/useProposals";
+import { useCreateProposal } from "../features/proposals/hooks/useCreateProposal";
+import { useFundProposal } from "../features/proposals/hooks/useFundProposal";
+import { useFinalizeProposal } from "../features/proposals/hooks/useFinalizeProposal";
+import { useWithdrawProposal } from "../features/proposals/hooks/useWithdrawProposal";
+import { useWithdrawMany } from "../features/proposals/hooks/useWithdrawMany";
 
 type Filter =
   | "all"
@@ -48,12 +53,26 @@ function metadataText(metadataURI?: string) {
 
 export default function HomePage() {
   const wallet = useLocalWallet();
-  const kastj = useKastj(wallet.signer);
+  const { ctx } = useProposalEngine(wallet.address, wallet.signer);
   const feed = useActivityFeed();
   const { t } = useLanguage();
   const proposalsQuery = useProposals();
   const proposals = proposalsQuery.data ?? [];
   const userDashboard = useUserDashboard(wallet.address);
+
+  // Mutations via engine abstraction
+  const createMutation = useCreateProposal(ctx);
+  const fundMutation = useFundProposal(ctx);
+  const finalizeMutation = useFinalizeProposal(ctx);
+  const withdrawMutation = useWithdrawProposal(ctx);
+  const withdrawManyMutation = useWithdrawMany(ctx);
+
+  const isAnyMutationPending =
+    createMutation.isPending ||
+    fundMutation.isPending ||
+    finalizeMutation.isPending ||
+    withdrawMutation.isPending ||
+    withdrawManyMutation.isPending;
 
   const [filter, setFilter] = useState<Filter>("all");
   const [supportedIds, setSupportedIds] = useState<number[]>([]);
@@ -139,14 +158,6 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallet.connected, wallet.address]);
 
-  async function refreshDbSoon() {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    await Promise.all([
-      proposalsQuery.refetch(),
-      loadMySupportedProposals(),
-    ]);
-  }
-
   async function handleCreate() {
     if (!wallet.connected) {
       toast.error("Conecta la wallet primero");
@@ -185,8 +196,8 @@ export default function HomePage() {
       })
     )}`;
 
-    await kastj.createProposal({
-      recipient: recipient as `0x${string}`,
+    await createMutation.mutateAsync({
+      recipient,
       asset: { type: "native" },
       goal,
       minThreshold,
@@ -201,7 +212,7 @@ export default function HomePage() {
     setMinThreshold("100");
     setDuration("86400");
 
-    await refreshDbSoon();
+    await loadMySupportedProposals();
   }
 
   async function handleFund(id: number) {
@@ -217,30 +228,30 @@ export default function HomePage() {
       return;
     }
 
-    await kastj.fundProposal({
+    await fundMutation.mutateAsync({
       proposalId: id,
       asset: proposal.asset,
       amount: fundAmount,
     });
 
-    await refreshDbSoon();
+    await loadMySupportedProposals();
   }
 
   async function handleFinalize(id: number) {
-    await kastj.finalizeProposal(id);
-    await refreshDbSoon();
+    await finalizeMutation.mutateAsync(id);
+    await loadMySupportedProposals();
   }
 
   async function handleWithdraw(id: number) {
-    await kastj.withdraw(id);
-    await refreshDbSoon();
+    await withdrawMutation.mutateAsync(id);
+    await loadMySupportedProposals();
   }
 
   async function handleWithdrawAll(ids: number[]) {
     if (!ids.length) return;
 
-    await kastj.withdrawMany(ids);
-    await refreshDbSoon();
+    await withdrawManyMutation.mutateAsync(ids);
+    await loadMySupportedProposals();
   }
 
   return (
@@ -331,7 +342,7 @@ export default function HomePage() {
             goal={goal}
             minThreshold={minThreshold}
             duration={duration}
-            loading={kastj.loading}
+            loading={isAnyMutationPending}
             connected={wallet.connected}
             onTitleChange={setTitle}
             onDescriptionChange={setDescription}
@@ -433,7 +444,7 @@ export default function HomePage() {
               key={proposal.id}
               proposal={proposal}
               fundAmount={fundAmount}
-              loading={kastj.loading}
+              loading={isAnyMutationPending}
               connected={wallet.connected}
               isSupported={supportedIdsSet.has(proposal.id)}
               onFund={handleFund}

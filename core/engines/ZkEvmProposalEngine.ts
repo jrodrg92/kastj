@@ -1,31 +1,50 @@
-import { Contract, parseEther, ZeroAddress } from "ethers";
+import { Contract, JsonRpcSigner, parseEther, ZeroAddress } from "ethers";
 import { CONTRACTS } from "../../lib/contracts";
 import ProposalManagerAbi from "../../abis/ProposalManager.json";
 import EscrowVaultAbi from "../../abis/EscrowVault.json";
-import {
+import type {
     CreateProposalInput,
     FundProposalInput,
     ProposalEngine,
+    ProposalEngineContext,
+    ProposalId,
     ProposalView,
-} from "./ProposalEngine";
+    TxResult,
+} from "./types";
 
 const KRC20_APPROVE_ABI = [
     "function approve(address spender, uint256 amount) external returns (bool)",
 ];
 
 export class ZkEvmProposalEngine implements ProposalEngine {
-    private getManager(signerOrProvider: any) {
-        return new Contract(CONTRACTS.manager, ProposalManagerAbi, signerOrProvider);
+    readonly kind = "kasplex-zkevm" as const;
+
+    private getManager(signer: JsonRpcSigner) {
+        return new Contract(CONTRACTS.manager, ProposalManagerAbi, signer);
     }
 
-    private getVault(signerOrProvider: any) {
-        return new Contract(CONTRACTS.vault, EscrowVaultAbi, signerOrProvider);
+    private getVault(signer: JsonRpcSigner) {
+        return new Contract(CONTRACTS.vault, EscrowVaultAbi, signer);
     }
 
-    async createProposal(signer: any, input: CreateProposalInput) {
+    private getSigner(ctx: ProposalEngineContext): JsonRpcSigner {
+        if (!ctx.signer) {
+            throw new Error("Signer required for ZkEVM operations");
+        }
+        return ctx.signer as JsonRpcSigner;
+    }
+
+    async createProposal(
+        ctx: ProposalEngineContext,
+        input: CreateProposalInput,
+    ): Promise<TxResult> {
+        const signer = this.getSigner(ctx);
         const manager = this.getManager(signer);
 
-        const token = input.asset.type === "native" ? ZeroAddress : input.asset.tokenAddress;
+        const token =
+            input.asset.type === "native"
+                ? ZeroAddress
+                : input.asset.tokenAddress;
 
         const tx = await manager.createProposal(
             input.recipient,
@@ -36,10 +55,15 @@ export class ZkEvmProposalEngine implements ProposalEngine {
             input.metadataURI,
         );
 
-        return tx.wait();
+        const receipt = await tx.wait();
+        return { txId: receipt.hash };
     }
 
-    async fundProposal(signer: any, input: FundProposalInput) {
+    async fundProposal(
+        ctx: ProposalEngineContext,
+        input: FundProposalInput,
+    ): Promise<TxResult> {
+        const signer = this.getSigner(ctx);
         const manager = this.getManager(signer);
         const amount = parseEther(input.amount);
 
@@ -47,65 +71,69 @@ export class ZkEvmProposalEngine implements ProposalEngine {
             const tx = await manager.fundNative(input.proposalId, {
                 value: amount,
             });
-
-            return tx.wait();
+            const receipt = await tx.wait();
+            return { txId: receipt.hash };
         }
 
-        const token = new Contract(input.asset.tokenAddress, KRC20_APPROVE_ABI, signer);
+        const token = new Contract(
+            input.asset.tokenAddress,
+            KRC20_APPROVE_ABI,
+            signer,
+        );
 
         const approveTx = await token.approve(CONTRACTS.vault, amount);
         await approveTx.wait();
 
         const fundTx = await manager.fundKrc20(input.proposalId, amount);
-
-        return fundTx.wait();
+        const receipt = await fundTx.wait();
+        return { txId: receipt.hash };
     }
 
-    async finalizeProposal(signer: any, proposalId: number) {
+    async finalizeProposal(
+        ctx: ProposalEngineContext,
+        proposalId: ProposalId,
+    ): Promise<TxResult> {
+        const signer = this.getSigner(ctx);
         const manager = this.getManager(signer);
         const tx = await manager.finalizeProposal(proposalId);
-
-        return tx.wait();
+        const receipt = await tx.wait();
+        return { txId: receipt.hash };
     }
 
-    async withdraw(signer: any, proposalId: number) {
+    async withdraw(
+        ctx: ProposalEngineContext,
+        proposalId: ProposalId,
+    ): Promise<TxResult> {
+        const signer = this.getSigner(ctx);
         const vault = this.getVault(signer);
         const tx = await vault.withdraw(proposalId);
-
-        return tx.wait();
+        const receipt = await tx.wait();
+        return { txId: receipt.hash };
     }
 
-    async withdrawMany(signer: any, proposalIds: number[]) {
+    async withdrawMany(
+        ctx: ProposalEngineContext,
+        proposalIds: ProposalId[],
+    ): Promise<TxResult> {
+        const signer = this.getSigner(ctx);
         const vault = this.getVault(signer);
         const tx = await vault.withdrawMany(proposalIds);
-
-        return tx.wait();
+        const receipt = await tx.wait();
+        return { txId: receipt.hash };
     }
 
-    async getProposal(providerOrSigner: any, proposalId: number): Promise<ProposalView> {
-        const manager = this.getManager(providerOrSigner);
-        const p = await manager.getProposal(proposalId);
+    // Read methods — app reads from Supabase, not from chain directly.
+    // These exist to satisfy the interface for testing/future use.
 
-        return {
-            id: p.id,
-            creator: p.creator,
-            recipient: p.recipient,
-            asset:
-                p.token === ZeroAddress
-                    ? { type: "native" }
-                    : { type: "krc20", tokenAddress: p.token },
-            goal: p.goalAmount,
-            minThreshold: p.minThreshold,
-            deadline: p.deadline,
-            totalRaised: p.totalRaised,
-            status: Number(p.status),
-            executed: p.finalized,
-            metadataURI: p.metadataURI,
-        };
+    async getProposal(_proposalId: ProposalId): Promise<ProposalView> {
+        throw new Error(
+            "ZkEVM engine: use Supabase queries for reading proposals",
+        );
     }
 
-    async getProposalCount(providerOrSigner: any): Promise<bigint> {
-        const manager = this.getManager(providerOrSigner);
-        return manager.proposalCount();
+    async listProposals(): Promise<ProposalView[]> {
+        throw new Error(
+            "ZkEVM engine: use Supabase queries for listing proposals",
+        );
     }
 }

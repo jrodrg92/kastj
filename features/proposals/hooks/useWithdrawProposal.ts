@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { ProposalEngineContext, ProposalId } from "@/core/engines/types";
-import { getProposalEngine } from "@/core/engines/proposalEngineFactory";
+import { getProposalEngine } from "@/core/engines/ProposalEngineFactory";
 import { proposalKeys } from "../queryKeys";
 
 export function useWithdrawProposal(ctx: ProposalEngineContext | null) {

@@ -7,13 +7,17 @@ import { useParams, useRouter } from "next/navigation";
 
 import { supabase } from "../../../lib/supabase";
 import { useLocalWallet } from "../../../hooks/useLocalWallet";
-import { useKastj } from "../../../hooks/useKastj";
+import { useProposalEngine } from "../../../hooks/useProposalEngine";
 import { NETWORK } from "../../../lib/network";
 import {
   formatRemainingTime,
   isExpired as hasExpired,
 } from "../../../lib/time";
 import { AppHeader } from "../../../components/layout/AppHeader";
+
+import { useFundProposal } from "../../../features/proposals/hooks/useFundProposal";
+import { useFinalizeProposal } from "../../../features/proposals/hooks/useFinalizeProposal";
+import { useWithdrawProposal } from "../../../features/proposals/hooks/useWithdrawProposal";
 
 type ProposalStatus = "active" | "succeeded" | "failed" | "unknown";
 
@@ -68,13 +72,26 @@ export default function ProposalClient() {
   const router = useRouter();
 
   const wallet = useLocalWallet();
-  const kastj = useKastj(wallet.signer);
+  const { ctx } = useProposalEngine(wallet.address, wallet.signer);
+
+  // Feature hooks for mutations
+  const fundMutation = useFundProposal(ctx);
+  const finalizeMutation = useFinalizeProposal(ctx);
+  const withdrawMutation = useWithdrawProposal(ctx);
+
+  const isMutating =
+    fundMutation.isPending ||
+    finalizeMutation.isPending ||
+    withdrawMutation.isPending;
 
   const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
   const proposalId = Number(idParam);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [proposal, setProposal] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [fundings, setFundings] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [activity, setActivity] = useState<any[]>([]);
   const [myContribution, setMyContribution] = useState("0");
   const [fundAmount, setFundAmount] = useState("1");
@@ -196,11 +213,6 @@ export default function ProposalClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proposalId, wallet.address]);
 
-  async function refreshSoon() {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    await loadDetail();
-  }
-
   async function handleFund() {
     if (!wallet.connected) {
       toast.error("Conecta tu wallet");
@@ -221,19 +233,19 @@ export default function ProposalClient() {
 
     const asset =
       !proposal.token || proposal.token === ZERO_ADDRESS
-        ? { type: "native" as const }
-        : {
+        ? ({ type: "native" } as const)
+        : ({
             type: "krc20" as const,
             tokenAddress: proposal.token as `0x${string}`,
-          };
+          });
 
-    await kastj.fundProposal({
+    await fundMutation.mutateAsync({
       proposalId,
       asset,
       amount: fundAmount,
     });
 
-    await refreshSoon();
+    await loadDetail();
   }
 
   async function handleFinalize() {
@@ -242,8 +254,8 @@ export default function ProposalClient() {
       return;
     }
 
-    await kastj.finalizeProposal(proposalId);
-    await refreshSoon();
+    await finalizeMutation.mutateAsync(proposalId);
+    await loadDetail();
   }
 
   async function handleWithdraw() {
@@ -257,8 +269,8 @@ export default function ProposalClient() {
       return;
     }
 
-    await kastj.withdraw(proposalId);
-    await refreshSoon();
+    await withdrawMutation.mutateAsync(proposalId);
+    await loadDetail();
   }
 
   async function copyLink() {
@@ -374,7 +386,9 @@ export default function ProposalClient() {
 
                 <p>
                   Recipient:{" "}
-                  <span className="text-white">{short(proposal.recipient)}</span>
+                  <span className="text-white">
+                    {short(proposal.recipient)}
+                  </span>
                 </p>
 
                 <p>
@@ -475,7 +489,9 @@ export default function ProposalClient() {
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <div className="rounded-2xl bg-zinc-900 p-4">
                   <p className="text-sm text-zinc-400">Supporters</p>
-                  <p className="mt-1 text-2xl font-black">{supportersCount}</p>
+                  <p className="mt-1 text-2xl font-black">
+                    {supportersCount}
+                  </p>
                 </div>
 
                 <div className="rounded-2xl bg-zinc-900 p-4">
@@ -502,11 +518,11 @@ export default function ProposalClient() {
                     />
 
                     <button
-                      disabled={!canFund || kastj.loading}
+                      disabled={!canFund || isMutating}
                       onClick={handleFund}
                       className="w-full rounded-2xl bg-blue-500 px-5 py-4 font-bold text-black hover:bg-blue-400 disabled:opacity-40"
                     >
-                      {kastj.loading
+                      {fundMutation.isPending
                         ? "Processing..."
                         : `Support ${fundAmount} ${NETWORK.currency}`}
                     </button>
@@ -515,11 +531,13 @@ export default function ProposalClient() {
 
                 {isActive && isExpired && (
                   <button
-                    disabled={!canFinalize || kastj.loading}
+                    disabled={!canFinalize || isMutating}
                     onClick={handleFinalize}
                     className="w-full rounded-2xl bg-yellow-500 px-5 py-4 font-bold text-black hover:bg-yellow-400 disabled:opacity-40"
                   >
-                    {kastj.loading ? "Finalizing..." : "Finalize proposal"}
+                    {finalizeMutation.isPending
+                      ? "Finalizing..."
+                      : "Finalize proposal"}
                   </button>
                 )}
 
@@ -531,11 +549,11 @@ export default function ProposalClient() {
 
                 {status === "failed" && Number(myContribution) > 0 && (
                   <button
-                    disabled={!canWithdraw || kastj.loading}
+                    disabled={!canWithdraw || isMutating}
                     onClick={handleWithdraw}
                     className="w-full rounded-2xl bg-red-500 px-5 py-4 font-bold text-white hover:bg-red-400 disabled:opacity-40"
                   >
-                    {kastj.loading
+                    {withdrawMutation.isPending
                       ? "Withdrawing..."
                       : `Withdraw ${Number(myContribution).toFixed(4)} ${
                           NETWORK.currency

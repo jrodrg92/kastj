@@ -1,4 +1,4 @@
-import { ProposalView } from "@/core/engines/types";
+import type { ProposalView } from "@/core/engines/types";
 import { canFinalizeProposal, canWithdrawFromProposal } from "./ProposalRules";
 
 export interface NormalizedProposalView extends ProposalView {

@@ -1,4 +1,4 @@
-import {
+import type {
     CreateProposalInput,
     FundProposalInput,
     ProposalEngine,
@@ -23,29 +23,41 @@ export class MockProposalEngine implements ProposalEngine {
             id,
             creator: ctx.account,
             recipient: input.recipient,
-            title: input.title,
-            description: input.description,
             asset: input.asset,
-            goal: input.goal,
-            minThreshold: input.minThreshold,
+            goal: {
+                value: input.goal,
+                decimals: 18,
+                symbol: "KAS",
+            },
+            minThreshold: {
+                value: input.minThreshold,
+                decimals: 18,
+                symbol: "KAS",
+            },
             totalRaised: {
                 value: "0",
-                decimals: input.asset.decimals,
-                symbol: input.asset.symbol,
+                decimals: 18,
+                symbol: "KAS",
             },
-            deadline: input.deadline,
+            deadline: new Date(
+                Date.now() + input.durationSeconds * 1000,
+            ),
             status: "active",
+            metadataURI: input.metadataURI,
             canWithdraw: false,
             canFinalize: false,
         });
 
-        return {
-            txId: `mock-create-${id}`,
-        };
+        return { txId: `mock-create-${id}` };
     }
 
-    async fundProposal(_ctx: ProposalEngineContext, input: FundProposalInput): Promise<TxResult> {
-        const proposal = this.proposals.find((p) => p.id === input.proposalId);
+    async fundProposal(
+        _ctx: ProposalEngineContext,
+        input: FundProposalInput,
+    ): Promise<TxResult> {
+        const proposal = this.proposals.find(
+            (p) => p.id === input.proposalId,
+        );
 
         if (!proposal) {
             throw new Error("Proposal not found");
@@ -53,15 +65,18 @@ export class MockProposalEngine implements ProposalEngine {
 
         proposal.totalRaised = {
             ...proposal.totalRaised,
-            value: String(Number(proposal.totalRaised.value) + Number(input.amount.value)),
+            value: String(
+                Number(proposal.totalRaised.value) + Number(input.amount),
+            ),
         };
 
-        return {
-            txId: `mock-fund-${input.proposalId}`,
-        };
+        return { txId: `mock-fund-${input.proposalId}` };
     }
 
-    async finalizeProposal(_ctx: ProposalEngineContext, proposalId: ProposalId): Promise<TxResult> {
+    async finalizeProposal(
+        _ctx: ProposalEngineContext,
+        proposalId: ProposalId,
+    ): Promise<TxResult> {
         const proposal = this.proposals.find((p) => p.id === proposalId);
 
         if (!proposal) {
@@ -75,14 +90,22 @@ export class MockProposalEngine implements ProposalEngine {
         proposal.canFinalize = false;
         proposal.canWithdraw = proposal.status === "failed";
 
-        return {
-            txId: `mock-finalize-${proposalId}`,
-        };
+        return { txId: `mock-finalize-${proposalId}` };
     }
 
-    async withdraw(_ctx: ProposalEngineContext, proposalId: ProposalId): Promise<TxResult> {
+    async withdraw(
+        _ctx: ProposalEngineContext,
+        proposalId: ProposalId,
+    ): Promise<TxResult> {
+        return { txId: `mock-withdraw-${proposalId}` };
+    }
+
+    async withdrawMany(
+        _ctx: ProposalEngineContext,
+        proposalIds: ProposalId[],
+    ): Promise<TxResult> {
         return {
-            txId: `mock-withdraw-${proposalId}`,
+            txId: `mock-withdraw-many-${proposalIds.join(",")}`,
         };
     }
 
