@@ -2,17 +2,21 @@ import Link from "next/link";
 import { NETWORK } from "../../lib/network";
 import { formatRemainingTime, isExpired as hasExpired } from "../../lib/time";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { InfoTooltip } from "../ui/InfoTooltip";
+import { FeeSplit } from "../ui/FeeSplit";
 
 type Proposal = {
   id: number;
   creator: string;
   recipient: string;
   goal: string;
+  minThreshold: string;
   deadline: number;
   totalRaised: string;
   status: number;
   executed?: boolean;
   metadataURI?: string | null;
+  asset?: { type: "native" } | { type: "krc20"; tokenAddress: `0x${string}` };
 };
 
 type Props = {
@@ -80,6 +84,11 @@ export function ProposalCard({
       ? Math.min((Number(p.totalRaised) / Number(p.goal)) * 100, 100)
       : 0;
 
+  const thresholdPercent = 
+    Number(p.goal) > 0
+      ? Math.min((Number(p.minThreshold) / Number(p.goal)) * 100, 100)
+      : 0;
+
   const isExpired = hasExpired(p.deadline);
   const isOverfunded = Number(p.totalRaised) > Number(p.goal);
 
@@ -102,13 +111,28 @@ export function ProposalCard({
           </p>
         </div>
 
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${statusClass(
-            p.status
-          )}`}
-        >
-          {statusLabel(p.status)}
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${statusClass(
+              p.status
+            )}`}
+          >
+            {statusLabel(p.status)}
+          </span>
+          
+          <div className="flex flex-wrap gap-1 justify-end">
+            {isExpired && (
+              <span className="rounded-full border border-border bg-background/50 px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                Finalizable
+              </span>
+            )}
+            {isOverfunded && (
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-500">
+                Overfunded
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{metadata.description}</p>
@@ -126,34 +150,51 @@ export function ProposalCard({
 
       <div className="mt-6">
         <div className="mb-2 flex justify-between text-xs font-medium">
-          <span className="text-foreground/80">
-            {p.totalRaised} / <span className="text-muted-foreground">{p.goal} {NETWORK.currency}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-foreground font-bold">{p.totalRaised}</span>
+            <span className="text-[10px] text-muted-foreground">/ {p.goal}</span>
+            <div className={`ml-1 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase ${
+              p.asset?.type === 'krc20' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+            }`}>
+              {p.asset?.type === 'krc20' ? 'KRC20' : NETWORK.currency}
+            </div>
+          </div>
+          <span className={percent >= thresholdPercent ? "text-emerald-500" : "text-amber-500"}>
+            {percent.toFixed(1)}%
           </span>
-          <span className="text-emerald-500">{percent.toFixed(1)}%</span>
         </div>
 
-        <div className="h-2 overflow-hidden rounded-full bg-secondary ring-1 ring-inset ring-black/10 dark:ring-white/5">
+        <div className="relative h-2.5 overflow-hidden rounded-full bg-secondary ring-1 ring-inset ring-black/10 dark:ring-white/5">
+          {/* Milestone Marker */}
+          {thresholdPercent > 0 && thresholdPercent < 100 && (
+            <div 
+              className="absolute top-0 bottom-0 z-10 w-0.5 bg-foreground/20"
+              style={{ left: `${thresholdPercent}%` }}
+              title={`Mínimo: ${p.minThreshold} ${NETWORK.currency}`}
+            ></div>
+          )}
+          
           <div
-            className="h-full rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-1000 ease-out"
+            className={`h-full rounded-full transition-all duration-1000 ease-out ${
+              percent >= thresholdPercent 
+                ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]" 
+                : "bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+            }`}
             style={{ width: `${percent}%` }}
           />
         </div>
+        
+        {thresholdPercent > 0 && (
+          <div className="mt-1 flex justify-between text-[9px] uppercase tracking-tighter text-muted-foreground/60">
+            <span>Inicio</span>
+            <span style={{ marginRight: `${100 - thresholdPercent}%` }}>Mínimo</span>
+            <span>Meta</span>
+          </div>
+        )}
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-        <span className="rounded-full border border-border bg-background/50 px-2.5 py-1">
-          {isExpired ? "Finalizable" : formatRemainingTime(p.deadline)}
-        </span>
-
-        {isOverfunded && (
-          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-emerald-600 dark:text-emerald-400">
-            🔥 Overfunded
-          </span>
-        )}
-
-        <span className="rounded-full border border-border bg-background/50 px-2.5 py-1">
-          93% / 5% / 2%
-        </span>
+      <div className="mt-5 border-t border-border/30 pt-4">
+        <FeeSplit />
       </div>
 
       <div className="mt-8 flex flex-wrap gap-3">

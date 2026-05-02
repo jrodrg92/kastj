@@ -25,7 +25,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <LanguageProvider>
         <WalletProvider>
           {children}
-          <Toaster position="top-right" />
+          <Toaster 
+            position="top-right" 
+            toastOptions={{
+              className: 'premium-glass !text-foreground !rounded-2xl !border-border !px-6 !py-4 shadow-2xl',
+              style: {
+                background: 'color-mix(in oklab, var(--card) 80%, transparent)',
+                backdropFilter: 'blur(16px)',
+              },
+              success: {
+                iconTheme: {
+                  primary: '#10b981',
+                  secondary: '#fff',
+                },
+              },
+            }}
+          />
         </WalletProvider>
       </LanguageProvider>
     </QueryClientProvider>

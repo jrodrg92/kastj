@@ -154,17 +154,17 @@
   body {
     @apply bg-background text-foreground;
     min-height: 100vh;
-    background:
-      radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 28%),
-      radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 24%),
-      linear-gradient(180deg, #f8fafc 0%, #f4f4f5 45%, #fafafa 100%);
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 40%),
+      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.08) 0px, transparent 40%),
+      radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
+    background-size: 200% 200%;
+    animation: mesh-gradient 30s ease infinite;
   }
 
-  .dark body {
-    background:
-      radial-gradient(circle at top left, rgba(34, 197, 94, 0.16), transparent 30%),
-      radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 28%),
-      linear-gradient(180deg, #111827 0%, #09090b 45%, #09090b 100%);
+  @keyframes mesh-gradient {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
   }
 
   input,
@@ -251,17 +251,19 @@
 
 /* PREMIUM UTILITIES */
 @utility premium-glass {
-  background: color-mix(in oklab, var(--card) 60%, transparent);
-  border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+  background: color-mix(in oklab, var(--card) 90%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
   box-shadow: 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
-    0 10px 40px -10px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(16px);
+    0 10px 25px -5px rgba(0, 0, 0, 0.05),
+    0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(12px);
   @variant dark {
     background: color-mix(in oklab, var(--card) 40%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
     box-shadow: 
       inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
       0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(16px);
   }
 }
 

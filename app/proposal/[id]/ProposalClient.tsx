@@ -15,6 +15,7 @@ import {
   isExpired as hasExpired,
 } from "../../../lib/time";
 import { AppHeader } from "../../../components/layout/AppHeader";
+import { InfoTooltip } from "../../../components/ui/InfoTooltip";
 
 import type { DbProposal, DbFunding, DbActivity } from "../../../types/supabase";
 import { useFundProposal } from "../../../features/proposals/hooks/useFundProposal";
@@ -258,6 +259,8 @@ export default function ProposalClient() {
     await loadDetail();
   }
 
+  const [copied, setCopied] = useState(false);
+
   async function handleWithdraw() {
     if (!wallet.connected) {
       toast.error("Conecta tu wallet");
@@ -275,7 +278,9 @@ export default function ProposalClient() {
 
   async function copyLink() {
     await navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
     toast.success("Link copiado 📋");
+    setTimeout(() => setCopied(false), 2000);
   }
 
   const metadata = useMemo(() => {
@@ -311,6 +316,8 @@ export default function ProposalClient() {
   const goal = Number(formatEther(BigInt(proposal.goal ?? 0)));
   const raised = Number(formatEther(BigInt(proposal.total_raised ?? 0)));
   const percent = goal > 0 ? Math.min((raised / goal) * 100, 100) : 0;
+  const threshold = Number(formatEther(BigInt(proposal.min_threshold ?? proposal.goal ?? 0)));
+  const thresholdPercent = goal > 0 ? Math.min((threshold / goal) * 100, 100) : 0;
 
   const isExpired = hasExpired(Number(proposal.deadline));
   const isActive = status === "active";
@@ -336,14 +343,7 @@ export default function ProposalClient() {
       <div className="mx-auto max-w-7xl space-y-8">
         <AppHeader />
 
-        <div>
-          <button
-            onClick={() => router.push("/")}
-            className="inline-flex h-10 items-center justify-center rounded-full border border-border bg-card/50 px-5 text-sm font-semibold text-foreground transition-all hover:bg-accent hover:text-accent-foreground backdrop-blur-md shadow-sm"
-          >
-            ← {t.backToProposals}
-          </button>
-        </div>
+
 
         <section className="grid gap-8 lg:grid-cols-[1fr_420px]">
           <div className="space-y-8">
@@ -407,7 +407,10 @@ export default function ProposalClient() {
             </section>
 
             <section className="premium-glass rounded-3xl p-8 lg:p-10">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">Why trust this proposal?</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                Why trust this proposal?
+                <InfoTooltip content="Seguridad garantizada por Smart Contracts en la red de Kaspa." />
+              </h2>
 
               <div className="mt-6 grid gap-4 md:grid-cols-3">
                 <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
@@ -441,12 +444,16 @@ export default function ProposalClient() {
               )}
 
               <div className="mt-5 max-h-[400px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                {activity.map((item) => (
+                {activity.map((item, index) => (
                   <div
                     key={item.id}
-                    className="flex items-start gap-3 rounded-2xl border border-border bg-background/50 p-4 transition-all hover:bg-card/80"
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both flex items-start gap-4 rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/20"
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-lg text-secondary-foreground">
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl shadow-sm ${
+                      item.type === 'funded' ? 'bg-emerald-500/10 text-emerald-500' : 
+                      item.type === 'created' ? 'bg-blue-500/10 text-blue-500' : 'bg-secondary'
+                    }`}>
                       {activityIcon(item.type)}
                     </span>
 
@@ -475,17 +482,36 @@ export default function ProposalClient() {
                   </p>
                 </div>
 
-                <p className="text-3xl font-bold tracking-tight text-emerald-500">
+                <p className={`text-3xl font-bold tracking-tight ${percent >= thresholdPercent ? 'text-emerald-500' : 'text-amber-500'}`}>
                   {percent.toFixed(1)}%
                 </p>
               </div>
 
-              <div className="mt-8 h-2 overflow-hidden rounded-full bg-secondary ring-1 ring-inset ring-black/10 dark:ring-white/5">
+              <div className="relative mt-8 h-2.5 overflow-hidden rounded-full bg-secondary ring-1 ring-inset ring-black/10 dark:ring-white/5">
+                {/* Milestone Marker */}
+                {thresholdPercent > 0 && thresholdPercent < 100 && (
+                  <div 
+                    className="absolute top-0 bottom-0 z-10 w-0.5 bg-foreground/20"
+                    style={{ left: `${thresholdPercent}%` }}
+                  ></div>
+                )}
+                
                 <div
-                  className="h-full rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-1000 ease-out"
+                  className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                    percent >= thresholdPercent 
+                      ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]" 
+                      : "bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                  }`}
                   style={{ width: `${percent}%` }}
                 />
               </div>
+
+              {thresholdPercent > 0 && (
+                <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold">
+                  <span>Mínimo: {threshold.toFixed(2)} {NETWORK.currency}</span>
+                  <span>Meta: {goal.toFixed(2)}</span>
+                </div>
+              )}
 
               <div className="mt-10 grid grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-border bg-background/50 p-5 shadow-inner">
@@ -570,9 +596,21 @@ export default function ProposalClient() {
 
                 <button
                   onClick={copyLink}
-                  className="w-full rounded-2xl border border-border bg-background/50 px-5 py-4 font-bold text-foreground transition-all hover:bg-accent backdrop-blur-sm hover:shadow-sm"
+                  className={`w-full rounded-2xl border px-5 py-4 font-bold transition-all backdrop-blur-sm shadow-sm flex items-center justify-center gap-2 ${
+                    copied ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500 scale-[0.98]' : 'border-border bg-background/50 text-foreground hover:bg-accent'
+                  }`}
                 >
-                  Copy share link
+                  {copied ? (
+                    <>
+                      <span>✓</span>
+                      <span>Enlace copiado</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🔗</span>
+                      <span>Compartir propuesta</span>
+                    </>
+                  )}
                 </button>
               </div>
             </section>

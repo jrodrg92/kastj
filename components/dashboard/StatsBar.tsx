@@ -29,14 +29,16 @@ export function StatsBar({ proposals }: { proposals: Proposal[] }) {
   ];
 
   return (
-    <section className="grid gap-4 md:grid-cols-5">
+    <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
       {items.map((item) => (
         <div
           key={item.label}
-          className="rounded-2xl border border-border bg-card/50 p-5 shadow-sm backdrop-blur-xl transition-all hover:bg-card/80"
+          className="premium-glass rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
         >
-          <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">{item.value}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{item.label}</p>
+          <p className="mt-2 text-2xl font-black tracking-tight text-gradient">
+            {item.value}
+          </p>
         </div>
       ))}
     </section>

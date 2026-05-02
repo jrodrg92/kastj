@@ -47,11 +47,18 @@ export function WalletStatus({
   }
 
   return (
-    <div className="flex h-9 items-center gap-3 rounded-full border border-border bg-card/50 pl-4 pr-1 text-sm font-medium transition-colors hover:bg-accent">
-      <span className="text-muted-foreground">
-        {balance} <span className="opacity-50">{NETWORK.currency}</span>
-      </span>
-      <div className="flex h-7 items-center rounded-full bg-background px-3 text-emerald-600 dark:text-emerald-400 border border-border shadow-sm">
+    <div className="premium-glass flex h-10 items-center gap-3 rounded-full pl-4 pr-1.5 text-sm font-semibold transition-all hover:shadow-lg">
+      <div className="flex items-center gap-2">
+        <div className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+        </div>
+        <span className="text-foreground/90">
+          {balance} <span className="text-[10px] text-muted-foreground uppercase">{NETWORK.currency}</span>
+        </span>
+      </div>
+      
+      <div className="flex h-7 items-center rounded-full bg-background/80 px-3 font-mono text-[11px] text-emerald-500 border border-emerald-500/20 shadow-inner">
         {address.slice(0, 6)}...{address.slice(-4)}
       </div>
     </div>

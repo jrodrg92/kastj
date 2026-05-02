@@ -15,7 +15,9 @@ import { useRealtimeNotifications } from "../hooks/useRealtimeNotifications";
 import { StatsBar } from "../components/dashboard/StatsBar";
 import { CreateProposalForm } from "../components/proposal/CreateProposalForm";
 import { ProposalCard } from "../components/proposal/ProposalCard";
+import { ProposalSkeleton, StatsSkeleton } from "../components/proposal/ProposalSkeleton";
 import { AppHeader } from "../components/layout/AppHeader";
+import { SortDropdown, SortOption } from "../components/ui/SortDropdown";
 
 import { NETWORK } from "../lib/network";
 import { supabase } from "../lib/supabase";
@@ -318,69 +320,69 @@ export default function Home() {
       <div className="mx-auto max-w-7xl space-y-10">
         <AppHeader />
 
-        <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-          <div className="premium-glass relative overflow-hidden rounded-3xl p-10 lg:p-12">
-            <div className="absolute -left-10 -top-10 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"></div>
-            <div className="mb-6 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-sm font-semibold text-emerald-500">
-              {t.autScrow}
-            </div>
+        <section className="space-y-8">
+          <div className="premium-glass relative overflow-hidden rounded-[3rem] p-12 lg:p-20 text-center">
+            <div className="absolute -left-20 -top-20 h-96 w-96 rounded-full bg-emerald-500/10 blur-[100px]"></div>
+            <div className="absolute -right-20 -bottom-20 h-96 w-96 rounded-full bg-blue-500/10 blur-[100px]"></div>
+            
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="mb-8 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-6 py-2 text-sm font-black uppercase tracking-widest text-emerald-500">
+                ✨ {t.autScrow}
+              </div>
 
-            <h1 className="text-4xl font-black tracking-tight md:text-6xl lg:text-7xl text-gradient leading-[1.1] pb-2">
-              {t.mission}
-            </h1>
-            <p className="mt-6 max-w-2xl text-xl text-muted-foreground leading-relaxed">
-              {t.mission1}
-            </p>
+              <h1 className="max-w-5xl text-5xl font-black tracking-tighter md:text-7xl lg:text-8xl text-gradient leading-[0.95] pb-4">
+                {t.mission}
+              </h1>
+              
+              <p className="mt-8 max-w-2xl text-xl text-muted-foreground leading-relaxed">
+                {t.mission1}
+              </p>
 
-            <div className="mt-8 flex flex-wrap gap-4">
-              <a
-                href="#create"
-                className="premium-btn rounded-full px-8 py-4 font-bold text-lg"
-              >
-                {t.createProposal}
-              </a>
+              <div className="mt-12 flex flex-wrap justify-center gap-6">
+                <a
+                  href="#create"
+                  className="premium-btn min-w-[200px] rounded-full px-10 py-5 font-bold text-xl transition-all hover:scale-105 active:scale-95"
+                >
+                  {t.createProposal}
+                </a>
 
-              <a
-                href="#proposals"
-                className="rounded-full border border-border bg-card/50 px-8 py-4 font-bold text-foreground transition-all hover:bg-accent hover:text-accent-foreground backdrop-blur-md shadow-sm"
-              >
-                {t.exploreProposals}
-              </a>
+                <a
+                  href="#proposals"
+                  className="rounded-full border border-border bg-background/50 px-10 py-5 font-bold text-xl text-foreground transition-all hover:bg-accent backdrop-blur-md shadow-sm hover:scale-105 active:scale-95"
+                >
+                  {t.exploreProposals}
+                </a>
+              </div>
             </div>
           </div>
 
-          <div className="premium-glass rounded-3xl p-10 flex flex-col justify-center">
-            <h2 className="mb-8 text-2xl font-bold tracking-tight text-foreground">{t.howItWorks}</h2>
-
-            <div className="space-y-4">
-              <div className="group rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                <p className="font-bold text-foreground flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-xs text-emerald-500">1</span>
-                  {t.step1}
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              { step: "1", title: t.step1, desc: t.step11, icon: "💡" },
+              { step: "2", title: t.step2, desc: t.step21, icon: "💎" },
+              { step: "3", title: t.step3, desc: t.step31, icon: "⚡" },
+            ].map((s) => (
+              <div key={s.step} className="premium-glass group rounded-[2rem] p-8 transition-all duration-300 hover:-translate-y-2">
+                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-3xl shadow-inner ring-1 ring-emerald-500/20">
+                  {s.icon}
+                </div>
+                <h3 className="text-xl font-bold text-foreground">
+                  <span className="mr-2 text-emerald-500 opacity-50">0{s.step}.</span>
+                  {s.title}
+                </h3>
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                  {s.desc}
                 </p>
-                <p className="mt-2 pl-8 text-sm text-muted-foreground leading-relaxed">{t.step11}</p>
               </div>
-
-              <div className="group rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                <p className="font-bold text-foreground flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-xs text-emerald-500">2</span>
-                  {t.step2}
-                </p>
-                <p className="mt-2 pl-8 text-sm text-muted-foreground leading-relaxed">{t.step21}</p>
-              </div>
-
-              <div className="group rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                <p className="font-bold text-foreground flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-xs text-emerald-500">3</span>
-                  {t.step3}
-                </p>
-                <p className="mt-2 pl-8 text-sm text-muted-foreground leading-relaxed">{t.step31}</p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
-        <StatsBar proposals={proposals} />
+        {proposalsQuery.isLoading ? (
+          <StatsSkeleton />
+        ) : (
+          <StatsBar proposals={proposals} />
+        )}
 
 
 
@@ -443,32 +445,44 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="grid gap-3 md:grid-cols-[1fr_220px]">
-            <input
-              type="text"
-              placeholder={t.searchProp}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-2xl border border-border bg-card/50 p-4 outline-none transition focus:border-emerald-500 focus:bg-background"
-            />
+          <div className="premium-glass relative z-30 flex flex-col gap-4 rounded-3xl p-6 md:flex-row md:items-center">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder={t.searchProp}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="premium-glass h-14 w-full rounded-2xl p-4 pl-12 outline-none transition focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 shadow-sm"
+              />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                🔍
+              </div>
+            </div>
 
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as Sort)}
-              className="rounded-2xl border border-border bg-card/50 p-4 outline-none transition focus:border-emerald-500 focus:bg-background md:w-48"
-            >
-              <option value="newest">{t.newest}</option>
-              <option value="raised">{t.moreRe}</option>
-              <option value="ending">{t.endSoon}</option>
-            </select>
+            <div className="flex flex-wrap gap-4">
+              <SortDropdown
+                value={sort}
+                onChange={(val) => setSort(val as Sort)}
+                labels={{
+                  newest: t.newest,
+                  raised: t.moreRe,
+                  ending: t.endSoon,
+                }}
+              />
+
+              <div className="relative md:w-48">
+                <input
+                  className="premium-glass h-14 w-full rounded-2xl p-4 pl-12 pr-4 outline-none transition-all focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 font-bold text-foreground placeholder:text-muted-foreground/50 shadow-sm"
+                  placeholder={`${t.fundingFor}`}
+                  value={fundAmount}
+                  onChange={(event) => setFundAmount(event.target.value)}
+                />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-emerald-500">
+                  {NETWORK.currency}
+                </div>
+              </div>
+            </div>
           </div>
-
-          <input
-            className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-blue-500"
-            placeholder={`${t.fundingFor} ${NETWORK.currency}`}
-            value={fundAmount}
-            onChange={(event) => setFundAmount(event.target.value)}
-          />
 
           {!wallet.connected && (
             <div className="rounded-3xl border border-border bg-card/50 p-8 text-center text-muted-foreground">
@@ -479,30 +493,43 @@ export default function Home() {
           {wallet.connected &&
             filteredProposals.length === 0 &&
             !proposalsQuery.isLoading && (
-              <div className="rounded-3xl border border-border bg-card/50 p-8 text-center text-muted-foreground">
-                {t.noProposalsFilter}
+              <div className="premium-glass rounded-3xl p-16 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/20 text-3xl">
+                  📂
+                </div>
+                <h3 className="text-xl font-bold text-foreground">{t.noProposalsFilter}</h3>
+                <p className="mt-2 text-muted-foreground">Prueba ajustando los filtros o crea una nueva propuesta.</p>
               </div>
             )}
 
-          {wallet.connected && proposalsQuery.isLoading && (
-            <div className="rounded-3xl border border-border bg-card/50 p-8 text-center text-muted-foreground">
-              {t.loadingProposals}
+          {proposalsQuery.isLoading && (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <ProposalSkeleton key={i} />
+              ))}
             </div>
           )}
 
-          {filteredProposals.map((proposal) => (
-            <ProposalCard
-              key={proposal.id}
-              proposal={proposal}
-              fundAmount={fundAmount}
-              loading={isAnyMutationPending}
-              connected={wallet.connected}
-              isSupported={supportedIdsSet.has(proposal.id)}
-              onFund={handleFund}
-              onFinalize={handleFinalize}
-              onWithdraw={handleWithdraw}
-            />
-          ))}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredProposals.map((proposal, index) => (
+              <div 
+                key={proposal.id} 
+                className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <ProposalCard
+                  proposal={proposal}
+                  fundAmount={fundAmount}
+                  loading={isAnyMutationPending}
+                  connected={wallet.connected}
+                  isSupported={supportedIdsSet.has(proposal.id)}
+                  onFund={handleFund}
+                  onFinalize={handleFinalize}
+                  onWithdraw={handleWithdraw}
+                />
+              </div>
+            ))}
+          </div>
 
           {/* Infinite scroll sentinel */}
           <div ref={loadMoreRef} className="py-4 text-center">
