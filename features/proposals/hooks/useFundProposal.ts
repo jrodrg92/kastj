@@ -5,9 +5,11 @@ import toast from "react-hot-toast";
 import { FundProposalInput, ProposalEngineContext } from "@/core/engines/types";
 import { getProposalEngine } from "@/core/engines/ProposalEngineFactory";
 import { proposalKeys } from "../queryKeys";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 export function useFundProposal(ctx: ProposalEngineContext | null) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async (input: FundProposalInput) => {
@@ -19,7 +21,7 @@ export function useFundProposal(ctx: ProposalEngineContext | null) {
       return engine.fundProposal(ctx, input);
     },
     onSuccess: async (_result, input) => {
-      toast.success("Proposal funded");
+      toast.success(t.proposalFunded);
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: proposalKeys.lists() }),
@@ -30,7 +32,7 @@ export function useFundProposal(ctx: ProposalEngineContext | null) {
     },
     onError: (error) => {
       console.error(error);
-      toast.error("Could not fund proposal");
+      toast.error(t.fundError);
     },
   });
 }

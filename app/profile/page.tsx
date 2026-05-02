@@ -13,10 +13,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { NETWORK } from "../../lib/network";
 import { useInfiniteProposals } from "../../features/proposals/hooks/useInfiniteProposals";
 
-function short(addr?: string) {
-    if (!addr) return "";
-    return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
-}
+import { short } from "../../lib/proposalUtils";
 
 function formatActivityAmount(amount?: string | null) {
     if (!amount) return null;
@@ -72,7 +69,7 @@ export default function ProfilePage() {
                             {t.conectWallet}
                         </p>
                         <button
-                            onClick={wallet.connect}
+                            onClick={() => wallet.connect()}
                             className="mt-6 rounded-2xl bg-emerald-600 px-8 py-4 font-bold text-white transition hover:bg-emerald-500"
                         >
                             {t.connectWallet}
@@ -173,7 +170,7 @@ export default function ProfilePage() {
                             >
                                 <div>
                                     <p className="font-semibold text-foreground">
-                                        Proposal #{p.id}
+                                        {t.proposalHash}{p.id}
                                     </p>
                                     <p className="text-sm text-muted-foreground">
                                         {Number(p.totalRaised).toFixed(4)} /{" "}
@@ -182,7 +179,7 @@ export default function ProfilePage() {
                                     </p>
                                 </div>
                                 <span
-                                    className={`rounded-full px-3 py-1 text-sm font-bold ${
+                                    className={`rounded-full px-3 py-1 text-xs font-bold ${
                                         p.status === 0
                                             ? "bg-yellow-500/10 text-yellow-400"
                                             : p.status === 1
@@ -191,10 +188,10 @@ export default function ProfilePage() {
                                     }`}
                                 >
                                     {p.status === 0
-                                        ? t.active
+                                        ? t.activeStatus
                                         : p.status === 1
-                                          ? t.succeeded
-                                          : t.failed}
+                                          ? t.succeededStatus
+                                          : t.failedStatus}
                                 </span>
                             </Link>
                         ))}
@@ -238,8 +235,8 @@ export default function ProfilePage() {
                                             {item.message}
                                         </p>
                                         <p className="text-sm text-muted-foreground">
-                                            Proposal #
-                                            {item.proposal_id}
+                                        {t.proposalHash}
+                                        {item.proposal_id}
                                             {amount &&
                                                 ` · ${amount} ${NETWORK.currency}`}
                                         </p>

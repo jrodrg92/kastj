@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import type { ProposalMessageAuthorRole, ProposalMessageType } from "../../core/domain/ProposalMessage";
 import { Send, Info, ChevronDown, Check } from "lucide-react";
+import { useUi } from "../../contexts/UiContext";
 
 interface Props {
   onSend: (body: string, type: ProposalMessageType) => Promise<void>;
@@ -15,16 +16,17 @@ export function ProposalMessageComposer({ onSend, authorRole, isSending }: Props
   const [type, setType] = useState<ProposalMessageType>("comment");
 
   const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const { t } = useUi();
 
   const canPostSpecial = authorRole === "creator" || authorRole === "moderator";
 
   const options: { value: ProposalMessageType; label: string; icon: string }[] = [
-    { value: "comment", label: "Comment", icon: "💬" },
-    { value: "question", label: "Question", icon: "❓" },
+    { value: "comment", label: t.comment, icon: "💬" },
+    { value: "question", label: t.question, icon: "❓" },
     ...(canPostSpecial
       ? [
-          { value: "answer" as const, label: "Official Answer", icon: "✅" },
-          { value: "update" as const, label: "Creator Update", icon: "📢" },
+          { value: "answer" as const, label: t.answer, icon: "✅" },
+          { value: "update" as const, label: t.update, icon: "📢" },
         ]
       : []),
   ];
@@ -47,7 +49,7 @@ export function ProposalMessageComposer({ onSend, authorRole, isSending }: Props
       <div className="flex flex-wrap items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
-            Post as
+            {t.postAs}
           </label>
           
           <div className="relative">
@@ -73,7 +75,7 @@ export function ProposalMessageComposer({ onSend, authorRole, isSending }: Props
                       }}
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-xs font-bold transition-all ${
                         type === opt.value
-                          ? "bg-emerald-500 text-white"
+                           ? "bg-emerald-500 text-white"
                           : "text-foreground/70 hover:bg-accent hover:text-emerald-600 dark:hover:text-emerald-400"
                       }`}
                     >
@@ -91,7 +93,7 @@ export function ProposalMessageComposer({ onSend, authorRole, isSending }: Props
         {type === 'update' && (
           <div className="flex items-center gap-2 text-[10px] font-black text-emerald-600 bg-emerald-500/10 dark:text-emerald-400 dark:bg-emerald-500/20 px-4 py-2 rounded-full border border-emerald-500/20 shadow-[0_4px_12px_rgba(16,185,129,0.1)]">
             <Info className="h-3.5 w-3.5" />
-            OFFICIAL UPDATE
+            {t.officialUpdate}
           </div>
         )}
       </div>
@@ -100,7 +102,7 @@ export function ProposalMessageComposer({ onSend, authorRole, isSending }: Props
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder={type === 'update' ? "Share an update with your supporters..." : "Type your message here..."}
+          placeholder={type === 'update' ? t.updatePlaceholder : t.commentPlaceholder}
           className="min-h-[140px] w-full rounded-2xl border border-border bg-background/50 p-5 text-sm text-foreground outline-none transition-all focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/40 placeholder:text-muted-foreground/50 dark:placeholder:text-muted-foreground/30 resize-none shadow-inner"
           maxLength={2000}
         />
@@ -120,7 +122,7 @@ export function ProposalMessageComposer({ onSend, authorRole, isSending }: Props
           ) : (
             <Send className="h-4 w-4" />
           )}
-          {isSending ? "Posting..." : "Post Message"}
+          {isSending ? t.posting : t.postMessage}
         </button>
       </div>
     </div>

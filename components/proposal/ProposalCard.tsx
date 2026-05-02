@@ -30,41 +30,8 @@ type Props = {
   onWithdraw: (id: number) => Promise<void>;
 };
 
-function short(addr: string) {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
-function statusLabel(status: number) {
-  if (status === 0) return "Activa";
-  if (status === 1) return "Exitosa";
-  if (status === 2) return "Fallida";
-  return "Desconocida";
-}
-
-function statusClass(status: number) {
-  if (status === 0) return "border border-amber-500/30 bg-amber-500/10 text-amber-400";
-  if (status === 1) return "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]";
-  if (status === 2) return "border border-red-500/30 bg-red-500/10 text-red-400";
-  return "border border-zinc-500/30 bg-zinc-500/10 text-zinc-400";
-}
-
-function parseMetadata(uri?: string) {
-  if (!uri?.startsWith("local://")) {
-    return {
-      title: "Propuesta sin título",
-      description: "Sin descripción disponible.",
-    };
-  }
-
-  try {
-    return JSON.parse(decodeURIComponent(uri.replace("local://", "")));
-  } catch {
-    return {
-      title: "Error metadata",
-      description: "No se pudo leer la metadata.",
-    };
-  }
-}
+import { useProposalMetadata } from "../../features/proposals/hooks/useProposalMetadata";
+import { statusLabel, statusClass, short } from "../../lib/proposalUtils";
 
 export function ProposalCard({
   proposal,
@@ -76,8 +43,9 @@ export function ProposalCard({
   onFinalize,
   onWithdraw
 }: Props) {
+  const { t } = useLanguage();
   const p = proposal;
-  const metadata = parseMetadata(p.metadataURI ?? undefined);
+  const metadata = useProposalMetadata(p.metadataURI);
 
   const percent =
     Number(p.goal) > 0
@@ -96,8 +64,6 @@ export function ProposalCard({
   const canFinalize = connected && !loading && !p.executed && isExpired;
   const canWithdraw = connected && !loading && p.status === 2;
 
-  const { t } = useLanguage();
-
   return (
     <div className="group premium-glass relative flex flex-col rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
       {/* Decorative Glow on Hover */}
@@ -107,7 +73,7 @@ export function ProposalCard({
         <div>
           <h3 className="text-xl font-bold tracking-tight text-foreground">{metadata.title}</h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Propuesta #{p.id} {isSupported && <span className="ml-2 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-blue-400">Apoyada</span>}
+            {t.proposalHash}{p.id} {isSupported && <span className="ml-2 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-blue-400">{t.supportedBadge}</span>}
           </p>
         </div>
 
@@ -117,18 +83,18 @@ export function ProposalCard({
               p.status
             )}`}
           >
-            {statusLabel(p.status)}
+            {statusLabel(p.status, t)}
           </span>
           
           <div className="flex flex-wrap gap-1 justify-end">
             {isExpired && (
               <span className="rounded-full border border-border bg-background/50 px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
-                Finalizable
+                {t.closableBadge}
               </span>
             )}
             {isOverfunded && (
               <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-500">
-                Overfunded
+                {t.overfundedBadge}
               </span>
             )}
           </div>
@@ -165,12 +131,12 @@ export function ProposalCard({
         </div>
 
         <div className="relative h-2.5 overflow-hidden rounded-full bg-secondary ring-1 ring-inset ring-black/10 dark:ring-white/5">
-          {/* Milestone Marker */}
+          {/* Milestone Marker (Threshold) */}
           {thresholdPercent > 0 && thresholdPercent < 100 && (
             <div 
-              className="absolute top-0 bottom-0 z-10 w-0.5 bg-foreground/20"
+              className="absolute top-0 bottom-0 z-30 w-[3px] bg-white shadow-[0_0_15px_rgba(255,255,255,1)] dark:bg-white"
               style={{ left: `${thresholdPercent}%` }}
-              title={`Mínimo: ${p.minThreshold} ${NETWORK.currency}`}
+              title={`${t.minimum}: ${p.minThreshold} ${NETWORK.currency}`}
             ></div>
           )}
           
@@ -186,9 +152,9 @@ export function ProposalCard({
         
         {thresholdPercent > 0 && (
           <div className="mt-1 flex justify-between text-[9px] uppercase tracking-tighter text-muted-foreground/60">
-            <span>Inicio</span>
-            <span style={{ marginRight: `${100 - thresholdPercent}%` }}>Mínimo</span>
-            <span>Meta</span>
+            <span>{t.start}</span>
+            <span style={{ marginRight: `${100 - thresholdPercent}%` }}>{t.minimum}</span>
+            <span>{t.goalLabel}</span>
           </div>
         )}
       </div>
@@ -221,7 +187,7 @@ export function ProposalCard({
             onClick={() => onFinalize(p.id)}
             className="flex h-10 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 text-sm font-medium text-emerald-400 transition-all hover:bg-emerald-500/20 disabled:opacity-40"
           >
-            {loading ? "..." : "Finalizar (Trigger)"}
+            {loading ? "..." : t.finalizeTrigger}
           </button>
         )}
 

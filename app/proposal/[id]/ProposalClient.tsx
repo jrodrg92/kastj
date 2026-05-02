@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatEther } from "ethers";
+import { formatEther } from "../../../lib/currencyUtils";
 import toast from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "../../../lib/supabase";
 import { useWalletContext } from "../../../contexts/WalletContext";
-import { useLanguage } from "../../../contexts/LanguageContext";
+import { useUi } from "../../../contexts/UiContext";
 import { useProposalEngine } from "../../../hooks/useProposalEngine";
 import { NETWORK } from "../../../lib/network";
 import {
@@ -19,50 +20,21 @@ import { InfoTooltip } from "../../../components/ui/InfoTooltip";
 import { History, ChevronDown } from "lucide-react";
 import { ProposalMessages } from "../../../components/proposal/ProposalMessages";
 
-import type { DbProposal, DbFunding, DbActivity } from "../../../types/supabase";
 import { useFundProposal } from "../../../features/proposals/hooks/useFundProposal";
 import { useFinalizeProposal } from "../../../features/proposals/hooks/useFinalizeProposal";
 import { useWithdrawProposal } from "../../../features/proposals/hooks/useWithdrawProposal";
+import { useProposal } from "../../../features/proposals/hooks/useProposal";
+import { useProposalActivity } from "../../../features/proposals/hooks/useProposalActivity";
+import { useProposalFundings } from "../../../features/proposals/hooks/useProposalFundings";
+import { proposalKeys } from "../../../features/proposals/queryKeys";
 
-type ProposalStatus = "active" | "succeeded" | "failed" | "unknown";
+import { useProposalMetadata } from "../../../features/proposals/hooks/useProposalMetadata";
 
-function short(addr?: string) {
-  if (!addr) return "";
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
-function normalizeStatus(status: string | number): ProposalStatus {
-  if (status === 0 || status === "active") return "active";
-  if (status === 1 || status === "succeeded") return "succeeded";
-  if (status === 2 || status === "failed") return "failed";
-  return "unknown";
-}
-
-function parseMetadata(uri?: string) {
-  if (!uri?.startsWith("local://") && !uri?.startsWith("supabase://")) {
-    return {
-      title: "Propuesta sin título",
-      description: "Sin descripción disponible.",
-    };
-  }
-
-  try {
-    const raw = uri.replace("local://", "").replace("supabase://", "");
-    return JSON.parse(decodeURIComponent(raw));
-  } catch {
-    return {
-      title: "Metadata inválida",
-      description: "No se pudo leer la metadata.",
-    };
-  }
-}
-
-function statusLabel(status: ProposalStatus) {
-  if (status === "active") return "🟡 Activa";
-  if (status === "succeeded") return "🟢 Exitosa";
-  if (status === "failed") return "🔴 Fallida";
-  return "❓ Desconocida";
-}
+import { 
+  short, 
+  normalizeStatus, 
+  statusLabel 
+} from "../../../lib/proposalUtils";
 
 function activityIcon(type: string) {
   if (type === "created") return "🆕";
@@ -75,10 +47,20 @@ function activityIcon(type: string) {
 export default function ProposalClient() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const wallet = useWalletContext();
-  const { t } = useLanguage();
+  const { t } = useUi();
   const { ctx } = useProposalEngine(wallet.address, wallet.signer);
+
+  const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
+  const proposalId = Number(idParam);
+
+  const { data: proposal, isLoading: proposalLoading } = useProposal(proposalId);
+  const { data: activity = [] } = useProposalActivity(proposalId);
+  const { data: fundings = [] } = useProposalFundings(proposalId);
+
+  const metadata = useProposalMetadata(proposal?.metadataURI);
 
   // Feature hooks for mutations
   const fundMutation = useFundProposal(ctx);
@@ -90,86 +72,25 @@ export default function ProposalClient() {
     finalizeMutation.isPending ||
     withdrawMutation.isPending;
 
-  const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
-  const proposalId = Number(idParam);
-
-  const [proposal, setProposal] = useState<DbProposal | null>(null);
-  const [fundings, setFundings] = useState<DbFunding[]>([]);
-  const [activity, setActivity] = useState<DbActivity[]>([]);
-  const [myContribution, setMyContribution] = useState("0");
   const [fundAmount, setFundAmount] = useState("");
   const [copied, setCopied] = useState(false);
   const [isActivityExpanded, setIsActivityExpanded] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  async function loadDetail() {
-    if (!Number.isFinite(proposalId)) return;
-
-    setLoading(true);
-
-    const { data: proposalData, error: proposalError } = await supabase
-      .from("proposals")
-      .select("*")
-      .eq("id", proposalId)
-      .maybeSingle();
-
-    const { data: fundingData, error: fundingError } = await supabase
-      .from("fundings")
-      .select("*")
-      .eq("proposal_id", proposalId)
-      .order("id", { ascending: false });
-
-    const { data: activityData, error: activityError } = await supabase
-      .from("activity")
-      .select("*")
-      .eq("proposal_id", proposalId)
-      .order("id", { ascending: false });
-
-    setLoading(false);
-
-    if (proposalError || !proposalData) {
-      console.error("proposalError", proposalError);
-      setProposal(null);
-      return;
-    }
-
-    if (fundingError) {
-      console.error("fundingError", fundingError);
-      toast.error("No se pudo cargar el historial");
-      return;
-    }
-
-    if (activityError) {
-      console.error("activityError", activityError);
-      toast.error("No se pudo cargar la actividad");
-      return;
-    }
-
-    setProposal(proposalData);
-    setFundings(fundingData ?? []);
-    setActivity(activityData ?? []);
-
-    if (wallet.address && fundingData) {
-      const mine = fundingData
-        .filter(
-          (funding) =>
-            funding.supporter?.toLowerCase() === wallet.address?.toLowerCase()
-        )
-        .reduce((acc, funding) => acc + BigInt(funding.amount), 0n);
-
-      setMyContribution(formatEther(mine));
-    } else {
-      setMyContribution("0");
-    }
-  }
+  const myContribution = useMemo(() => {
+    if (!wallet.address || !fundings.length) return "0";
+    const mine = fundings
+      .filter(
+        (f) => f.supporter?.toLowerCase() === wallet.address?.toLowerCase()
+      )
+      .reduce((acc, f) => acc + BigInt(f.amount), 0n);
+    return formatEther(mine);
+  }, [wallet.address, fundings]);
 
   useEffect(() => {
-    if (!Number.isFinite(proposalId)) return;
+    if (!proposalId) return;
 
-    loadDetail();
-
-    const proposalsChannel = supabase
-      .channel(`proposal-${proposalId}`)
+    const channel = supabase
+      .channel(`proposal-detail-${proposalId}`)
       .on(
         "postgres_changes",
         {
@@ -178,12 +99,8 @@ export default function ProposalClient() {
           table: "proposals",
           filter: `id=eq.${proposalId}`,
         },
-        () => loadDetail()
+        () => queryClient.invalidateQueries({ queryKey: proposalKeys.detail(proposalId) })
       )
-      .subscribe();
-
-    const fundingsChannel = supabase
-      .channel(`fundings-${proposalId}`)
       .on(
         "postgres_changes",
         {
@@ -192,12 +109,8 @@ export default function ProposalClient() {
           table: "fundings",
           filter: `proposal_id=eq.${proposalId}`,
         },
-        () => loadDetail()
+        () => queryClient.invalidateQueries({ queryKey: [...proposalKeys.detail(proposalId), "fundings"] })
       )
-      .subscribe();
-
-    const activityChannel = supabase
-      .channel(`activity-${proposalId}`)
       .on(
         "postgres_changes",
         {
@@ -206,101 +119,83 @@ export default function ProposalClient() {
           table: "activity",
           filter: `proposal_id=eq.${proposalId}`,
         },
-        () => loadDetail()
+        () => queryClient.invalidateQueries({ queryKey: [...proposalKeys.detail(proposalId), "activity"] })
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(proposalsChannel);
-      supabase.removeChannel(fundingsChannel);
-      supabase.removeChannel(activityChannel);
+      supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalId, wallet.address]);
+  }, [proposalId, queryClient]);
 
   async function handleFund() {
     if (!wallet.connected) {
-      toast.error("Conecta tu wallet");
+      toast.error(t.conectWallet);
       return;
     }
 
     if (!proposal) {
-      toast.error("Propuesta no cargada");
+      toast.error(t.proposalNotFound);
       return;
     }
 
     if (Number(fundAmount) <= 0) {
-      toast.error("Cantidad inválida");
+      toast.error(t.invalidAmount);
       return;
     }
 
-    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-
-    const asset =
-      !proposal.token || proposal.token === ZERO_ADDRESS
-        ? ({ type: "native" } as const)
-        : ({
-            type: "krc20" as const,
-            tokenAddress: proposal.token as `0x${string}`,
-          });
-
     await fundMutation.mutateAsync({
       proposalId,
-      asset,
+      asset: proposal.asset,
       amount: fundAmount,
     });
-
-    await loadDetail();
   }
 
   async function handleFinalize() {
     if (!wallet.connected) {
-      toast.error("Conecta tu wallet");
+      toast.error(t.conectWallet);
       return;
     }
 
     await finalizeMutation.mutateAsync(proposalId);
-    await loadDetail();
   }
 
   async function handleWithdraw() {
     if (!wallet.connected) {
-      toast.error("Conecta tu wallet");
+      toast.error(t.conectWallet);
       return;
     }
 
     if (Number(myContribution) <= 0) {
-      toast.error("No tienes fondos para retirar");
+      toast.error(t.noFundsToWithdraw);
       return;
     }
 
     await withdrawMutation.mutateAsync(proposalId);
-    await loadDetail();
   }
 
   async function copyLink() {
     await navigator.clipboard.writeText(window.location.href);
     setCopied(true);
-    toast.success("Link copiado 📋");
+    toast.success(`${t.linkCopied} 📋`);
     setTimeout(() => setCopied(false), 2000);
   }
-
-  const metadata = useMemo(() => {
-    return parseMetadata(proposal?.metadata_uri ?? undefined);
-  }, [proposal]);
 
   if (!Number.isFinite(proposalId)) {
     return (
       <main className="min-h-screen bg-background p-8 text-foreground">
-        ID de propuesta inválido.
+        {t.invalidProposalId}
       </main>
     );
   }
 
-  if (loading && !proposal) {
+  if (proposalLoading && !proposal) {
     return (
       <main className="min-h-screen bg-background p-8 text-foreground flex items-center justify-center">
-        {t.loadingProposal}
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-full bg-emerald-500/20" />
+          <p className="text-muted-foreground">{t.loadingProposal}</p>
+        </div>
       </main>
     );
   }
@@ -308,29 +203,30 @@ export default function ProposalClient() {
   if (!proposal) {
     return (
       <main className="min-h-screen bg-background p-8 text-foreground flex items-center justify-center">
-        Propuesta no encontrada.
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">{t.proposalNotFoundPage}</h1>
+          <button onClick={() => router.push('/')} className="mt-4 text-emerald-500 hover:underline">{t.backToHome}</button>
+        </div>
       </main>
     );
   }
 
   const status = normalizeStatus(proposal.status);
-
-  const goal = Number(formatEther(BigInt(proposal.goal ?? 0)));
-  const raised = Number(formatEther(BigInt(proposal.total_raised ?? 0)));
+  const goal = Number(proposal.goal);
+  const raised = Number(proposal.totalRaised);
   const percent = goal > 0 ? Math.min((raised / goal) * 100, 100) : 0;
-  const threshold = Number(formatEther(BigInt(proposal.min_threshold ?? proposal.goal ?? 0)));
+  const threshold = Number(proposal.minThreshold);
   const thresholdPercent = goal > 0 ? Math.min((threshold / goal) * 100, 100) : 0;
 
-  const isExpired = hasExpired(Number(proposal.deadline));
+  const isExpired = hasExpired(proposal.deadline);
   const isActive = status === "active";
   const canFund = wallet.connected && isActive && !isExpired;
-  const canFinalize =
-    wallet.connected && isActive && isExpired && !proposal.success;
-  const canWithdraw =
-    wallet.connected && status === "failed" && Number(myContribution) > 0;
+  
+  const canFinalize = wallet.connected && isActive && isExpired; 
+  const canWithdraw = wallet.connected && status === "failed" && Number(myContribution) > 0;
 
   const supportersCount = new Set(
-    fundings.map((funding) => funding.supporter?.toLowerCase())
+    fundings.map((f) => f.supporter?.toLowerCase())
   ).size;
 
   const isCreator =
@@ -345,31 +241,29 @@ export default function ProposalClient() {
       <div className="mx-auto max-w-7xl space-y-8">
         <AppHeader />
 
-
-
         <section className="grid gap-8 lg:grid-cols-[1fr_420px]">
           <div className="space-y-8">
             <section className="premium-glass rounded-3xl p-8 lg:p-10">
               <div className="mb-6 flex flex-wrap gap-2">
                 <span className="flex items-center gap-1.5 rounded-full border border-border bg-background/50 px-4 py-1.5 text-sm font-bold text-foreground shadow-sm">
                   <div className={`h-2 w-2 rounded-full ${status === "active" ? "bg-yellow-500" : status === "succeeded" ? "bg-green-500" : "bg-red-500"} shadow-[0_0_8px_currentColor]`} />
-                  {statusLabel(status)}
+                  {statusLabel(status, t)}
                 </span>
 
                 {isCreator && (
-                  <span className="flex items-center rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-sm font-bold text-blue-500 shadow-sm">
+                  <span className="flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-600 dark:text-emerald-500 shadow-sm">
                     {t.youAreCreator}
                   </span>
                 )}
 
                 {isTrending && (
                   <span className="flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-1.5 text-sm font-bold text-orange-500 shadow-sm">
-                    🔥 Trending
+                    🔥 {t.trending}
                   </span>
                 )}
               </div>
 
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Proposal #{proposal.id}</p>
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t.proposalHash}{proposal.id}</p>
 
               <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-gradient md:text-5xl leading-tight pb-2">
                 {metadata.title}
@@ -381,28 +275,28 @@ export default function ProposalClient() {
 
               <div className="mt-8 grid gap-4 rounded-2xl border border-border bg-background/50 p-5 text-sm text-muted-foreground md:grid-cols-2">
                 <p>
-                  Creator:{" "}
+                  {t.creator}:{" "}
                   <span className="font-mono text-foreground/80">{short(proposal.creator)}</span>
                 </p>
 
                 <p>
-                  Recipient:{" "}
+                  {t.receiver}:{" "}
                   <span className="font-mono text-foreground/80">
                     {short(proposal.recipient)}
                   </span>
                 </p>
 
                 <p>
-                  Deadline:{" "}
+                  {t.deadline}:{" "}
                   <span className="font-medium text-foreground/80">
                     {isExpired
-                      ? "Expired"
-                      : formatRemainingTime(Number(proposal.deadline))}
+                      ? t.expired
+                      : formatRemainingTime(proposal.deadline)}
                   </span>
                 </p>
 
                 <p>
-                  Supporters:{" "}
+                  {t.suprtd}:{" "}
                   <span className="font-medium text-foreground/80">{supportersCount}</span>
                 </p>
               </div>
@@ -410,36 +304,36 @@ export default function ProposalClient() {
 
             <section className="premium-glass rounded-3xl p-8 lg:p-10">
               <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Why trust this proposal?
-                <InfoTooltip content="Seguridad garantizada por Smart Contracts en la red de Kaspa." />
+                {t.whyTrust}
+                <InfoTooltip content={t.trustTooltip} />
               </h2>
 
               <div className="mt-6 grid gap-4 md:grid-cols-3">
                 <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                  <p className="font-semibold text-foreground">Escrow protected</p>
+                  <p className="font-semibold text-foreground">{t.escrowProtected}</p>
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                    Funds stay locked until settlement.
+                    {t.escrowProtectedDesc}
                   </p>
                 </div>
 
                 <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                  <p className="font-semibold text-foreground">Automatic settlement</p>
+                  <p className="font-semibold text-foreground">{t.autoSettlement}</p>
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                    Success distributes funds. Failure enables withdrawals.
+                    {t.autoSettlementDesc}
                   </p>
                 </div>
 
                 <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                  <p className="font-semibold text-foreground">Transparent history</p>
+                  <p className="font-semibold text-foreground">{t.transparentHistory}</p>
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                    Funding and status changes are indexed and visible.
+                    {t.transparentHistoryDesc}
                   </p>
                 </div>
               </div>
             </section>
 
             <ProposalMessages
-              proposalId={proposalId}
+              proposalId={String(proposalId)}
               currentWallet={wallet.address}
               creatorWallet={proposal.creator}
               recipientWallet={proposal.recipient}
@@ -452,11 +346,11 @@ export default function ProposalClient() {
               >
                 <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-3">
                   <History className="h-6 w-6 text-emerald-500" />
-                  Proposal activity
+                  {t.propAct}
                 </h2>
                 <div className="flex items-center gap-3">
                   <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-black text-emerald-500 border border-emerald-500/20">
-                    {activity.length} events
+                    {activity.length} {activity.length === 1 ? t.eventLabel : t.eventsLabel}
                   </span>
                   <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${isActivityExpanded ? 'rotate-180' : ''}`} />
                 </div>
@@ -465,7 +359,7 @@ export default function ProposalClient() {
               {isActivityExpanded && (
                 <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
                   {activity.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">No activity yet.</p>
+                    <p className="text-sm text-muted-foreground italic">{t.noActivityYet}</p>
                   ) : (
                       <div className="max-h-[400px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                         {activity.map((item, index) => (
@@ -485,7 +379,7 @@ export default function ProposalClient() {
                             <div>
                               <p className="font-medium text-foreground">{item.message}</p>
                               <p className="text-sm text-muted-foreground/80">
-                                {item.actor ? short(item.actor) : "System"} ·{" "}
+                                {item.actor ? short(item.actor) : t.systemActor} ·{" "}
                                 {new Date(item.created_at ?? 0).toLocaleString()}
                               </p>
                             </div>
@@ -500,13 +394,13 @@ export default function ProposalClient() {
 
           <aside className="space-y-6 lg:sticky lg:top-28 lg:self-start">
             <section className="premium-glass rounded-3xl p-8 lg:p-10">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Raised</p>
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t.raisedLabel}</p>
 
               <div className="mt-2 flex items-end justify-between gap-4">
                 <div>
                   <p className="text-4xl font-black tracking-tight text-foreground">{raised.toFixed(4)}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    of {goal.toFixed(4)} {NETWORK.currency}
+                    {t.ofLabel} {goal.toFixed(4)} {NETWORK.currency}
                   </p>
                 </div>
 
@@ -516,10 +410,10 @@ export default function ProposalClient() {
               </div>
 
               <div className="relative mt-8 h-2.5 overflow-hidden rounded-full bg-secondary ring-1 ring-inset ring-black/10 dark:ring-white/5">
-                {/* Milestone Marker */}
+                {/* Milestone Marker (Threshold) */}
                 {thresholdPercent > 0 && thresholdPercent < 100 && (
                   <div 
-                    className="absolute top-0 bottom-0 z-10 w-0.5 bg-foreground/20"
+                    className="absolute top-0 bottom-0 z-30 w-[3px] bg-white shadow-[0_0_15px_rgba(255,255,255,1)] dark:bg-white"
                     style={{ left: `${thresholdPercent}%` }}
                   ></div>
                 )}
@@ -536,30 +430,30 @@ export default function ProposalClient() {
 
               {thresholdPercent > 0 && (
                 <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold">
-                  <span>Mínimo: {threshold.toFixed(2)} {NETWORK.currency}</span>
-                  <span>Meta: {goal.toFixed(2)}</span>
+                  <span>{t.minLabel} {threshold.toFixed(2)} {NETWORK.currency}</span>
+                  <span>{t.goalAsideLabel} {goal.toFixed(2)}</span>
                 </div>
               )}
 
-              <div className="mt-10 grid grid-cols-2 gap-4">
-                <div className="rounded-2xl border border-border bg-background/50 p-5 shadow-inner">
-                  <p className="text-sm font-medium text-muted-foreground">Supporters</p>
-                  <p className="mt-2 text-2xl font-bold text-foreground">
+              <div className="mt-10 space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-background/50 p-5 shadow-inner">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{t.unicSup}</p>
+                  <p className="mt-2 text-2xl font-black text-foreground">
                     {supportersCount}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-background/50 p-5 shadow-inner">
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <p className="mt-2 text-lg font-bold capitalize text-foreground">{status}</p>
+                <div className="rounded-2xl border border-white/10 bg-background/50 p-5 shadow-inner">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{t.status}</p>
+                  <p className="mt-2 text-xl font-black capitalize text-foreground">{statusLabel(status, t).replace(/^(🟡|🟢|🔴)\s*/, "")}</p>
                 </div>
-              </div>
 
-              <div className="mt-4 rounded-2xl border border-border bg-background/50 p-6 shadow-inner">
-                <p className="text-sm font-medium text-muted-foreground">Your contribution</p>
-                <p className="mt-2 text-3xl font-bold text-foreground">
-                  {Number(myContribution).toFixed(4)} <span className="text-xl text-muted-foreground">{NETWORK.currency}</span>
-                </p>
+                <div className="rounded-2xl border border-white/10 bg-background/50 p-5 shadow-inner">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{t.yourContribution}</p>
+                  <p className="mt-2 text-2xl font-black text-foreground">
+                    {Number(myContribution).toFixed(4)} <span className="text-sm font-bold text-muted-foreground">{NETWORK.currency}</span>
+                  </p>
+                </div>
               </div>
 
               <div className="mt-8 space-y-4">
@@ -567,7 +461,7 @@ export default function ProposalClient() {
                   <>
                     <input
                       className="w-full rounded-2xl border border-border bg-background/80 p-5 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
-                      placeholder={`Amount ${NETWORK.currency}`}
+                      placeholder={`${t.amountPlaceholder} ${NETWORK.currency}`}
                       value={fundAmount}
                       onChange={(event) => setFundAmount(event.target.value)}
                     />
@@ -578,8 +472,8 @@ export default function ProposalClient() {
                       className="premium-btn w-full rounded-2xl px-5 py-4 font-bold text-lg disabled:opacity-50"
                     >
                       {fundMutation.isPending
-                        ? "Processing..."
-                        : `Support ${fundAmount} ${NETWORK.currency}`}
+                        ? t.processingButton
+                        : `${t.supp} ${fundAmount} ${NETWORK.currency}`}
                     </button>
                   </>
                 )}
@@ -591,14 +485,14 @@ export default function ProposalClient() {
                     className="w-full rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 font-bold text-emerald-600 transition-all hover:bg-emerald-500/20 disabled:opacity-40 dark:text-emerald-400"
                   >
                     {finalizeMutation.isPending
-                      ? "Finalizing..."
-                      : "Finalize proposal"}
+                      ? t.finalizingButton
+                      : t.finalizeProposalButton}
                   </button>
                 )}
 
                 {status === "succeeded" && (
                   <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-center font-bold text-emerald-600 dark:text-emerald-400">
-                    Funds distributed successfully
+                    {t.fundsDistributedSuccess}
                   </div>
                 )}
 
@@ -609,8 +503,8 @@ export default function ProposalClient() {
                     className="w-full rounded-2xl bg-destructive px-5 py-4 font-bold text-destructive-foreground transition-all hover:opacity-90 disabled:opacity-40"
                   >
                     {withdrawMutation.isPending
-                      ? "Withdrawing..."
-                      : `Withdraw ${Number(myContribution).toFixed(4)} ${
+                      ? t.withdrawingButton
+                      : `${t.withdrawButton} ${Number(myContribution).toFixed(4)} ${
                           NETWORK.currency
                         }`}
                   </button>
@@ -618,7 +512,7 @@ export default function ProposalClient() {
 
                 {status === "failed" && Number(myContribution) <= 0 && (
                   <div className="rounded-2xl border border-border bg-background/50 px-5 py-4 text-center font-bold text-muted-foreground">
-                    No funds to withdraw
+                    {t.noFundsToWithdraw}
                   </div>
                 )}
 
@@ -631,12 +525,12 @@ export default function ProposalClient() {
                   {copied ? (
                     <>
                       <span>✓</span>
-                      <span>Enlace copiado</span>
+                      <span>{t.linkCopied}</span>
                     </>
                   ) : (
                     <>
                       <span>🔗</span>
-                      <span>Compartir propuesta</span>
+                      <span>{t.shareProposal}</span>
                     </>
                   )}
                 </button>

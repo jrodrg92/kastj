@@ -5,9 +5,11 @@ import toast from "react-hot-toast";
 import { ProposalEngineContext, ProposalId } from "@/core/engines/types";
 import { getProposalEngine } from "@/core/engines/ProposalEngineFactory";
 import { proposalKeys } from "../queryKeys";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 export function useFinalizeProposal(ctx: ProposalEngineContext | null) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async (proposalId: ProposalId) => {
@@ -19,7 +21,7 @@ export function useFinalizeProposal(ctx: ProposalEngineContext | null) {
       return engine.finalizeProposal(ctx, proposalId);
     },
     onSuccess: async (_result, proposalId) => {
-      toast.success("Proposal finalized");
+      toast.success(t.proposalFinalized);
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: proposalKeys.lists() }),
@@ -30,7 +32,7 @@ export function useFinalizeProposal(ctx: ProposalEngineContext | null) {
     },
     onError: (error) => {
       console.error(error);
-      toast.error("Could not finalize proposal");
+      toast.error(t.finalizeError);
     },
   });
 }

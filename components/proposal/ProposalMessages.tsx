@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useOptimistic, useTransition } from "react";
 import { useProposalMessages, useCreateProposalMessage, useSoftDeleteMessage, useTogglePinMessage } from "../../features/proposal-messages/hooks";
 import { ProposalMessageComposer } from "./ProposalMessageComposer";
 import { ProposalMessageItem } from "./ProposalMessageItem";
 import { MessageSquare, MessageSquareOff } from "lucide-react";
-import type { ProposalMessageAuthorRole, ProposalMessageType } from "../../core/domain/ProposalMessage";
+import { useUi } from "../../contexts/UiContext";
+import type { ProposalMessage, ProposalMessageAuthorRole, ProposalMessageType } from "../../core/domain/ProposalMessage";
 
 interface Props {
   proposalId: string;
@@ -25,23 +26,52 @@ export function ProposalMessages({
   const deleteMutation = useSoftDeleteMessage(proposalId);
   const pinMutation = useTogglePinMessage(proposalId);
 
+  const [optimisticMessages, addOptimisticMessage] = useOptimistic<ProposalMessage[], ProposalMessage>(
+    messages,
+    (state, newMessage) => [...state, newMessage]
+  );
+
+  const [isTransitioning, startTransition] = useTransition();
+
   const currentAuthorRole = useMemo(() => {
     if (!currentWallet) return "visitor";
     const wallet = currentWallet.toLowerCase();
     if (wallet === creatorWallet.toLowerCase()) return "creator";
     if (wallet === recipientWallet.toLowerCase()) return "recipient";
     return "supporter";
-  }, [currentWallet, creatorWallet, recipientWallet]);
+  }, [currentWallet, creatorWallet, recipientWallet]) as ProposalMessageAuthorRole;
 
   const canPin = currentAuthorRole === "creator" || currentAuthorRole === "moderator";
 
   const handleSend = async (body: string, type: ProposalMessageType) => {
     if (!currentWallet) return;
-    await createMutation.mutateAsync({
+
+    const newMessage: ProposalMessage = {
+      id: `temp-${Date.now()}`,
+      proposalId,
       authorWallet: currentWallet,
       authorRole: currentAuthorRole,
       type,
       body,
+      bodyHash: "",
+      isDeleted: false,
+      isPinned: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    startTransition(async () => {
+      addOptimisticMessage(newMessage);
+      try {
+        await createMutation.mutateAsync({
+          authorWallet: currentWallet,
+          authorRole: currentAuthorRole,
+          type,
+          body,
+        });
+      } catch (e) {
+        console.error("Failed to send message", e);
+      }
     });
   };
 
@@ -54,26 +84,28 @@ export function ProposalMessages({
     await pinMutation.mutateAsync({ messageId, isPinned });
   };
 
+  const { t } = useUi();
+
   return (
     <section className="space-y-8">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h2 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
             <MessageSquare className="h-8 w-8 text-emerald-500" />
-            Discussion
+            {t.discussion}
           </h2>
           <p className="text-sm font-medium text-muted-foreground">
-            Connect with the community and stay updated on the progress.
+            {t.discussionDesc}
           </p>
         </div>
         <div className="rounded-full bg-emerald-500/10 px-4 py-1.5 text-xs font-black text-emerald-500 border border-emerald-500/20">
-          {messages.length} Messages
+          {optimisticMessages.length} {optimisticMessages.length === 1 ? t.messageLabel : t.messagesLabel}
         </div>
       </div>
 
       <div className="space-y-4">
-        {messages.length > 0 ? (
-          messages.map((msg) => (
+        {optimisticMessages.length > 0 ? (
+          optimisticMessages.map((msg) => (
             <ProposalMessageItem
               key={msg.id}
               message={msg}
@@ -88,9 +120,9 @@ export function ProposalMessages({
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-emerald-500/10 text-emerald-500 shadow-[0_8px_30px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/20">
               <MessageSquare className="h-10 w-10" />
             </div>
-            <h3 className="text-2xl font-black text-foreground tracking-tight">First Word?</h3>
+            <h3 className="text-2xl font-black text-foreground tracking-tight">{t.firstWord}</h3>
             <p className="mx-auto mt-3 max-w-[320px] text-sm font-medium text-muted-foreground/70 leading-relaxed">
-              This proposal doesn't have any messages yet. Be the pioneer and start the conversation!
+              {t.pioneerDesc}
             </p>
           </div>
         ) : (
@@ -113,8 +145,8 @@ export function ProposalMessages({
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground/40">
             <MessageSquareOff className="h-8 w-8" />
           </div>
-          <h3 className="text-xl font-black text-foreground tracking-tight">Join the Discussion</h3>
-          <p className="text-sm font-medium text-muted-foreground mt-3 max-w-[300px] mx-auto">Connect your wallet to share your thoughts or ask questions about this proposal.</p>
+          <h3 className="text-xl font-black text-foreground tracking-tight">{t.joinDiscussion}</h3>
+          <p className="text-sm font-medium text-muted-foreground mt-3 max-w-[300px] mx-auto">{t.joinDiscussionDesc}</p>
         </div>
       )}
     </section>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { formatEther } from "ethers";
+import { formatEther } from "../../../lib/currencyUtils";
 import { supabase } from "../../../lib/supabase";
 import { proposalKeys } from "../queryKeys";
 

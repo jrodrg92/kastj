@@ -1,30 +1,11 @@
 import type { Metadata } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import getQueryClient from "../../../lib/getQueryClient";
+import { proposalKeys } from "../../../features/proposals/queryKeys";
+import { fetchProposal } from "../../../features/proposals/api";
+import { parseMetadataUri } from "../../../lib/proposalUtils";
+import { supabase } from "../../../lib/supabase";
 import ProposalClient from "./ProposalClient";
-
-function parseMetadata(uri?: string) {
-  if (!uri?.startsWith("local://") && !uri?.startsWith("supabase://")) {
-    return {
-      title: "Kastj proposal",
-      description: "Conditional crowdfunding proposal on Kastj.",
-    };
-  }
-
-  try {
-    const raw = uri.replace("local://", "").replace("supabase://", "");
-    return JSON.parse(decodeURIComponent(raw));
-  } catch {
-    return {
-      title: "Kastj proposal",
-      description: "Conditional crowdfunding proposal on Kastj.",
-    };
-  }
-}
-
-const supabaseServer = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 type Props = {
   params: Promise<{
@@ -34,21 +15,21 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
+  const proposal = await fetchProposal(Number(id));
+  
+  const metadata = parseMetadataUri(proposal?.metadataURI);
 
-  const { data } = await supabaseServer
-    .from("proposals")
-    .select("id, metadata_uri")
-    .eq("id", Number(id))
-    .maybeSingle();
-
-  const metadata = parseMetadata(data?.metadata_uri);
+  const raised = Number(proposal?.totalRaised ?? 0);
+  const goal = Number(proposal?.goal ?? 0);
+  const percent = goal > 0 ? Math.min((raised / goal) * 100, 100).toFixed(0) : "0";
 
   const title = metadata?.title
-    ? `Kastj — ${metadata.title}`
+    ? `${percent}% — ${metadata.title} | Kastj`
     : `Kastj — Proposal #${id}`;
 
-  const description =
-    metadata?.description ?? "Conditional crowdfunding proposal on Kastj.";
+  const description = `${metadata?.description?.slice(0, 150) ?? "Conditional crowdfunding proposal"}. Goal: ${goal} KAS. Raised: ${raised} KAS (${percent}%).`;
+
+  const ogImage = "/og-image.png"; // Fallback for now
 
   return {
     title,
@@ -58,15 +39,64 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       type: "website",
       siteName: "Kastj",
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: [ogImage],
     },
   };
 }
 
-export default function ProposalPage() {
-  return <ProposalClient />;
+export default async function Page({ params }: Props) {
+  const { id } = await params;
+  const proposalId = Number(id);
+  const queryClient = getQueryClient();
+
+  // Prefetch main proposal
+  await queryClient.prefetchQuery({
+    queryKey: proposalKeys.detail(proposalId),
+    queryFn: () => fetchProposal(proposalId),
+  });
+
+  // Prefetch activity
+  await queryClient.prefetchQuery({
+    queryKey: [...proposalKeys.detail(proposalId), "activity"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("activity")
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .order("id", { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  // Prefetch fundings
+  await queryClient.prefetchQuery({
+    queryKey: [...proposalKeys.detail(proposalId), "fundings"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("fundings")
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .order("id", { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <ProposalClient />
+    </HydrationBoundary>
+  );
 }

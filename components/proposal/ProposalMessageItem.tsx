@@ -3,6 +3,7 @@
 import React from "react";
 import type { ProposalMessage } from "../../core/domain/ProposalMessage";
 import { Trash2, Pin, PinOff } from "lucide-react";
+import { useUi } from "../../contexts/UiContext";
 
 interface Props {
   message: ProposalMessage;
@@ -20,6 +21,7 @@ export function ProposalMessageItem({
   onTogglePin,
 }: Props) {
   const shortWallet = (w: string) => `${w.slice(0, 6)}...${w.slice(-4)}`;
+  const { t } = useUi();
 
   const roleColors: Record<string, string> = {
     creator: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
@@ -29,17 +31,25 @@ export function ProposalMessageItem({
     visitor: "bg-zinc-500/5 text-zinc-500 dark:bg-zinc-800/30 dark:text-zinc-500 border-zinc-500/10 dark:border-zinc-700/30",
   };
 
+  const roleLabels: Record<string, string> = {
+    creator: t.creatorBadge,
+    recipient: t.recipientBadge,
+    moderator: t.moderatorBadge,
+    supporter: t.supporterBadge,
+    visitor: t.visitorBadge,
+  };
+
   const typeLabels: Record<string, string> = {
-    update: "📢 Update",
-    answer: "✅ Answer",
-    question: "❓ Question",
-    comment: "💬 Comment",
+    update: `📢 ${t.update}`,
+    answer: `✅ ${t.answer}`,
+    question: `❓ ${t.question}`,
+    comment: `💬 ${t.comment}`,
   };
 
   if (message.isDeleted) {
     return (
       <div className="premium-glass rounded-2xl p-4 opacity-50 grayscale italic text-sm text-muted-foreground">
-        This message was deleted by the author.
+        {t.deletedMessage}
       </div>
     );
   }
@@ -58,7 +68,7 @@ export function ProposalMessageItem({
             {shortWallet(message.authorWallet)}
           </span>
           <span className={`rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${roleColors[message.authorRole] || roleColors.visitor}`}>
-            {message.authorRole}
+            {roleLabels[message.authorRole] || roleLabels.visitor}
           </span>
           {message.type !== 'comment' && (
             <span className="text-[11px] font-bold text-muted-foreground">
@@ -82,7 +92,7 @@ export function ProposalMessageItem({
             className="flex items-center gap-1.5 text-xs font-bold text-red-600/70 dark:text-red-500/70 hover:text-red-600 dark:hover:text-red-400 transition-colors"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Delete
+            {t.delete}
           </button>
         )}
         {canPin && (
@@ -91,7 +101,7 @@ export function ProposalMessageItem({
             className="flex items-center gap-1.5 text-xs font-bold text-emerald-600/70 dark:text-emerald-500/70 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
           >
             {message.isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-            {message.isPinned ? 'Unpin' : 'Pin'}
+            {message.isPinned ? t.unpin : t.pin}
           </button>
         )}
       </div>

@@ -120,4 +120,8 @@ export class MockProposalEngine implements ProposalEngine {
     async listProposals(): Promise<ProposalView[]> {
         return this.proposals;
     }
+
+    async verifyProposal(_proposal: ProposalView): Promise<boolean> {
+        return true;
+    }
 }

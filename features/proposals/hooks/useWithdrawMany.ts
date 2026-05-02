@@ -5,9 +5,11 @@ import toast from "react-hot-toast";
 import type { ProposalEngineContext, ProposalId } from "@/core/engines/types";
 import { getProposalEngine } from "@/core/engines/ProposalEngineFactory";
 import { proposalKeys } from "../queryKeys";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 export function useWithdrawMany(ctx: ProposalEngineContext | null) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async (proposalIds: ProposalId[]) => {
@@ -19,7 +21,7 @@ export function useWithdrawMany(ctx: ProposalEngineContext | null) {
       return engine.withdrawMany(ctx, proposalIds);
     },
     onSuccess: async () => {
-      toast.success("Funds withdrawn");
+      toast.success(t.withdrawSuccess);
 
       await queryClient.invalidateQueries({
         queryKey: proposalKeys.lists(),
@@ -27,7 +29,7 @@ export function useWithdrawMany(ctx: ProposalEngineContext | null) {
     },
     onError: (error) => {
       console.error(error);
-      toast.error("Could not withdraw funds");
+      toast.error(t.withdrawError);
     },
   });
 }

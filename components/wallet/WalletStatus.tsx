@@ -1,48 +1,55 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { type JsonRpcSigner, formatEther } from "ethers";
+import { formatEther } from "ethers";
 import { NETWORK } from "../../lib/network";
-import { useLanguage } from "../../contexts/LanguageContext";
+import { useUi } from "../../contexts/UiContext";
+import { useWalletContext } from "../../contexts/WalletContext";
 
-export function WalletStatus({
-  connected,
-  address,
-  connect,
-  signer,
-}: {
-  connected: boolean;
-  address: string;
-  connect: () => void;
-  signer: JsonRpcSigner | null;
-}) {
+export function WalletStatus() {
+  const { connected, address, signer, connect, walletType } = useWalletContext();
   const [balance, setBalance] = useState<string>("0");
-
-  const { t } = useLanguage();
+  const { t } = useUi();
 
   useEffect(() => {
-    if (!signer || !connected) return;
+    if (!signer || !connected || !address) return;
 
     async function loadBalance() {
       try {
-        const raw = await signer!.provider!.getBalance(address);
-        setBalance(Number(formatEther(raw)).toFixed(4));
+        if (walletType === "metamask") {
+            const raw = await signer.provider!.getBalance(address);
+            setBalance(Number(formatEther(raw)).toFixed(4));
+        } else if (walletType === "kasware") {
+            const result = await signer.getBalance();
+            // result is { confirmed: number, unconfirmed: number, total: number } in sompis
+            setBalance((Number(result.total) / 1e8).toFixed(2));
+        }
       } catch (e) {
-        console.error(e);
+        console.error("Failed to load balance", e);
       }
     }
 
     loadBalance();
-  }, [signer, connected, address]);
+    const interval = setInterval(loadBalance, 30000);
+    return () => clearInterval(interval);
+  }, [signer, connected, address, walletType]);
 
   if (!connected) {
     return (
-      <button
-        onClick={connect}
-        className="premium-btn flex h-9 items-center justify-center rounded-full px-5 text-sm font-bold"
-      >
-        {t.connectWallet}
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+            onClick={() => connect("metamask")}
+            className="premium-btn flex h-10 items-center justify-center rounded-full px-5 text-sm font-bold"
+        >
+            {t.connectWallet} (EVM)
+        </button>
+        <button
+            onClick={() => connect("kasware")}
+            className="flex h-10 items-center justify-center rounded-full border border-border bg-card px-5 text-sm font-bold text-foreground hover:bg-accent"
+        >
+            KasWare
+        </button>
+      </div>
     );
   }
 
@@ -59,7 +66,7 @@ export function WalletStatus({
       </div>
       
       <div className="flex h-7 items-center rounded-full bg-background/80 px-3 font-mono text-[11px] text-emerald-500 border border-emerald-500/20 shadow-inner">
-        {address.slice(0, 6)}...{address.slice(-4)}
+        {walletType === "kasware" ? "K" : "E"}: {address?.slice(0, 6)}...{address?.slice(-4)}
       </div>
     </div>
   );

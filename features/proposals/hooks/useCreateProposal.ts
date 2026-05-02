@@ -5,9 +5,11 @@ import toast from "react-hot-toast";
 import { ProposalEngineContext, CreateProposalInput } from "@/core/engines/types";
 import { getProposalEngine } from "@/core/engines/ProposalEngineFactory";
 import { proposalKeys } from "../queryKeys";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 export function useCreateProposal(ctx: ProposalEngineContext | null) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async (input: CreateProposalInput) => {
@@ -19,14 +21,14 @@ export function useCreateProposal(ctx: ProposalEngineContext | null) {
       return engine.createProposal(ctx, input);
     },
     onSuccess: async () => {
-      toast.success("Proposal created");
+      toast.success(t.proposalCreated);
       await queryClient.invalidateQueries({
         queryKey: proposalKeys.lists(),
       });
     },
     onError: (error) => {
       console.error(error);
-      toast.error("Could not create proposal");
+      toast.error(t.createError);
     },
   });
 }

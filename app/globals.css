@@ -79,9 +79,9 @@
 
   --destructive: oklch(0.577 0.245 27.325);
 
-  --border: oklch(0.88 0 0);
-  --input: oklch(0.88 0 0);
-  --ring: oklch(0.65 0 0);
+  --border: 0 0% 100% / 15%;
+  --input: 0 0% 100% / 10%;
+  --ring: 142.1 70.6% 45.3%;
 
   --chart-1: oklch(0.65 0.2 145);
   --chart-2: oklch(0.62 0.18 220);
@@ -126,9 +126,9 @@
 
   --destructive: oklch(0.704 0.191 22.216);
 
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.56 0 0);
+  --border: oklch(1 0 0 / 20%);
+  --input: oklch(1 0 0 / 25%);
+  --ring: oklch(0.65 0.15 150);
 
   --chart-1: oklch(0.72 0.2 145);
   --chart-2: oklch(0.65 0.18 220);
@@ -268,12 +268,11 @@
 }
 
 @utility premium-btn {
-  background: linear-gradient(180deg, oklch(0.68 0.16 150), oklch(0.62 0.16 150));
+  background: oklch(0.65 0.18 145);
   color: #fff;
   box-shadow: 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
-    0 4px 14px 0 rgba(16, 185, 129, 0.39);
-  border: 1px solid oklch(0.55 0.16 150);
+    0 4px 14px 0 rgba(16, 185, 129, 0.4);
+  border: 1px solid oklch(0.6 0.18 145);
   transition: all 0.2s ease;
   &:hover {
     box-shadow: 

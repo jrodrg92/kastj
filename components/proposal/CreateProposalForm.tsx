@@ -21,14 +21,6 @@ type Props = {
   onCreate: () => Promise<void>;
 };
 
-const durationOptions = [
-  { label: "5 min", value: "300" },
-  { label: "1 hora", value: "3600" },
-  { label: "1 día", value: "86400" },
-  { label: "7 días", value: "604800" },
-  { label: "30 dias", value: "2592000" },
-];
-
 export function CreateProposalForm({
   title,
   description,
@@ -47,6 +39,16 @@ export function CreateProposalForm({
   onDurationChange,
   onCreate,
 }: Props) {
+  const { t } = useLanguage();
+
+  const durationOptions = [
+    { label: t.min5, value: "300" },
+    { label: t.hour1, value: "3600" },
+    { label: t.day1, value: "86400" },
+    { label: t.days7, value: "604800" },
+    { label: t.days30, value: "2592000" },
+  ];
+
   async function handleSubmit() {
     if (!connected) {
       toast.error(t.connectWalletFirst);
@@ -55,8 +57,6 @@ export function CreateProposalForm({
 
     await onCreate();
   }
-
-  const { t } = useLanguage();
 
   return (
     <section className="premium-glass rounded-3xl p-8 lg:p-10">
@@ -79,7 +79,7 @@ export function CreateProposalForm({
             {t.title}
           </label>
           <input
-            className="w-full rounded-xl border border-border bg-background/50 p-4 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background"
+            className="w-full rounded-xl border border-white/10 bg-background/50 p-4 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
             placeholder={t.ej1}
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
@@ -139,7 +139,7 @@ export function CreateProposalForm({
             </div>
             <input
               type="number"
-              className="w-full rounded-xl border border-border bg-background/50 p-4 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
+            className="w-full rounded-xl border border-white/10 bg-background/50 p-4 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
               value={minThreshold}
               onChange={(e) => onMinThresholdChange(e.target.value)}
             />
@@ -172,7 +172,7 @@ export function CreateProposalForm({
         <button
           onClick={handleSubmit}
           disabled={loading || !connected}
-          className="premium-btn mt-6 w-full rounded-xl px-5 py-4 font-bold text-lg disabled:opacity-50"
+          className="w-full rounded-2xl bg-emerald-500 px-5 py-4 font-black text-lg text-white shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition-all hover:bg-emerald-600 hover:shadow-[0_4px_25px_rgba(16,185,129,0.4)] active:scale-[0.98] disabled:opacity-50"
         >
           {loading ? t.creating : t.createProposal}
         </button>

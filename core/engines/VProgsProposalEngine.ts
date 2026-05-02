@@ -7,6 +7,7 @@ import type {
     ProposalView,
     TxResult,
 } from "./types";
+import { VProgVerifier } from "../vprogs/Verifier";
 
 /**
  * vProgs (Virtual Programs) engine stub.
@@ -85,5 +86,17 @@ export class VProgsProposalEngine implements ProposalEngine {
         throw new Error(
             "VProgsProposalEngine.listProposals: not yet implemented.",
         );
+    }
+
+    async verifyProposal(proposal: ProposalView): Promise<boolean> {
+        // vProgs are the prime candidate for client-side verification
+        const verifier = new VProgVerifier();
+        return verifier.verifyEscrowAddress(proposal.recipient, {
+            creator: proposal.creator,
+            recipient: proposal.recipient,
+            goal: BigInt(proposal.goal.value),
+            threshold: BigInt(proposal.minThreshold.value),
+            deadline: Math.floor(proposal.deadline.getTime() / 1000),
+        });
     }
 }

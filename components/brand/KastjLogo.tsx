@@ -1,4 +1,8 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+
 export function KastjLogo() {
+  const { t } = useLanguage();
+
   return (
     <div className="flex items-center gap-4">
       <div className="flex items-center justify-center">
@@ -21,7 +25,7 @@ export function KastjLogo() {
         </div>
 
         <p className="mt-1 text-sm text-muted-foreground">
-          Conditional crowdfunding on Kaspa
+          {t.appTagline}
         </p>
       </div>
     </div>

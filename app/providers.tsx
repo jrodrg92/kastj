@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { Toaster } from "react-hot-toast";
-import { LanguageProvider } from "../contexts/LanguageContext";
+import { UiProvider } from "../contexts/UiContext";
 import { WalletProvider } from "../contexts/WalletContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -22,7 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
+      <UiProvider>
         <WalletProvider>
           {children}
           <Toaster 
@@ -42,7 +42,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             }}
           />
         </WalletProvider>
-      </LanguageProvider>
+      </UiProvider>
     </QueryClientProvider>
   );
 }

@@ -99,4 +99,10 @@ export interface ProposalEngine {
     getProposal(proposalId: ProposalId): Promise<ProposalView>;
 
     listProposals(): Promise<ProposalView[]>;
+
+    /**
+     * Verifies the integrity of a proposal's escrow (vProg/Contract).
+     * Returns true if the on-chain logic matches the expected rules.
+     */
+    verifyProposal(proposal: ProposalView): Promise<boolean>;
 }

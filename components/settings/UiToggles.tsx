@@ -1,11 +1,9 @@
 "use client";
 
-import { useUiPreferences } from "../../hooks/useUiPreferences";
-import { useLanguage } from "../../contexts/LanguageContext";
+import { useUi } from "../../contexts/UiContext";
 
 export function UiToggles() {
-  const { theme, toggleTheme } = useUiPreferences();
-  const { lang, setLang } = useLanguage();
+  const { theme, toggleTheme, lang, setLang } = useUi();
 
   const nextLang = lang === "en" ? "es" : "en";
 

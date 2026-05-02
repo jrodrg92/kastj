@@ -8,24 +8,26 @@ type Proposal = {
   status: number;
 };
 
-export function StatsBar({ proposals }: { proposals: Proposal[] }) {
-  const total = proposals.length;
-  const active = proposals.filter((p) => p.status === 0).length;
-  const succeeded = proposals.filter((p) => p.status === 1).length;
-  const failed = proposals.filter((p) => p.status === 2).length;
-  const { t } = useLanguage();
+import { useQuery } from "@tanstack/react-query";
+import { proposalKeys } from "../../features/proposals/queryKeys";
+import { fetchStats } from "../../features/proposals/api";
 
-  const raised = proposals.reduce(
-    (acc, p) => acc + Number(p.totalRaised || 0),
-    0
-  );
+export function StatsBar() {
+  const { t } = useLanguage();
+  const { data: stats } = useQuery({
+    queryKey: [...proposalKeys.all, "stats"],
+    queryFn: fetchStats,
+    staleTime: 60_000,
+  });
+
+  if (!stats) return null;
 
   const items = [
-    { label: t.total, value: total },
-    { label: t.active, value: active },
-    { label: t.succeeded, value: succeeded },
-    { label: t.failed, value: failed },
-    { label: t.recud, value: `${raised.toFixed(2)} ${NETWORK.currency}` },
+    { label: t.total, value: stats.total },
+    { label: t.activeStatus, value: stats.active },
+    { label: t.succeededStatus, value: stats.succeeded },
+    { label: t.failedStatus, value: stats.failed },
+    { label: t.recud, value: `${stats.raised.toFixed(2)} ${NETWORK.currency}` },
   ];
 
   return (
