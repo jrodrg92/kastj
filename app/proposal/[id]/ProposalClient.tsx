@@ -209,10 +209,11 @@ export default function ProposalClient() {
     }
 
     await kastj.fundProposal({
-      proposalId,
-      asset: proposal.asset,
-      amount,
-    });
+  proposalId: proposalId,
+  asset: proposal.asset,
+  amount: fundAmount,
+});
+
     await refreshSoon();
   }
 
@@ -293,7 +294,6 @@ export default function ProposalClient() {
   <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#182131,_#09090b_45%)] p-6 text-white md:p-10">
     <div className="mx-auto max-w-7xl space-y-8">
       <AppHeader
-          description={t.descriptionApp}
           connected={wallet.connected}
           address={wallet.address}
           connect={wallet.connect}

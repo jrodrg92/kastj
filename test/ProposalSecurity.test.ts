@@ -6,7 +6,7 @@ const { ethers } = await network.create();
 describe("Kastj escrow security", function () {
   async function deployFixture() {
     const [deployer, creator, recipient, supporter, attacker, treasuryOwner] =
-    await ethers.getSigners();
+      await ethers.getSigners();
 
     const Vault = await ethers.getContractFactory("EscrowVault");
     const vault = await Vault.deploy();
@@ -58,27 +58,19 @@ describe("Kastj escrow security", function () {
     goal = "10",
     threshold = "5",
     duration = 30 * 24 * 60 * 60,
-    }: any) {
+  }: any) {
     const tx = await manager.connect(creator).createProposal(
-        recipient.address,
-        {
-        assetType: 0,
-        token: ethers.ZeroAddress,
-        },
-        ethers.parseEther(goal),
-        ethers.parseEther(threshold),
-        duration,
-        "ipfs://proposal"
+      recipient.address,
+      ethers.ZeroAddress,
+      ethers.parseEther(goal),
+      ethers.parseEther(threshold),
+      duration,
+      "ipfs://proposal"
     );
 
     await tx.wait();
 
     return await manager.proposalCount();
-    }
-
-  async function increaseTime(seconds: number) {
-    await ethers.provider.send("evm_increaseTime", [seconds]);
-    await ethers.provider.send("evm_mine", []);
   }
 
   it("un usuario externo NO puede llamar enableWithdrawals", async function () {
@@ -105,59 +97,61 @@ describe("Kastj escrow security", function () {
 
   it("una propuesta fallida permite refunds", async function () {
     const { manager, vault, creator, recipient, supporter } =
-        await deployFixture();
+      await deployFixture();
 
     const proposalId = await createProposal({
-        manager,
-        creator,
-        recipient,
-        goal: "10",
-        threshold: "5",
+      manager,
+      creator,
+      recipient,
+      goal: "10",
+      threshold: "5",
     });
 
     await manager.connect(supporter).fundNative(proposalId, {
-        value: ethers.parseEther("2"),
+      value: ethers.parseEther("2"),
     });
 
     await moveAfterDeadline(manager, proposalId);
 
-    await manager.finalize(proposalId);
+    await manager.finalizeProposal(proposalId);
 
     expect(await vault.withdrawalsEnabled(proposalId)).to.equal(true);
 
     await vault.connect(supporter).withdraw(proposalId);
-    });
 
-    it("una propuesta exitosa libera 93/5/2", async function () {
+    expect(await vault.proposalBalances(proposalId)).to.equal(0n);
+  });
+
+  it("una propuesta exitosa libera 93/5/2", async function () {
     const { manager, vault, treasury, creator, recipient, supporter } =
-        await deployFixture();
+      await deployFixture();
 
     const proposalId = await createProposal({
-        manager,
-        creator,
-        recipient,
-        goal: "10",
-        threshold: "5",
+      manager,
+      creator,
+      recipient,
+      goal: "10",
+      threshold: "5",
     });
 
     await manager.connect(supporter).fundNative(proposalId, {
-    value: ethers.parseEther("10"),
+      value: ethers.parseEther("10"),
     });
 
-    await moveAfterDeadline(manager, proposalId);(3601);
+    await moveAfterDeadline(manager, proposalId);
 
     const recipientBefore = await ethers.provider.getBalance(recipient.address);
     const creatorBefore = await ethers.provider.getBalance(creator.address);
     const treasuryBefore = await ethers.provider.getBalance(
-        await treasury.getAddress()
+      await treasury.getAddress()
     );
 
-    await manager.finalize(proposalId);
+    await manager.finalizeProposal(proposalId);
 
     const recipientAfter = await ethers.provider.getBalance(recipient.address);
     const creatorAfter = await ethers.provider.getBalance(creator.address);
     const treasuryAfter = await ethers.provider.getBalance(
-        await treasury.getAddress()
+      await treasury.getAddress()
     );
 
     expect(recipientAfter - recipientBefore).to.equal(ethers.parseEther("9.3"));
@@ -165,45 +159,40 @@ describe("Kastj escrow security", function () {
     expect(treasuryAfter - treasuryBefore).to.equal(ethers.parseEther("0.2"));
 
     expect(await vault.released(proposalId)).to.equal(true);
-    });
+  });
 
   it("si creator == recipient, libera 98/0/2", async function () {
     const { manager, treasury, creator, supporter, attacker } =
-        await deployFixture();
+      await deployFixture();
 
     const proposalId = await createProposal({
-        manager,
-        creator,
-        recipient: creator,
-        goal: "10",
-        threshold: "5",
+      manager,
+      creator,
+      recipient: creator,
+      goal: "10",
+      threshold: "5",
     });
 
     await manager.connect(supporter).fundNative(proposalId, {
-    value: ethers.parseEther("10"),
+      value: ethers.parseEther("10"),
     });
 
-    await moveAfterDeadline(manager, proposalId);(3601);
+    await moveAfterDeadline(manager, proposalId);
 
     const creatorBefore = await ethers.provider.getBalance(creator.address);
     const treasuryBefore = await ethers.provider.getBalance(
-        await treasury.getAddress()
+      await treasury.getAddress()
     );
 
-    await manager.connect(attacker).finalize(proposalId);
+    await manager.connect(attacker).finalizeProposal(proposalId);
 
     const creatorAfter = await ethers.provider.getBalance(creator.address);
     const treasuryAfter = await ethers.provider.getBalance(
-        await treasury.getAddress()
+      await treasury.getAddress()
     );
 
-    expect(creatorAfter - creatorBefore).to.equal(
-        ethers.parseEther("9.8")
-    );
-
-    expect(treasuryAfter - treasuryBefore).to.equal(
-        ethers.parseEther("0.2")
-    );
+    expect(creatorAfter - creatorBefore).to.equal(ethers.parseEther("9.8"));
+    expect(treasuryAfter - treasuryBefore).to.equal(ethers.parseEther("0.2"));
   });
 
   it("no permite doble finalize", async function () {
@@ -218,42 +207,42 @@ describe("Kastj escrow security", function () {
     });
 
     await manager.connect(supporter).fundNative(proposalId, {
-    value: ethers.parseEther("10"),
-    });
-
-    await moveAfterDeadline(manager, proposalId);(3601);
-
-    await manager.finalize(proposalId);
-
-    await expect(
-      manager.finalize(proposalId)
-    ).to.be.revertedWith("Already executed");
-  });
-
-  it("no permite doble withdraw", async function () {
-    const { manager, vault, creator, recipient, supporter } =
-        await deployFixture();
-
-    const proposalId = await createProposal({
-        manager,
-        creator,
-        recipient,
-        goal: "10",
-        threshold: "5",
-    });
-
-    await manager.connect(supporter).fundNative(proposalId, {
-        value: ethers.parseEther("2"),
+      value: ethers.parseEther("10"),
     });
 
     await moveAfterDeadline(manager, proposalId);
 
-    await manager.finalize(proposalId);
+    await manager.finalizeProposal(proposalId);
+
+    await expect(
+      manager.finalizeProposal(proposalId)
+    ).to.be.revertedWith("Not active");
+  });
+
+  it("no permite doble withdraw", async function () {
+    const { manager, vault, creator, recipient, supporter } =
+      await deployFixture();
+
+    const proposalId = await createProposal({
+      manager,
+      creator,
+      recipient,
+      goal: "10",
+      threshold: "5",
+    });
+
+    await manager.connect(supporter).fundNative(proposalId, {
+      value: ethers.parseEther("2"),
+    });
+
+    await moveAfterDeadline(manager, proposalId);
+
+    await manager.finalizeProposal(proposalId);
 
     await vault.connect(supporter).withdraw(proposalId);
 
     await expect(
-        vault.connect(supporter).withdraw(proposalId)
+      vault.connect(supporter).withdraw(proposalId)
     ).to.be.revertedWith("Already withdrawn");
   });
 
@@ -270,12 +259,12 @@ describe("Kastj escrow security", function () {
     });
 
     await manager.connect(supporter).fundNative(proposalId, {
-    value: ethers.parseEther("10"),
+      value: ethers.parseEther("10"),
     });
 
-    await moveAfterDeadline(manager, proposalId);(3601);
+    await moveAfterDeadline(manager, proposalId);
 
-    await manager.finalize(proposalId);
+    await manager.finalizeProposal(proposalId);
 
     await expect(
       vault.connect(supporter).withdraw(proposalId)

@@ -5,12 +5,6 @@ import { formatEther } from "ethers";
 import { NETWORK } from "../../lib/network";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-
-function short(addr: string) {
-  if (!addr) return "";
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
 export function WalletStatus({
   connected,
   address,
@@ -63,9 +57,9 @@ export function WalletStatus({
         {balance} {NETWORK.currency}
       </span>
 
-      <span className="text-zinc-400">
-        {short(address)}
-      </span>
+      {connected && address && (
+        <span>{address.slice(0, 6)}...{address.slice(-4)}</span>
+      )}
     </div>
   );
 }

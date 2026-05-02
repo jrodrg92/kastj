@@ -21,6 +21,7 @@ type Props = {
   fundAmount: string;
   loading: boolean;
   connected: boolean;
+  isSupported?: boolean;
   onFund: (id: number) => Promise<void>;
   onFinalize: (id: number) => Promise<void>;
   onWithdraw: (id: number) => Promise<void>;
@@ -67,6 +68,7 @@ export function ProposalCard({
   fundAmount,
   loading,
   connected,
+  isSupported,
   onFund,
   onFinalize,
   onWithdraw

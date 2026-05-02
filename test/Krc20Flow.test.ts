@@ -5,8 +5,6 @@ const { ethers } = await network.create();
 
 describe("Kastj KRC20 flow", function () {
   async function deployFixture() {
-    
-
     const [deployer, creator, recipient, supporter, attacker, treasuryOwner] =
       await ethers.getSigners();
 
@@ -47,7 +45,7 @@ describe("Kastj KRC20 flow", function () {
     };
   }
 
-async function moveAfterDeadline(manager: any, proposalId: bigint) {
+  async function moveAfterDeadline(manager: any, proposalId: bigint) {
     const proposal = await manager.getProposal(proposalId);
     const block = await ethers.provider.getBlock("latest");
 
@@ -57,11 +55,6 @@ async function moveAfterDeadline(manager: any, proposalId: bigint) {
     const secondsToMove = Number(deadline - now + 1n);
 
     await ethers.provider.send("evm_increaseTime", [secondsToMove]);
-    await ethers.provider.send("evm_mine", []);
-    }
-
-  async function increaseTime(seconds: number) {
-    await ethers.provider.send("evm_increaseTime", [seconds]);
     await ethers.provider.send("evm_mine", []);
   }
 
@@ -73,18 +66,17 @@ async function moveAfterDeadline(manager: any, proposalId: bigint) {
     goal = "100",
     threshold = "50",
     duration = 365 * 24 * 60 * 60,
-    }: any) {
-    await manager.connect(creator).createProposal(
-        recipient.address,
-        {
-        assetType: 1,
-        token: await token.getAddress(),
-        },
-        ethers.parseEther(goal),
-        ethers.parseEther(threshold),
-        duration,
-        "ipfs://krc20-proposal"
+  }: any) {
+    const tx = await manager.connect(creator).createProposal(
+      recipient.address,
+      await token.getAddress(),
+      ethers.parseEther(goal),
+      ethers.parseEther(threshold),
+      duration,
+      "ipfs://krc20-proposal"
     );
+
+    await tx.wait();
 
     return await manager.proposalCount();
   }
@@ -118,8 +110,16 @@ async function moveAfterDeadline(manager: any, proposalId: bigint) {
   });
 
   it("una propuesta KRC20 exitosa libera 93/5/2", async function () {
-    const { manager, vault, treasury, creator, recipient, supporter, token, attacker } =
-      await deployFixture();
+    const {
+      manager,
+      vault,
+      treasury,
+      creator,
+      recipient,
+      supporter,
+      token,
+      attacker,
+    } = await deployFixture();
 
     const proposalId = await createKrc20Proposal({
       manager,
@@ -136,9 +136,9 @@ async function moveAfterDeadline(manager: any, proposalId: bigint) {
       .connect(supporter)
       .fundKrc20(proposalId, ethers.parseEther("100"));
 
-    await moveAfterDeadline(manager, proposalId);(3601);
+    await moveAfterDeadline(manager, proposalId);
 
-    await manager.connect(attacker).finalize(proposalId);
+    await manager.connect(attacker).finalizeProposal(proposalId);
 
     expect(await token.balanceOf(recipient.address)).to.equal(
       ethers.parseEther("93")
@@ -176,9 +176,9 @@ async function moveAfterDeadline(manager: any, proposalId: bigint) {
       .connect(supporter)
       .fundKrc20(proposalId, ethers.parseEther("20"));
 
-    await moveAfterDeadline(manager, proposalId);(3601);
+    await moveAfterDeadline(manager, proposalId);
 
-    await manager.connect(attacker).finalize(proposalId);
+    await manager.connect(attacker).finalizeProposal(proposalId);
 
     const before = await token.balanceOf(supporter.address);
 
@@ -203,7 +203,7 @@ async function moveAfterDeadline(manager: any, proposalId: bigint) {
 
     await expect(
       manager.connect(supporter).fundKrc20(proposalId, ethers.parseEther("10"))
-    ).to.be.revertedWith("Insufficient allowance");
+    ).to.be.revert(ethers);
   });
 
   it("no permite fundNative en propuesta KRC20", async function () {

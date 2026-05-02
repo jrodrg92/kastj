@@ -1,23 +1,27 @@
 import { NETWORK } from "../../lib/network";
 import { useLanguage } from "../../contexts/LanguageContext";
 
+type Dashboard = {
+  totalContributed: string;
+  activeContributed: string;
+  withdrawable: string;
+  createdCount: number;
+  supportedCount: number;
+  withdrawableIds: number[];
+};
+
+type Props = {
+  dashboard: Dashboard;
+  loading: boolean;
+  onWithdrawAll: (ids: number[]) => Promise<void> | void;
+};
+
 export function UserDashboard({
   dashboard,
   loading,
-  onWithdrawAll
-}: {
-  dashboard: {
-    totalContributed: string;
-    activeContributed: string;
-    withdrawable: string;
-    createdCount: number;
-    supportedCount: number;
-    withdrawableIds: number[];
-    onWithdrawAll: number
-  };
-  loading: boolean;
-}) {
-  const {t} = useLanguage();
+  onWithdrawAll,
+}: Props) {
+  const { t } = useLanguage();
 
   const cards = [
     {
@@ -42,25 +46,12 @@ export function UserDashboard({
     },
   ];
 
-  {Number(dashboard.withdrawable) > 0 && (
-  <div className="mt-6">
-    <button
-      onClick={onWithdrawAll}
-      className="w-full rounded-2xl bg-red-500 px-6 py-4 text-lg font-bold text-white transition hover:bg-red-400"
-    >
-      Withdraw {Number(dashboard.withdrawable).toFixed(4)} {NETWORK.currency}
-    </button>
-  </div>
-)}
-
   return (
     <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">{t.mydsbrd}</h2>
-          <p className="text-sm text-zinc-400">
-            {t.actApp}
-          </p>
+          <p className="text-sm text-zinc-400">{t.actApp}</p>
         </div>
 
         {loading && (
@@ -80,25 +71,17 @@ export function UserDashboard({
             <p className="mt-2 text-2xl font-black">{card.value}</p>
           </div>
         ))}
-        {Number(dashboard.withdrawable) > 0 && (
-          <div className="mt-6">
-            <button
-              onClick={onWithdrawAll}
-              className="w-full rounded-2xl bg-red-500 px-6 py-4 text-lg font-bold text-white transition hover:bg-red-400"
-            >
-              Withdraw {Number(dashboard.withdrawable).toFixed(4)} {NETWORK.currency}
-            </button>
-          </div>
-        )}
-        {Number(dashboard.withdrawable) > 0 && onWithdrawAll && (
-          <button
-            onClick={() => onWithdrawAll(dashboard.withdrawableIds)}
-            className="mt-6 w-full rounded-2xl bg-red-500 px-6 py-4 text-lg font-bold text-white transition hover:bg-red-400"
-          >
-            Withdraw {Number(dashboard.withdrawable).toFixed(4)} {NETWORK.currency}
-          </button>
-        )}
       </div>
+
+      {Number(dashboard.withdrawable) > 0 && (
+        <button
+          onClick={() => onWithdrawAll(dashboard.withdrawableIds)}
+          className="mt-6 w-full rounded-2xl bg-red-500 px-6 py-4 text-lg font-bold text-white transition hover:bg-red-400"
+        >
+          Withdraw {Number(dashboard.withdrawable).toFixed(4)}{" "}
+          {NETWORK.currency}
+        </button>
+      )}
     </section>
   );
 }

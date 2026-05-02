@@ -10,11 +10,10 @@ import { KastjLogo } from "../../components/brand/KastjLogo";
 
 
 type Props = {
-  description?: string;
   connected: boolean;
   address?: string;
-  signer?: any;
-  connect: () => void;
+  signer: any;
+  connect: () => void | Promise<void>;
 };
 
 export function AppHeader({
@@ -38,7 +37,7 @@ export function AppHeader({
 
            <WalletStatus
                 connected={connected}
-                address={address}
+                address={address ?? ""}
                 signer={signer}
                 connect={connect}
             />
