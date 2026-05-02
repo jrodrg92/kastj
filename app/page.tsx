@@ -208,47 +208,207 @@ export default function HomePage() {
   }
 
   return (
-    <main className="p-6 text-white">
-      <AppHeader
-        connected={wallet.connected}
-        address={wallet.address}
-        connect={wallet.connect}
-        signer={wallet.signer}
-      />
-
-      <StatsBar proposals={proposals} />
-
-      {wallet.connected && (
-        <UserDashboard
-          dashboard={userDashboard.dashboard}
-          loading={userDashboard.loadingUserDashboard}
-          onWithdrawAll={handleWithdrawAll}
-        />
-      )}
-
-      <input value={search} onChange={handleSearchChange} />
-
-      <select value={sort} onChange={handleSortChange}>
-        <option value="newest">Newest</option>
-        <option value="raised">Most funded</option>
-        <option value="ending">Ending soon</option>
-      </select>
-
-      <input value={fundAmount} onChange={handleFundAmountChange} />
-
-      {filteredProposals.map((p) => (
-        <ProposalCard
-          key={p.id}
-          proposal={p}
-          fundAmount={fundAmount}
-          loading={kastj.loading}
+  <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#13231f,_#09090b_45%)] px-4 py-8 text-white md:px-8">
+    <div className="mx-auto max-w-7xl space-y-8">
+        <AppHeader
           connected={wallet.connected}
-          isSupported={supportedIdsSet.has(p.id)}
-          onFund={handleFund}
-          onFinalize={handleFinalize}
-          onWithdraw={handleWithdraw}
+          address={wallet.address}
+          connect={wallet.connect}
+          signer={wallet.signer}
         />
-      ))}
-    </main>
+
+         <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          <div className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 p-8 shadow-2xl">
+            <div className="mb-4 inline-flex rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-sm text-green-400">
+              {t.autScrow}
+            </div>
+
+            <h2 className="max-w-3xl text-4xl font-black tracking-tight md:text-5xl">
+              {t.mission}
+            </h2>
+
+            <p className="mt-4 max-w-2xl text-lg text-zinc-400">
+              {t.mission1}
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href="#create"
+                className="rounded-2xl bg-green-500 px-5 py-3 font-bold text-black transition hover:bg-green-400"
+              >
+                {t.createProposal}
+              </a>
+
+              <a
+                href="#proposals"
+                className="rounded-2xl bg-zinc-800 px-5 py-3 font-bold text-white transition hover:bg-zinc-700"
+              >
+                {t.exploreProposals}
+              </a>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl">
+            <h3 className="text-2xl font-bold">{t.howItWorks}</h3>
+
+            <div className="mt-5 space-y-4">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <p className="font-bold">1. {t.step1}</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {t.step11}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <p className="font-bold">2. {t.step2}</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {t.step21}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <p className="font-bold">3. {t.step3}</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {t.step31}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <StatsBar proposals={proposals} />
+
+        {wallet.connected && (
+          <UserDashboard
+            dashboard={userDashboard.dashboard}
+            loading={userDashboard.loadingUserDashboard}
+            onWithdrawAll={handleWithdrawAll}
+          />
+        )}
+
+                {wallet.connected && (
+            <ActivityFeed
+              activity={feed.activity}
+              loading={feed.loadingActivity}
+            />
+          )}
+
+        <div id="create">
+          <CreateProposalForm
+            title={title}
+            description={description}
+            recipient={recipient}
+            goal={goal}
+            loading={kastj.loading}
+            connected={wallet.connected}
+            onTitleChange={setTitle}
+            onDescriptionChange={setDescription}
+            onRecipientChange={setRecipient}
+            onGoalChange={setGoal}
+            onCreate={handleCreate}
+          />
+        </div>
+
+          <section id="proposals" className="space-y-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-3xl font-bold">{t.proposals}</h2>
+                <p className="text-zinc-400">
+                  {t.findnew}
+                </p>
+              </div>
+
+              <button
+                onClick={db.loadDbProposals}
+                disabled={!wallet.connected || db.loadingDb || kastj.loading}
+                className="rounded-xl bg-zinc-800 px-5 py-3 font-bold transition hover:bg-zinc-700 disabled:opacity-40"
+              >
+                {db.loadingDb ? "Cargando..." : t.refresh}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: "all", label: t.all },
+                { key: "active", label: t.active },
+                { key: "mine", label: t.mine},
+                { key: "supported", label: t.sup },
+                { key: "succeeded", label: t.succeeded },
+                { key: "failed", label: t.failed },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => setFilter(item.key as Filter)}
+                  className={`rounded-xl px-4 py-2 font-semibold transition ${
+                    filter === item.key
+                      ? "bg-white text-black"
+                      : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+              <input
+                className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-green-500"
+                placeholder={t.search}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+
+              <select
+                className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-green-500"
+                value={sort}
+                onChange={(e) => setSort(e.target.value as Sort)}
+              >
+                <option value="newest">{t.newest}</option>
+                <option value="raised">{t.moreRe}</option>
+                <option value="ending">{t.endSoon}</option>
+              </select>
+            </div>
+
+            <input
+              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-blue-500"
+              placeholder={`Cantidad para apoyar en ${NETWORK.currency}`}
+              value={fundAmount}
+              onChange={(e) => setFundAmount(e.target.value)}
+            />
+
+            {!wallet.connected && (
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
+                {t.conectWallet}
+              </div>
+            )}
+
+            {wallet.connected && filteredProposals.length === 0 && !db.loadingDb && (
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
+                No hay propuestas para este filtro o búsqueda.
+              </div>
+            )}
+
+            {wallet.connected && db.loadingDb && (
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
+                Cargando propuestas...
+              </div>
+            )}
+
+          {filteredProposals.map((p) => (
+            <ProposalCard
+              key={p.id}
+              proposal={p}
+              fundAmount={fundAmount}
+              loading={kastj.loading}
+              connected={wallet.connected}
+              isSupported={supportedIdsSet.has(p.id)}
+              onFund={handleFund}
+              onFinalize={handleFinalize}
+              onWithdraw={handleWithdraw}
+            />
+          ))}
+          </section>
+        </div>
+      </main>
   );
 }
