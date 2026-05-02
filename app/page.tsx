@@ -66,7 +66,7 @@ export default function HomePage() {
   const userDashboard = useUserDashboard(wallet.address);
 
   const [minThreshold, setMinThreshold] = useState("100");
-  const [durationSeconds, setDurationSeconds] = useState(86400);
+  const [duration, setDuration] = useState("86400");
 
   // ✅ HANDLERS FIX
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,28 +149,27 @@ export default function HomePage() {
   }
 
   async function handleCreate() {
-    if (!title || !description) {
-      toast.error("Añade título y descripción");
-      return;
-    }
-
-    if (!isAddress(recipient)) {
-      toast.error("Dirección inválida");
-      return;
-    }
+    const metadataURI = `local://${encodeURIComponent(
+      JSON.stringify({
+        title,
+        description,
+      })
+    )}`;
 
     await kastj.createProposal({
-      recipient: recipient as Address,
+      recipient: recipient as `0x${string}`,
       asset: { type: "native" },
       goal,
-      minThreshold,
-      durationSeconds,
-      metadataURI: `local://${encodeURIComponent(
-        JSON.stringify({ title, description })
-      )}`,
+      minThreshold: goal, // por ahora igual al objetivo
+      durationSeconds: Number(duration),
+      metadataURI,
     });
 
-    await refreshDbSoon();
+    setTitle("");
+    setDescription("");
+    setRecipient("");
+    setGoal("");
+    setDuration("86400");
   }
 
   async function handleFinalize(id: number) {
@@ -299,12 +298,14 @@ export default function HomePage() {
             description={description}
             recipient={recipient}
             goal={goal}
+            duration={duration}
             loading={kastj.loading}
             connected={wallet.connected}
             onTitleChange={setTitle}
             onDescriptionChange={setDescription}
             onRecipientChange={setRecipient}
             onGoalChange={setGoal}
+            onDurationChange={setDuration}
             onCreate={handleCreate}
           />
         </div>

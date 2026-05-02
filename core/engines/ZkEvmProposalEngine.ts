@@ -15,11 +15,7 @@ const KRC20_APPROVE_ABI = [
 
 export class ZkEvmProposalEngine implements ProposalEngine {
   private getManager(signerOrProvider: any) {
-    return new Contract(
-      CONTRACTS.manager,
-      ProposalManagerAbi,
-      signerOrProvider
-    );
+    return new Contract(CONTRACTS.manager, ProposalManagerAbi, signerOrProvider);
   }
 
   private getVault(signerOrProvider: any) {
@@ -29,20 +25,12 @@ export class ZkEvmProposalEngine implements ProposalEngine {
   async createProposal(signer: any, input: CreateProposalInput) {
     const manager = this.getManager(signer);
 
-    const asset =
-      input.asset.type === "native"
-        ? {
-            assetType: 0,
-            token: ZeroAddress,
-          }
-        : {
-            assetType: 1,
-            token: input.asset.tokenAddress,
-          };
+    const token =
+      input.asset.type === "native" ? ZeroAddress : input.asset.tokenAddress;
 
     const tx = await manager.createProposal(
       input.recipient,
-      asset,
+      token,
       parseEther(input.goal),
       parseEther(input.minThreshold),
       input.durationSeconds,
@@ -80,7 +68,7 @@ export class ZkEvmProposalEngine implements ProposalEngine {
 
   async finalizeProposal(signer: any, proposalId: number) {
     const manager = this.getManager(signer);
-    const tx = await manager.finalize(proposalId);
+    const tx = await manager.finalizeProposal(proposalId);
 
     return tx.wait();
   }
@@ -111,15 +99,15 @@ export class ZkEvmProposalEngine implements ProposalEngine {
       creator: p.creator,
       recipient: p.recipient,
       asset:
-        Number(p.asset.assetType) === 0
+        p.token === ZeroAddress
           ? { type: "native" }
-          : { type: "krc20", tokenAddress: p.asset.token },
-      goal: p.goal,
+          : { type: "krc20", tokenAddress: p.token },
+      goal: p.goalAmount,
       minThreshold: p.minThreshold,
       deadline: p.deadline,
       totalRaised: p.totalRaised,
       status: Number(p.status),
-      executed: p.executed,
+      executed: p.finalized,
       metadataURI: p.metadataURI,
     };
   }

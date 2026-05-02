@@ -1,4 +1,4 @@
- [
+[
     {
       "inputs": [
         {
@@ -7,7 +7,7 @@
           "type": "address"
         },
         {
-          "internalType": "address payable",
+          "internalType": "address",
           "name": "_treasury",
           "type": "address"
         }
@@ -21,7 +21,7 @@
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "id",
+          "name": "proposalId",
           "type": "uint256"
         },
         {
@@ -38,8 +38,14 @@
         },
         {
           "indexed": false,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
           "internalType": "uint256",
-          "name": "goal",
+          "name": "goalAmount",
           "type": "uint256"
         },
         {
@@ -70,14 +76,14 @@
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "id",
+          "name": "proposalId",
           "type": "uint256"
         },
         {
           "indexed": false,
-          "internalType": "bool",
-          "name": "success",
-          "type": "bool"
+          "internalType": "enum ProposalManager.ProposalStatus",
+          "name": "status",
+          "type": "uint8"
         },
         {
           "indexed": false,
@@ -95,13 +101,19 @@
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "id",
+          "name": "proposalId",
           "type": "uint256"
         },
         {
           "indexed": true,
           "internalType": "address",
           "name": "supporter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "token",
           "type": "address"
         },
         {
@@ -128,8 +140,13 @@
           "type": "address"
         },
         {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
-          "name": "goal",
+          "name": "goalAmount",
           "type": "uint256"
         },
         {
@@ -139,7 +156,7 @@
         },
         {
           "internalType": "uint256",
-          "name": "duration",
+          "name": "durationSeconds",
           "type": "uint256"
         },
         {
@@ -152,7 +169,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "proposalId",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -163,11 +180,11 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "id",
+          "name": "proposalId",
           "type": "uint256"
         }
       ],
-      "name": "finalize",
+      "name": "finalizeProposal",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -176,11 +193,29 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "id",
+          "name": "proposalId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
           "type": "uint256"
         }
       ],
-      "name": "fund",
+      "name": "fundKrc20",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "proposalId",
+          "type": "uint256"
+        }
+      ],
+      "name": "fundNative",
       "outputs": [],
       "stateMutability": "payable",
       "type": "function"
@@ -189,7 +224,7 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "id",
+          "name": "proposalId",
           "type": "uint256"
         }
       ],
@@ -213,8 +248,13 @@
               "type": "address"
             },
             {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
               "internalType": "uint256",
-              "name": "goal",
+              "name": "goalAmount",
               "type": "uint256"
             },
             {
@@ -233,13 +273,13 @@
               "type": "uint256"
             },
             {
-              "internalType": "enum ProposalManager.Status",
+              "internalType": "enum ProposalManager.ProposalStatus",
               "name": "status",
               "type": "uint8"
             },
             {
               "internalType": "bool",
-              "name": "executed",
+              "name": "finalized",
               "type": "bool"
             },
             {
@@ -251,6 +291,19 @@
           "internalType": "struct ProposalManager.Proposal",
           "name": "",
           "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -295,8 +348,13 @@
           "type": "address"
         },
         {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
-          "name": "goal",
+          "name": "goalAmount",
           "type": "uint256"
         },
         {
@@ -315,13 +373,13 @@
           "type": "uint256"
         },
         {
-          "internalType": "enum ProposalManager.Status",
+          "internalType": "enum ProposalManager.ProposalStatus",
           "name": "status",
           "type": "uint8"
         },
         {
           "internalType": "bool",
-          "name": "executed",
+          "name": "finalized",
           "type": "bool"
         },
         {
@@ -334,11 +392,24 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_treasury",
+          "type": "address"
+        }
+      ],
+      "name": "setTreasury",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "treasury",
       "outputs": [
         {
-          "internalType": "contract KastjTreasury",
+          "internalType": "address",
           "name": "",
           "type": "address"
         }

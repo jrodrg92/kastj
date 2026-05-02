@@ -198,21 +198,36 @@ export default function ProposalClient() {
   }
 
   async function handleFund() {
-    if (!wallet.connected) {
-      toast.error("Conecta tu wallet");
-      return;
-    }
+  if (!wallet.connected) {
+    toast.error("Conecta tu wallet");
+    return;
+  }
 
-    if (Number(fundAmount) <= 0) {
-      toast.error("Cantidad inválida");
-      return;
-    }
+  if (!proposal) {
+    toast.error("Propuesta no cargada");
+    return;
+  }
+
+  if (Number(fundAmount) <= 0) {
+    toast.error("Cantidad inválida");
+    return;
+  }
+
+  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+  const asset =
+      !proposal.token || proposal.token === ZERO_ADDRESS
+        ? { type: "native" as const }
+        : {
+            type: "krc20" as const,
+            tokenAddress: proposal.token as `0x${string}`,
+          };
 
     await kastj.fundProposal({
-  proposalId: proposalId,
-  asset: proposal.asset,
-  amount: fundAmount,
-});
+      proposalId,
+      asset,
+      amount: fundAmount,
+    });
 
     await refreshSoon();
   }
@@ -268,8 +283,7 @@ export default function ProposalClient() {
   const isExpired = hasExpired(Number(proposal.deadline));
   const isActive = proposal.status === "active";
   const canFund = wallet.connected && isActive && !isExpired;
-  const canFinalize = wallet.connected && isActive && isExpired && !proposal.executed;
-
+  const canFinalize = wallet.connected && isActive && isExpired && !proposal.finalized;
   const canWithdraw =
     wallet.connected &&
     proposal.status === "failed" &&

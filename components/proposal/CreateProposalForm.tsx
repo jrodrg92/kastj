@@ -14,7 +14,7 @@ type Props = {
   onDescriptionChange: (value: string) => void;
   onRecipientChange: (value: string) => void;
   onGoalChange: (value: string) => void;
-  onDurationChange: (value: string) => void;
+  onDurationChange?: (value: string) => void;
   onCreate: () => Promise<void>;
 };
 
@@ -124,7 +124,7 @@ export function CreateProposalForm({
             <select
               className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 p-4 outline-none transition focus:border-green-500"
               value={duration}
-              onChange={(e) => onDurationChange(e.target.value)}
+              onChange={(e) => onDurationChange?.(e.target.value)}
             >
               {durationOptions.map((option) => (
                 <option key={option.value} value={option.value}>
