@@ -1,8 +1,4 @@
-import { ProposalView } from "@/core/engines/types";
-import {
-  canFinalizeProposal,
-  canWithdrawFromProposal,
-} from "./ProposalRules";
+import type { ProposalView } from "../engines/types";
 
 export interface NormalizedProposalView extends ProposalView {
   ui: {
@@ -31,8 +27,8 @@ export function normalizeProposalView(
       isFailed: proposal.status === "failed",
       isExpired: proposal.deadline.getTime() <= now.getTime(),
       progressPercent: goal > 0 ? Math.min((raised / goal) * 100, 100) : 0,
-      canFinalize: canFinalizeProposal(proposal, now),
-      canWithdraw: canWithdrawFromProposal(proposal),
+      canFinalize: proposal.canFinalize,
+      canWithdraw: proposal.canWithdraw,
     },
   };
 }

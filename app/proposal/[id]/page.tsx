@@ -37,27 +37,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { data } = await supabaseServer
     .from("proposals")
-    .select(`
-      id,
-      metadata_uri,
-      proposal_metadata (
-        title,
-        description
-      )
-    `)
+    .select("id, metadata_uri")
     .eq("id", Number(id))
-    .single();
+    .maybeSingle();
 
-  const metadata =
-    (data?.proposal_metadata as any) ?? parseMetadata(data?.metadata_uri);
+  const metadata = parseMetadata(data?.metadata_uri);
 
   const title = metadata?.title
     ? `Kastj — ${metadata.title}`
     : `Kastj — Proposal #${id}`;
 
   const description =
-    metadata?.description ??
-    "Conditional crowdfunding proposal on Kastj.";
+    metadata?.description ?? "Conditional crowdfunding proposal on Kastj.";
 
   return {
     title,

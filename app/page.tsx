@@ -21,6 +21,8 @@ import { NETWORK } from "../lib/network";
 import { supabase } from "../lib/supabase";
 import { useLanguage } from "../contexts/LanguageContext";
 
+import { useProposals } from "../features/proposals/hooks/useProposals";
+
 type Filter =
   | "all"
   | "active"
@@ -48,11 +50,10 @@ function metadataText(metadataURI?: string) {
 export default function HomePage() {
   const wallet = useLocalWallet();
   const kastj = useKastj(wallet.signer);
-  const db = useSupabaseProposals();
   const feed = useActivityFeed();
   const { t } = useLanguage();
-
-  const proposals = db.dbProposals ?? [];
+  const proposalsQuery = useProposals();
+  const proposals = proposalsQuery.data ?? [];
   const userDashboard = useUserDashboard(wallet.address);
 
   const [filter, setFilter] = useState<Filter>("all");
@@ -131,15 +132,18 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!wallet.connected) return;
-
-    db.loadDbProposals();
+    proposalsQuery.isLoading
+    proposalsQuery.refetch()
     loadMySupportedProposals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallet.connected, wallet.address]);
 
   async function refreshDbSoon() {
     await new Promise((resolve) => setTimeout(resolve, 800));
-    await Promise.all([db.loadDbProposals(), loadMySupportedProposals()]);
+    await Promise.all([
+      proposalsQuery.refetch(),
+      loadMySupportedProposals(),
+    ]);
   }
 
   async function handleCreate() {
@@ -346,11 +350,11 @@ export default function HomePage() {
             </div>
 
             <button
-              onClick={db.loadDbProposals}
-              disabled={!wallet.connected || db.loadingDb || kastj.loading}
+              onClick={() => proposalsQuery.refetch()}
+              disabled={proposalsQuery.isFetching}
               className="rounded-xl bg-zinc-800 px-5 py-3 font-bold transition hover:bg-zinc-700 disabled:opacity-40"
             >
-              {db.loadingDb ? "Cargando..." : t.refresh}
+              {proposalsQuery.isFetching ? "Cargando..." : t.refresh}
             </button>
           </div>
 
@@ -409,13 +413,15 @@ export default function HomePage() {
             </div>
           )}
 
-          {wallet.connected && filteredProposals.length === 0 && !db.loadingDb && (
+          {wallet.connected &&
+            filteredProposals.length === 0 &&
+            !proposalsQuery.isLoading && (
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
               No hay propuestas para este filtro o búsqueda.
             </div>
           )}
 
-          {wallet.connected && db.loadingDb && (
+          {wallet.connected && proposalsQuery.isLoading && (
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
               Cargando propuestas...
             </div>
