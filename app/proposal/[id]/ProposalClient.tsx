@@ -5,6 +5,7 @@ import { formatEther } from "../../../lib/currencyUtils";
 import toast from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 
 import { supabase } from "../../../lib/supabase";
 import { useWalletContext } from "../../../contexts/WalletContext";
@@ -17,7 +18,9 @@ import {
 } from "../../../lib/time";
 import { AppHeader } from "../../../components/layout/AppHeader";
 import { InfoTooltip } from "../../../components/ui/InfoTooltip";
-import { History, ChevronDown } from "lucide-react";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { ScrollReveal } from "../../../components/ui/ScrollReveal";
+import { History, ChevronDown, ArrowLeft, Loader2, FileText, Coins, Target, CheckCircle2, XCircle } from "lucide-react";
 import { ProposalMessages } from "../../../components/proposal/ProposalMessages";
 
 import { useFundProposal } from "../../../features/proposals/hooks/useFundProposal";
@@ -56,6 +59,11 @@ export default function ProposalClient() {
   const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
   const proposalId = Number(idParam);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { data: proposal, isLoading: proposalLoading } = useProposal(proposalId);
   const { data: activity = [] } = useProposalActivity(proposalId);
   const { data: fundings = [] } = useProposalFundings(proposalId);
@@ -74,7 +82,7 @@ export default function ProposalClient() {
 
   const [fundAmount, setFundAmount] = useState("");
   const [copied, setCopied] = useState(false);
-  const [isActivityExpanded, setIsActivityExpanded] = useState(false);
+  const [isActivityExpanded, setIsActivityExpanded] = useState(true);
 
   const myContribution = useMemo(() => {
     if (!wallet.address || !fundings.length) return "0";
@@ -149,6 +157,7 @@ export default function ProposalClient() {
       asset: proposal.asset,
       amount: fundAmount,
     });
+    setFundAmount("");
   }
 
   async function handleFinalize() {
@@ -183,18 +192,29 @@ export default function ProposalClient() {
 
   if (!Number.isFinite(proposalId)) {
     return (
-      <main className="min-h-screen bg-background p-8 text-foreground">
-        {t.invalidProposalId}
+      <main className="min-h-screen bg-background p-8 text-foreground flex items-center justify-center">
+        <EmptyState 
+          title={t.invalidProposalId} 
+          description="The proposal ID provided in the URL is not valid."
+        />
       </main>
     );
   }
 
   if (proposalLoading && !proposal) {
     return (
-      <main className="min-h-screen bg-background p-8 text-foreground flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full bg-emerald-500/20" />
-          <p className="text-muted-foreground">{t.loadingProposal}</p>
+      <main className="min-h-screen bg-background text-foreground selection:bg-cyan-500/25">
+        <AppHeader />
+        <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 md:px-8">
+          <div className="flex flex-col gap-8 lg:flex-row">
+            <div className="flex-1 space-y-6">
+              <div className="h-64 w-full rounded-3xl premium-glass animate-shimmer" />
+              <div className="h-40 w-full rounded-3xl premium-glass animate-shimmer" />
+            </div>
+            <div className="w-full lg:w-[380px]">
+              <div className="h-96 w-full rounded-3xl premium-glass animate-shimmer" />
+            </div>
+          </div>
         </div>
       </main>
     );
@@ -202,10 +222,18 @@ export default function ProposalClient() {
 
   if (!proposal) {
     return (
-      <main className="min-h-screen bg-background p-8 text-foreground flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">{t.proposalNotFoundPage}</h1>
-          <button onClick={() => router.push('/')} className="mt-4 text-emerald-500 hover:underline">{t.backToHome}</button>
+      <main className="min-h-screen bg-background text-foreground selection:bg-cyan-500/25">
+        <AppHeader />
+        <div className="flex h-[70vh] items-center justify-center p-8">
+          <div className="text-center">
+            <EmptyState 
+              title={t.proposalNotFoundPage} 
+              description="This proposal doesn't exist or has been removed."
+            />
+            <Link href="/" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-cyan-500 hover:text-cyan-400">
+              <ArrowLeft size={16} /> {t.backToHome}
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -233,152 +261,197 @@ export default function ProposalClient() {
     wallet.address &&
     proposal.creator?.toLowerCase() === wallet.address.toLowerCase();
 
-  const isTrending = percent >= 80;
+  const isTrending = percent >= 80 && isActive;
+
+  /* Semantic Styling */
+  const statusBadgeClass =
+    status === "active"
+      ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+      : status === "succeeded"
+        ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+        : "bg-rose-500/10 text-rose-400 border-rose-500/20";
+
+  /* Timeline Logic */
+  const timelineSteps = [
+    { id: "created", label: "Created", icon: FileText, done: true, color: "text-blue-400", bg: "bg-blue-500/20" },
+    { id: "funding", label: "Funding", icon: Coins, done: percent > 0 || status === 'active', color: "text-cyan-400", bg: "bg-cyan-500/20" },
+    { id: "threshold", label: "Consensus", icon: Target, done: percent >= thresholdPercent, color: percent >= thresholdPercent ? "text-cyan-400" : "text-amber-400", bg: percent >= thresholdPercent ? "bg-cyan-500/20" : "bg-amber-500/20" },
+    { id: "finished", label: status === 'succeeded' ? "Unlocked" : status === 'failed' ? "Failed" : "Finalized", icon: status === 'failed' ? XCircle : CheckCircle2, done: status !== 'active', color: status === 'failed' ? "text-rose-400" : status === 'succeeded' ? "text-cyan-400" : "text-muted-foreground", bg: status === 'failed' ? "bg-rose-500/20" : status === 'succeeded' ? "bg-cyan-500/20" : "bg-secondary" }
+  ];
 
   return (
-    <main className="min-h-screen bg-background px-4 py-8 text-foreground md:px-8 selection:bg-emerald-500/30">
-      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/5 via-background to-background"></div>
-      <div className="mx-auto max-w-7xl space-y-8">
-        <AppHeader />
+    <main className="min-h-screen bg-background text-foreground selection:bg-cyan-500/25">
+      <AppHeader />
+      
+      <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
+        
+        {/* Back Navigation */}
+        <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+          <ArrowLeft size={16} /> {t.backToProposals}
+        </Link>
 
-        <section className="grid gap-8 lg:grid-cols-[1fr_420px]">
+        <section className="grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
+          
+          {/* ─── LEFT COLUMN: CONTENT ─── */}
           <div className="space-y-8">
-            <section className="premium-glass rounded-3xl p-8 lg:p-10">
-              <div className="mb-6 flex flex-wrap gap-2">
-                <span className="flex items-center gap-1.5 rounded-full border border-border bg-background/50 px-4 py-1.5 text-sm font-bold text-foreground shadow-sm">
-                  <div className={`h-2 w-2 rounded-full ${status === "active" ? "bg-yellow-500" : status === "succeeded" ? "bg-green-500" : "bg-red-500"} shadow-[0_0_8px_currentColor]`} />
-                  {statusLabel(status, t)}
-                </span>
-
-                {isCreator && (
-                  <span className="flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-600 dark:text-emerald-500 shadow-sm">
-                    {t.youAreCreator}
+            
+            {/* Overview Card */}
+            <ScrollReveal>
+              <div className="premium-glass rounded-[2rem] p-6 md:p-10">
+                <div className="mb-6 flex flex-wrap items-center gap-3">
+                  <span className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${statusBadgeClass}`}>
+                    <div className={`h-1.5 w-1.5 rounded-full bg-current shadow-[0_0_6px_currentColor]`} />
+                    {statusLabel(status, t)}
                   </span>
-                )}
 
-                {isTrending && (
-                  <span className="flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-1.5 text-sm font-bold text-orange-500 shadow-sm">
-                    🔥 {t.trending}
+                  {isCreator && (
+                    <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-500">
+                      {t.youAreCreator}
+                    </span>
+                  )}
+
+                  {isTrending && (
+                    <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-500">
+                      🔥 {t.trending}
+                    </span>
+                  )}
+                  
+                  <span className="ml-auto text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t.proposalHash}{proposal.id}
                   </span>
-                )}
-              </div>
-
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t.proposalHash}{proposal.id}</p>
-
-              <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-gradient md:text-5xl leading-tight pb-2">
-                {metadata.title}
-              </h1>
-
-              <p className="mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
-                {metadata.description}
-              </p>
-
-              <div className="mt-8 grid gap-4 rounded-2xl border border-border bg-background/50 p-5 text-sm text-muted-foreground md:grid-cols-2">
-                <p>
-                  {t.creator}:{" "}
-                  <span className="font-mono text-foreground/80">{short(proposal.creator)}</span>
-                </p>
-
-                <p>
-                  {t.receiver}:{" "}
-                  <span className="font-mono text-foreground/80">
-                    {short(proposal.recipient)}
-                  </span>
-                </p>
-
-                <p>
-                  {t.deadline}:{" "}
-                  <span className="font-medium text-foreground/80">
-                    {isExpired
-                      ? t.expired
-                      : formatRemainingTime(proposal.deadline)}
-                  </span>
-                </p>
-
-                <p>
-                  {t.suprtd}:{" "}
-                  <span className="font-medium text-foreground/80">{supportersCount}</span>
-                </p>
-              </div>
-            </section>
-
-            <section className="premium-glass rounded-3xl p-8 lg:p-10">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                {t.whyTrust}
-                <InfoTooltip content={t.trustTooltip} />
-              </h2>
-
-              <div className="mt-6 grid gap-4 md:grid-cols-3">
-                <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                  <p className="font-semibold text-foreground">{t.escrowProtected}</p>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                    {t.escrowProtectedDesc}
-                  </p>
                 </div>
 
-                <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                  <p className="font-semibold text-foreground">{t.autoSettlement}</p>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                    {t.autoSettlementDesc}
-                  </p>
-                </div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-5xl leading-[1.15]">
+                  {metadata.title}
+                </h1>
 
-                <div className="group rounded-2xl border border-border bg-background/50 p-6 transition-all hover:bg-card hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                  <p className="font-semibold text-foreground">{t.transparentHistory}</p>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                    {t.transparentHistoryDesc}
-                  </p>
+                <p className="mt-6 text-base leading-relaxed text-muted-foreground/90 md:text-lg">
+                  {metadata.description}
+                </p>
+
+                <div className="mt-10 grid gap-4 rounded-2xl border border-white/[0.06] bg-background/40 p-5 text-sm md:grid-cols-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">{t.creator}:</span>
+                    <span className="font-mono font-medium text-foreground">{short(proposal.creator)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">{t.receiver}:</span>
+                    <span className="font-mono font-medium text-foreground">{short(proposal.recipient)}</span>
+                  </div>
                 </div>
               </div>
-            </section>
+            </ScrollReveal>
 
-            <ProposalMessages
-              proposalId={String(proposalId)}
-              currentWallet={wallet.address}
-              creatorWallet={proposal.creator}
-              recipientWallet={proposal.recipient}
-            />
+            {/* Timeline Visual */}
+            <ScrollReveal delay={100}>
+              <div className="premium-glass rounded-3xl p-6 md:p-8">
+                <h3 className="text-lg font-bold text-foreground mb-6">Proposal Lifecycle</h3>
+                <div className="flex items-center justify-between relative">
+                  {/* Background Track */}
+                  <div className="absolute left-0 top-6 h-0.5 w-full bg-white/[0.06] -z-10" />
+                  
+                  {timelineSteps.map((step, index) => {
+                    const Icon = step.icon;
+                    return (
+                      <div key={step.id} className="flex flex-col items-center gap-3 relative px-2">
+                        <div className={`relative z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 ${step.done ? step.bg : 'bg-[#121212] text-muted-foreground/30'} transition-colors duration-500 shadow-xl`}>
+                          <Icon size={20} className={step.done ? step.color : 'text-muted-foreground/30'} />
+                        </div>
+                        <span className={`text-[10px] font-semibold uppercase tracking-wider ${step.done ? 'text-foreground/90' : 'text-muted-foreground/50'}`}>
+                          {step.label}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </ScrollReveal>
 
-            <section className="premium-glass rounded-3xl p-6 lg:p-8">
-              <button 
-                onClick={() => setIsActivityExpanded(!isActivityExpanded)}
-                className="flex w-full items-center justify-between group"
-              >
-                <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-3">
-                  <History className="h-6 w-6 text-emerald-500" />
-                  {t.propAct}
+            {/* Trust / Features */}
+            <ScrollReveal delay={200}>
+              <div className="premium-glass rounded-3xl p-6 md:p-8">
+                <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                  {t.whyTrust}
+                  <InfoTooltip content={t.trustTooltip} />
                 </h2>
-                <div className="flex items-center gap-3">
-                  <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-black text-emerald-500 border border-emerald-500/20">
-                    {activity.length} {activity.length === 1 ? t.eventLabel : t.eventsLabel}
-                  </span>
-                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${isActivityExpanded ? 'rotate-180' : ''}`} />
-                </div>
-              </button>
 
-              {isActivityExpanded && (
-                <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                  {activity.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">{t.noActivityYet}</p>
-                  ) : (
+                <div className="mt-6 grid gap-4 md:grid-cols-3">
+                  <div className="group rounded-2xl border border-white/[0.06] bg-background/40 p-5 transition-all hover:bg-card hover:border-cyan-500/20">
+                    <p className="text-sm font-semibold text-foreground">{t.escrowProtected}</p>
+                    <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                      {t.escrowProtectedDesc}
+                    </p>
+                  </div>
+                  <div className="group rounded-2xl border border-white/[0.06] bg-background/40 p-5 transition-all hover:bg-card hover:border-cyan-500/20">
+                    <p className="text-sm font-semibold text-foreground">{t.autoSettlement}</p>
+                    <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                      {t.autoSettlementDesc}
+                    </p>
+                  </div>
+                  <div className="group rounded-2xl border border-white/[0.06] bg-background/40 p-5 transition-all hover:bg-card hover:border-cyan-500/20">
+                    <p className="text-sm font-semibold text-foreground">{t.transparentHistory}</p>
+                    <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                      {t.transparentHistoryDesc}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* Messages */}
+            <ScrollReveal delay={300}>
+              <ProposalMessages
+                proposalId={String(proposalId)}
+                currentWallet={wallet.address}
+                creatorWallet={proposal.creator}
+                recipientWallet={proposal.recipient}
+              />
+            </ScrollReveal>
+
+            {/* Activity Log */}
+            <ScrollReveal delay={400}>
+              <div className="premium-glass rounded-3xl p-6 md:p-8 mb-8">
+                <button 
+                  onClick={() => setIsActivityExpanded(!isActivityExpanded)}
+                  className="flex w-full items-center justify-between group outline-none"
+                >
+                  <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                    <History className="h-5 w-5 text-cyan-500" />
+                    {t.propAct}
+                  </h2>
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[10px] font-bold text-muted-foreground">
+                      {activity.length} {activity.length === 1 ? t.eventLabel : t.eventsLabel}
+                    </span>
+                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${isActivityExpanded ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+
+                {isActivityExpanded && (
+                  <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                    {activity.length === 0 ? (
+                      <div className="rounded-2xl border border-white/[0.06] bg-background/30 p-8 text-center">
+                        <p className="text-sm text-muted-foreground">{t.noActivityYet}</p>
+                      </div>
+                    ) : (
                       <div className="max-h-[400px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                         {activity.map((item, index) => (
                           <div
                             key={item.id}
-                            className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both flex items-start gap-4 rounded-2xl border border-border bg-background/50 p-5 transition-all hover:bg-card hover:border-emerald-500/20"
-                            style={{ animationDelay: `${index * 50}ms` }}
+                            className="flex items-start gap-4 rounded-2xl border border-white/[0.06] bg-background/40 p-4 transition-all hover:bg-card hover:border-cyan-500/20"
                           >
                             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl shadow-sm ${
-                              item.type === 'funded' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500' : 
-                              item.type === 'created' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-500' : 
-                              item.type === 'failed' ? 'bg-red-500/10 text-red-600 dark:text-red-500' : 'bg-secondary'
+                              item.type === 'funded' ? 'bg-cyan-500/10 text-cyan-500' : 
+                              item.type === 'created' ? 'bg-blue-500/10 text-blue-500' : 
+                              item.type === 'failed' ? 'bg-rose-500/10 text-rose-500' : 
+                              item.type === 'succeeded' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-secondary'
                             }`}>
                               {activityIcon(item.type)}
                             </span>
         
                             <div>
-                              <p className="font-medium text-foreground">{item.message}</p>
-                              <p className="text-sm text-muted-foreground/80">
+                              <p className="text-sm font-medium text-foreground">{item.message}</p>
+                              <p className="mt-1 text-[11px] text-muted-foreground/60">
                                 {item.actor ? short(item.actor) : t.systemActor} ·{" "}
                                 {new Date(item.created_at ?? 0).toLocaleString()}
                               </p>
@@ -386,156 +459,174 @@ export default function ProposalClient() {
                           </div>
                         ))}
                       </div>
-                  )}
-                </div>
-              )}
-            </section>
+                    )}
+                  </div>
+                )}
+              </div>
+            </ScrollReveal>
           </div>
 
-          <aside className="space-y-6 lg:sticky lg:top-28 lg:self-start">
-            <section className="premium-glass rounded-3xl p-8 lg:p-10">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t.raisedLabel}</p>
-
-              <div className="mt-2 flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-4xl font-black tracking-tight text-foreground">{raised.toFixed(4)}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {t.ofLabel} {goal.toFixed(4)} {NETWORK.currency}
-                  </p>
-                </div>
-
-                <p className={`text-3xl font-bold tracking-tight ${percent >= thresholdPercent ? 'text-emerald-600 dark:text-emerald-500' : 'text-amber-600 dark:text-amber-500'}`}>
-                  {percent.toFixed(1)}%
-                </p>
-              </div>
-
-              <div className="relative mt-8 h-2.5 overflow-hidden rounded-full bg-secondary ring-1 ring-inset ring-black/10 dark:ring-white/5">
-                {/* Milestone Marker (Threshold) */}
-                {thresholdPercent > 0 && thresholdPercent < 100 && (
-                  <div 
-                    className="absolute top-0 bottom-0 z-30 w-[3px] bg-white shadow-[0_0_15px_rgba(255,255,255,1)] dark:bg-white"
-                    style={{ left: `${thresholdPercent}%` }}
-                  ></div>
+          {/* ─── RIGHT COLUMN: STICKY PANEL ─── */}
+          <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+            <div className="premium-glass rounded-[2rem] p-6 md:p-8">
+              
+              <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                <span>{t.raisedLabel}</span>
+                {isExpired ? (
+                  <span className="text-rose-400">{t.expired}</span>
+                ) : (
+                  <span>{mounted ? formatRemainingTime(proposal.deadline) : "--"}</span>
                 )}
+              </div>
+
+              <div className="mt-3 flex items-baseline gap-2">
+                <span className="text-4xl font-extrabold tracking-tight text-foreground">{raised.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                <span className="text-sm font-medium text-muted-foreground">/ {goal.toLocaleString()} {NETWORK.currency}</span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mt-6">
+                <div className="mb-2 flex justify-between text-xs font-bold">
+                  <span className="text-muted-foreground uppercase tracking-wider">{t.progress}</span>
+                  <span className={percent >= thresholdPercent ? 'text-emerald-400' : 'text-amber-400'}>
+                    {percent.toFixed(1)}%
+                  </span>
+                </div>
                 
-                <div
-                  className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                    percent >= thresholdPercent 
-                      ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)] dark:shadow-[0_0_12px_rgba(16,185,129,0.8)]" 
-                      : "bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.2)] dark:shadow-[0_0_12px_rgba(245,158,11,0.5)]"
-                  }`}
-                  style={{ width: `${percent}%` }}
-                />
+                <div className="relative h-2.5 overflow-hidden rounded-full bg-white/[0.06] shadow-inner">
+                  {/* Threshold Marker */}
+                  {thresholdPercent > 0 && thresholdPercent < 100 && (
+                    <div 
+                      className="absolute top-0 bottom-0 z-30 w-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+                      style={{ left: `${thresholdPercent}%` }}
+                      title={`${t.minThreshold}: ${thresholdPercent}%`}
+                    />
+                  )}
+                  
+                  {/* Fill */}
+                  <div
+                    className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                      percent >= thresholdPercent 
+                        ? "bg-gradient-to-r from-cyan-500 to-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]" 
+                        : "bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    }`}
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+
+                {thresholdPercent > 0 && (
+                  <div className="mt-2 text-right text-[10px] font-semibold text-muted-foreground/50">
+                    {t.minThreshold}: {threshold.toLocaleString()} {NETWORK.currency}
+                  </div>
+                )}
               </div>
 
-              {thresholdPercent > 0 && (
-                <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold">
-                  <span>{t.minLabel} {threshold.toFixed(2)} {NETWORK.currency}</span>
-                  <span>{t.goalAsideLabel} {goal.toFixed(2)}</span>
+              {/* Stats Grid */}
+              <div className="mt-8 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-white/[0.06] bg-background/40 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{t.unicSup}</p>
+                  <p className="mt-1 text-xl font-bold text-foreground">{supportersCount}</p>
                 </div>
-              )}
-
-              <div className="mt-10 space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-background/50 p-5 shadow-inner">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{t.unicSup}</p>
-                  <p className="mt-2 text-2xl font-black text-foreground">
-                    {supportersCount}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-background/50 p-5 shadow-inner">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{t.status}</p>
-                  <p className="mt-2 text-xl font-black capitalize text-foreground">{statusLabel(status, t).replace(/^(🟡|🟢|🔴)\s*/, "")}</p>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-background/50 p-5 shadow-inner">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{t.yourContribution}</p>
-                  <p className="mt-2 text-2xl font-black text-foreground">
-                    {Number(myContribution).toFixed(4)} <span className="text-sm font-bold text-muted-foreground">{NETWORK.currency}</span>
+                <div className="rounded-xl border border-white/[0.06] bg-background/40 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{t.yourContribution}</p>
+                  <p className="mt-1 text-xl font-bold text-foreground">
+                    {Number(myContribution).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
 
+              {/* Actions */}
               <div className="mt-8 space-y-4">
                 {isActive && !isExpired && (
-                  <>
-                    <input
-                      className="w-full rounded-2xl border border-border bg-background/80 p-5 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-emerald-500/50 focus:bg-background focus:ring-1 focus:ring-emerald-500/50"
-                      placeholder={`${t.amountPlaceholder} ${NETWORK.currency}`}
-                      value={fundAmount}
-                      onChange={(event) => setFundAmount(event.target.value)}
-                    />
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        className="w-full rounded-xl border border-white/10 bg-background/60 p-4 pl-12 text-sm font-semibold text-foreground outline-none transition-all placeholder:text-muted-foreground/50 focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/30"
+                        placeholder={`${t.amountPlaceholder}`}
+                        value={fundAmount}
+                        onChange={(event) => setFundAmount(event.target.value)}
+                      />
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-cyan-500">
+                        {NETWORK.currency}
+                      </div>
+                    </div>
 
                     <button
                       disabled={!canFund || isMutating}
                       onClick={handleFund}
-                      className="premium-btn w-full rounded-2xl px-5 py-4 font-bold text-lg disabled:opacity-50"
+                      className="premium-btn flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold disabled:opacity-50"
                     >
-                      {fundMutation.isPending
-                        ? t.processingButton
-                        : `${t.supp} ${fundAmount} ${NETWORK.currency}`}
+                      {fundMutation.isPending ? (
+                        <><Loader2 size={16} className="animate-spin" /> {t.processingButton}</>
+                      ) : (
+                        <>{t.supp} Proposal</>
+                      )}
                     </button>
-                  </>
+                    <p className="text-center text-[10px] text-muted-foreground/60 font-medium">Funds are securely locked in smart contract escrow.</p>
+                  </div>
                 )}
 
                 {isActive && isExpired && (
                   <button
                     disabled={!canFinalize || isMutating}
                     onClick={handleFinalize}
-                    className="w-full rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 font-bold text-emerald-600 transition-all hover:bg-emerald-500/20 disabled:opacity-40 dark:text-emerald-400"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3.5 text-sm font-bold text-emerald-400 transition-all hover:bg-emerald-500/20 disabled:opacity-50"
                   >
-                    {finalizeMutation.isPending
-                      ? t.finalizingButton
-                      : t.finalizeProposalButton}
+                    {finalizeMutation.isPending ? (
+                      <><Loader2 size={16} className="animate-spin" /> {t.finalizingButton}</>
+                    ) : (
+                      <>{t.finalizeProposalButton}</>
+                    )}
                   </button>
-                )}
-
-                {status === "succeeded" && (
-                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-center font-bold text-emerald-600 dark:text-emerald-400">
-                    {t.fundsDistributedSuccess}
-                  </div>
                 )}
 
                 {status === "failed" && Number(myContribution) > 0 && (
                   <button
                     disabled={!canWithdraw || isMutating}
                     onClick={handleWithdraw}
-                    className="w-full rounded-2xl bg-destructive px-5 py-4 font-bold text-destructive-foreground transition-all hover:opacity-90 disabled:opacity-40"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-3.5 text-sm font-bold text-rose-400 transition-all hover:bg-rose-500/20 disabled:opacity-50"
                   >
-                    {withdrawMutation.isPending
-                      ? t.withdrawingButton
-                      : `${t.withdrawButton} ${Number(myContribution).toFixed(4)} ${
-                          NETWORK.currency
-                        }`}
+                    {withdrawMutation.isPending ? (
+                      <><Loader2 size={16} className="animate-spin" /> {t.withdrawingButton}</>
+                    ) : (
+                      <>{t.withdrawButton} {Number(myContribution).toLocaleString(undefined, { maximumFractionDigits: 2 })} {NETWORK.currency}</>
+                    )}
                   </button>
                 )}
 
                 {status === "failed" && Number(myContribution) <= 0 && (
-                  <div className="rounded-2xl border border-border bg-background/50 px-5 py-4 text-center font-bold text-muted-foreground">
+                  <div className="rounded-xl border border-white/[0.06] bg-background/40 p-4 text-center text-xs font-semibold text-muted-foreground">
                     {t.noFundsToWithdraw}
+                  </div>
+                )}
+                
+                {status === "succeeded" && (
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] p-4 text-center text-xs font-bold text-emerald-400">
+                    {t.fundsDistributedSuccess}
                   </div>
                 )}
 
                 <button
                   onClick={copyLink}
-                  className={`w-full rounded-2xl border px-5 py-4 font-bold transition-all backdrop-blur-sm shadow-sm flex items-center justify-center gap-2 ${
-                    copied ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500 scale-[0.98]' : 'border-border bg-background/50 text-foreground hover:bg-accent'
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3.5 text-sm font-semibold transition-all ${
+                    copied ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 scale-[0.98]' : 'border-white/10 bg-card/50 text-foreground hover:bg-accent'
                   }`}
                 >
                   {copied ? (
-                    <>
-                      <span>✓</span>
-                      <span>{t.linkCopied}</span>
-                    </>
+                    <><CheckCircle2 size={16} /> {t.linkCopied}</>
                   ) : (
-                    <>
-                      <span>🔗</span>
-                      <span>{t.shareProposal}</span>
-                    </>
+                    <>🔗 {t.shareProposal}</>
                   )}
                 </button>
+
+                {!wallet.connected && (
+                  <p className="text-center text-[11px] font-medium text-rose-400">
+                    {t.conectWallet} to interact.
+                  </p>
+                )}
               </div>
-            </section>
+            </div>
           </aside>
         </section>
       </div>

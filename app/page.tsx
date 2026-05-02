@@ -1,27 +1,20 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query'
 import getQueryClient from '../lib/getQueryClient'
 import { proposalKeys } from '../features/proposals/queryKeys'
-import { fetchProposalsPage, fetchStats } from '../features/proposals/api'
-import { HomeClient } from './HomeClient'
+import { fetchStats } from '../features/proposals/api'
+import { LandingClient } from './LandingClient'
 
 export default async function Page() {
   const queryClient = getQueryClient()
 
-  await Promise.all([
-    queryClient.prefetchInfiniteQuery({
-      queryKey: [...proposalKeys.lists(), "infinite"],
-      queryFn: () => fetchProposalsPage(0),
-      initialPageParam: 0,
-    }),
-    queryClient.prefetchQuery({
-      queryKey: [...proposalKeys.all, "stats"],
-      queryFn: fetchStats,
-    }),
-  ])
+  await queryClient.prefetchQuery({
+    queryKey: [...proposalKeys.all, "stats"],
+    queryFn: fetchStats,
+  })
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <HomeClient />
+      <LandingClient />
     </HydrationBoundary>
   )
 }

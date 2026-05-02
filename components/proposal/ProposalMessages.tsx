@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useOptimistic, useTransition } from "react";
+import React, { useMemo, useOptimistic, useTransition, useState } from "react";
 import { useProposalMessages, useCreateProposalMessage, useSoftDeleteMessage, useTogglePinMessage } from "../../features/proposal-messages/hooks";
 import { ProposalMessageComposer } from "./ProposalMessageComposer";
 import { ProposalMessageItem } from "./ProposalMessageItem";
@@ -32,6 +32,7 @@ export function ProposalMessages({
   );
 
   const [isTransitioning, startTransition] = useTransition();
+  const [replyingTo, setReplyingTo] = useState<ProposalMessage | null>(null);
 
   const currentAuthorRole = useMemo(() => {
     if (!currentWallet) return "visitor";
@@ -43,15 +44,16 @@ export function ProposalMessages({
 
   const canPin = currentAuthorRole === "creator" || currentAuthorRole === "moderator";
 
-  const handleSend = async (body: string, type: ProposalMessageType) => {
+  const handleSend = async (body: string, parentId?: string | null) => {
     if (!currentWallet) return;
 
     const newMessage: ProposalMessage = {
       id: `temp-${Date.now()}`,
       proposalId,
+      parentId: parentId || null,
       authorWallet: currentWallet,
       authorRole: currentAuthorRole,
-      type,
+      type: "comment",
       body,
       bodyHash: "",
       isDeleted: false,
@@ -66,9 +68,11 @@ export function ProposalMessages({
         await createMutation.mutateAsync({
           authorWallet: currentWallet,
           authorRole: currentAuthorRole,
-          type,
+          type: "comment",
           body,
+          parentId,
         });
+        setReplyingTo(null);
       } catch (e) {
         console.error("Failed to send message", e);
       }
@@ -90,37 +94,45 @@ export function ProposalMessages({
     <section className="space-y-8">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
-            <MessageSquare className="h-8 w-8 text-emerald-500" />
+          <h2 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <MessageSquare className="h-8 w-8 text-cyan-500" />
             {t.discussion}
           </h2>
           <p className="text-sm font-medium text-muted-foreground">
             {t.discussionDesc}
           </p>
         </div>
-        <div className="rounded-full bg-emerald-500/10 px-4 py-1.5 text-xs font-black text-emerald-500 border border-emerald-500/20">
+        <div className="rounded-full bg-cyan-500/10 px-4 py-1.5 text-xs font-bold text-cyan-500 border border-cyan-500/20">
           {optimisticMessages.length} {optimisticMessages.length === 1 ? t.messageLabel : t.messagesLabel}
         </div>
       </div>
 
       <div className="space-y-4">
         {optimisticMessages.length > 0 ? (
-          optimisticMessages.map((msg) => (
-            <ProposalMessageItem
-              key={msg.id}
-              message={msg}
-              isOwnMessage={!!currentWallet && msg.authorWallet.toLowerCase() === currentWallet.toLowerCase()}
-              canPin={canPin}
-              onDelete={handleDelete}
-              onTogglePin={handleTogglePin}
-            />
-          ))
+          optimisticMessages.map((msg) => {
+            const parentMsg = msg.parentId ? optimisticMessages.find(m => m.id === msg.parentId) : null;
+            return (
+              <ProposalMessageItem
+                key={msg.id}
+                message={msg}
+                parentMessage={parentMsg}
+                isOwnMessage={!!currentWallet && msg.authorWallet.toLowerCase() === currentWallet.toLowerCase()}
+                canPin={canPin}
+                onDelete={handleDelete}
+                onTogglePin={handleTogglePin}
+                onReply={currentWallet ? (m) => {
+                  setReplyingTo(m);
+                  document.getElementById('composer-section')?.scrollIntoView({ behavior: 'smooth' });
+                } : undefined}
+              />
+            );
+          })
         ) : !isLoading ? (
-          <div className="premium-glass rounded-[2rem] p-12 text-center border-emerald-500/10 bg-emerald-500/[0.02] dark:bg-emerald-500/[0.01]">
-            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-emerald-500/10 text-emerald-500 shadow-[0_8px_30px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/20">
+          <div className="premium-glass rounded-[2rem] p-12 text-center border-cyan-500/10 bg-cyan-500/[0.02] dark:bg-cyan-500/[0.01]">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-cyan-500/10 text-cyan-500 shadow-[0_8px_30px_rgba(6,182,212,0.15)] ring-1 ring-cyan-500/20">
               <MessageSquare className="h-10 w-10" />
             </div>
-            <h3 className="text-2xl font-black text-foreground tracking-tight">{t.firstWord}</h3>
+            <h3 className="text-2xl font-bold text-foreground tracking-tight">{t.firstWord}</h3>
             <p className="mx-auto mt-3 max-w-[320px] text-sm font-medium text-muted-foreground/70 leading-relaxed">
               {t.pioneerDesc}
             </p>
@@ -139,13 +151,15 @@ export function ProposalMessages({
           onSend={handleSend}
           authorRole={currentAuthorRole}
           isSending={createMutation.isPending}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
         />
       ) : (
         <div className="premium-glass rounded-[2rem] p-10 text-center border-dashed border-border shadow-sm">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground/40">
             <MessageSquareOff className="h-8 w-8" />
           </div>
-          <h3 className="text-xl font-black text-foreground tracking-tight">{t.joinDiscussion}</h3>
+          <h3 className="text-xl font-bold text-foreground tracking-tight">{t.joinDiscussion}</h3>
           <p className="text-sm font-medium text-muted-foreground mt-3 max-w-[300px] mx-auto">{t.joinDiscussionDesc}</p>
         </div>
       )}

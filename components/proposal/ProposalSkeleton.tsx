@@ -2,7 +2,7 @@ import React from "react";
 
 export function ProposalSkeleton() {
   return (
-    <div className="premium-glass relative flex flex-col rounded-3xl p-7 animate-pulse">
+    <div className="premium-glass relative flex flex-col rounded-3xl p-7 animate-shimmer">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 flex-1">
           <div className="h-6 w-3/4 rounded-lg bg-muted"></div>
@@ -41,7 +41,7 @@ export function StatsSkeleton() {
   return (
     <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="premium-glass rounded-2xl p-5 animate-pulse">
+        <div key={i} className="premium-glass rounded-2xl p-5 animate-shimmer">
           <div className="h-3 w-16 rounded bg-muted/50 mb-3"></div>
           <div className="h-8 w-24 rounded bg-muted"></div>
         </div>

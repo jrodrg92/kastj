@@ -38,14 +38,14 @@ export function SortDropdown({ value, onChange, labels }: Props) {
     <div className="relative md:w-56" ref={containerRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="premium-glass flex h-14 w-full items-center justify-between rounded-2xl px-5 text-sm font-bold text-foreground/90 transition-all hover:bg-background/80 active:scale-95 shadow-sm"
+        className="flex h-14 w-full items-center justify-between rounded-2xl border border-white/[0.04] bg-white/[0.02] px-5 text-sm font-bold text-foreground transition-all hover:bg-white/[0.04] active:scale-95 outline-none focus:border-cyan-500/40 focus:bg-background/60 focus:ring-1 focus:ring-cyan-500/30"
       >
-        <span className="flex items-center gap-2">
-          <span className="text-lg">{activeOption.icon}</span>
+        <span className="flex items-center gap-3">
+          <span className="text-base grayscale opacity-70">{activeOption.icon}</span>
           {activeOption.label}
         </span>
         <svg
-          className={`h-4 w-4 text-emerald-500 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+          className={`h-4 w-4 text-cyan-500 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -67,11 +67,11 @@ export function SortDropdown({ value, onChange, labels }: Props) {
               }}
               className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
                 value === opt.value
-                  ? "bg-emerald-500 text-white shadow-lg"
-                  : "text-foreground/70 hover:bg-emerald-500/10 hover:text-emerald-500"
+                  ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                  : "text-foreground/70 hover:bg-white/[0.04] hover:text-foreground"
               }`}
             >
-              <span className="text-base">{opt.icon}</span>
+              <span className="text-base grayscale opacity-70">{opt.icon}</span>
               {opt.label}
               {value === opt.value && <span className="ml-auto text-xs">✓</span>}
             </button>

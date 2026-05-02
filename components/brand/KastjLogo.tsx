@@ -19,7 +19,7 @@ export function KastjLogo() {
             KASTJ
           </span>
 
-          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+          <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-xs font-bold text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400">
             beta
           </span>
         </div>

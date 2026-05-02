@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Clock, Users, Loader2 } from "lucide-react";
 import { NETWORK } from "../../lib/network";
 import { formatRemainingTime, isExpired as hasExpired } from "../../lib/time";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -44,6 +46,12 @@ export function ProposalCard({
   onWithdraw
 }: Props) {
   const { t } = useLanguage();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const p = proposal;
   const metadata = useProposalMetadata(p.metadataURI);
 
@@ -52,7 +60,7 @@ export function ProposalCard({
       ? Math.min((Number(p.totalRaised) / Number(p.goal)) * 100, 100)
       : 0;
 
-  const thresholdPercent = 
+  const thresholdPercent =
     Number(p.goal) > 0
       ? Math.min((Number(p.minThreshold) / Number(p.goal)) * 100, 100)
       : 0;
@@ -64,142 +72,130 @@ export function ProposalCard({
   const canFinalize = connected && !loading && !p.executed && isExpired;
   const canWithdraw = connected && !loading && p.status === 2;
 
+  /* Status badge styling - adding the dot and glow */
+  const statusConfig =
+    p.status === 0
+      ? { label: statusLabel(p.status, t), color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/20", dot: "bg-amber-400" }
+      : p.status === 1
+        ? { label: statusLabel(p.status, t), color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", dot: "bg-emerald-400" }
+        : { label: statusLabel(p.status, t), color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/20", dot: "bg-rose-400" };
+
   return (
-    <div className="group premium-glass relative flex flex-col rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-      {/* Decorative Glow on Hover */}
-      <div className="pointer-events-none absolute -inset-px rounded-3xl border border-emerald-500/20 bg-emerald-500/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100 mix-blend-screen"></div>
+    <div className="group relative flex h-full flex-col rounded-[2rem] border border-white/[0.05] bg-gradient-to-b from-card/60 to-card/20 p-6 backdrop-blur-xl transition-all duration-500 hover:border-cyan-500/30 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+      {/* Decorative glow */}
+      <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-cyan-500/5 blur-2xl transition-opacity duration-500 group-hover:opacity-100 opacity-0" />
 
+      {/* ─── Header ─── */}
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-xl font-bold tracking-tight text-foreground">{metadata.title}</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t.proposalHash}{p.id} {isSupported && <span className="ml-2 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-blue-400">{t.supportedBadge}</span>}
-          </p>
-        </div>
-
-        <div className="flex flex-col items-end gap-2">
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${statusClass(
-              p.status
-            )}`}
-          >
-            {statusLabel(p.status, t)}
-          </span>
-          
-          <div className="flex flex-wrap gap-1 justify-end">
-            {isExpired && (
-              <span className="rounded-full border border-border bg-background/50 px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
-                {t.closableBadge}
-              </span>
-            )}
-            {isOverfunded && (
-              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-500">
-                {t.overfundedBadge}
+        <div className="min-w-0 flex-1">
+          <h3 className="line-clamp-1 text-base font-bold tracking-tight text-foreground transition-colors group-hover:text-cyan-400">
+            {metadata.title}
+          </h3>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">#{p.id}</span>
+            {isSupported && (
+              <span className="inline-flex items-center rounded-full bg-cyan-500/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-tighter text-cyan-400 border border-cyan-500/20">
+                {t.supportedBadge}
               </span>
             )}
           </div>
         </div>
-      </div>
-
-      <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{metadata.description}</p>
-
-      <div className="mt-6 grid gap-2 rounded-2xl border border-border bg-background/50 p-4 text-xs text-muted-foreground md:grid-cols-2">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground/70">{t.creator}:</span> 
-          <span className="font-mono text-foreground/80">{short(p.creator)}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground/70">{t.receiver}:</span> 
-          <span className="font-mono text-foreground/80">{short(p.recipient)}</span>
+        
+        <div className={`flex items-center gap-2 rounded-full border ${statusConfig.border} ${statusConfig.bg} px-3 py-1`}>
+           <div className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot} shadow-[0_0_8px_currentColor]`} />
+           <span className={`text-[9px] font-black uppercase tracking-widest ${statusConfig.color}`}>
+             {statusConfig.label}
+           </span>
         </div>
       </div>
 
-      <div className="mt-6">
-        <div className="mb-2 flex justify-between text-xs font-medium">
-          <div className="flex items-center gap-1.5">
-            <span className="text-foreground font-bold">{p.totalRaised}</span>
-            <span className="text-[10px] text-muted-foreground">/ {p.goal}</span>
-            <div className={`ml-1 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase ${
-              p.asset?.type === 'krc20' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-            }`}>
-              {p.asset?.type === 'krc20' ? 'KRC20' : NETWORK.currency}
+      {/* ─── Description ─── */}
+      <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-muted-foreground/60 font-medium">
+        {metadata.description}
+      </p>
+
+      {/* ─── Progress ─── */}
+      <div className="mt-8 space-y-4">
+        <div className="flex items-end justify-between">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">{t.raisedLabel}</p>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-black tracking-tighter text-foreground">{p.totalRaised}</span>
+              <span className="text-[10px] font-bold text-muted-foreground/30">/ {p.goal} {NETWORK.currency}</span>
             </div>
           </div>
-          <span className={percent >= thresholdPercent ? "text-emerald-500" : "text-amber-500"}>
-            {percent.toFixed(1)}%
-          </span>
+          <div className="text-right">
+            <span className={`text-sm font-black tracking-tighter ${percent >= thresholdPercent ? "text-cyan-400" : "text-amber-400"}`}>
+              {percent.toFixed(0)}%
+            </span>
+          </div>
         </div>
 
-        <div className="relative h-2.5 overflow-hidden rounded-full bg-secondary ring-1 ring-inset ring-black/10 dark:ring-white/5">
-          {/* Milestone Marker (Threshold) */}
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/[0.04] shadow-inner">
           {thresholdPercent > 0 && thresholdPercent < 100 && (
-            <div 
-              className="absolute top-0 bottom-0 z-30 w-[3px] bg-white shadow-[0_0_15px_rgba(255,255,255,1)] dark:bg-white"
+            <div
+              className="absolute top-0 bottom-0 z-30 w-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]"
               style={{ left: `${thresholdPercent}%` }}
-              title={`${t.minimum}: ${p.minThreshold} ${NETWORK.currency}`}
-            ></div>
+              title={`Consensus: ${thresholdPercent}%`}
+            />
           )}
-          
           <div
             className={`h-full rounded-full transition-all duration-1000 ease-out ${
-              percent >= thresholdPercent 
-                ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]" 
-                : "bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+              percent >= thresholdPercent
+                ? "bg-gradient-to-r from-cyan-500 to-emerald-500 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                : "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
             }`}
             style={{ width: `${percent}%` }}
           />
         </div>
-        
-        {thresholdPercent > 0 && (
-          <div className="mt-1 flex justify-between text-[9px] uppercase tracking-tighter text-muted-foreground/60">
-            <span>{t.start}</span>
-            <span style={{ marginRight: `${100 - thresholdPercent}%` }}>{t.minimum}</span>
-            <span>{t.goalLabel}</span>
+      </div>
+
+      {/* ─── Metadata Footer ─── */}
+      <div className="mt-auto pt-6">
+        <div className="flex items-center justify-between border-t border-white/[0.04] pt-5">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
+            <Clock size={12} className="text-cyan-500/50" />
+            {isExpired ? (
+              <span className="text-rose-400/70">Expired</span>
+            ) : (
+              <span className="text-foreground/70">{mounted ? formatRemainingTime(p.deadline) : "--"}</span>
+            )}
           </div>
-        )}
-      </div>
+          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
+            <Users size={12} className="text-cyan-500/50" />
+            <span className="text-foreground/70">{short(p.creator)}</span>
+          </div>
+        </div>
 
-      <div className="mt-5 border-t border-border/30 pt-4">
-        <FeeSplit />
-      </div>
-
-      <div className="mt-8 flex flex-wrap gap-3">
-        <Link
-          href={`/proposal/${p.id}`}
-          className="flex h-10 items-center justify-center rounded-xl border border-border bg-background/50 px-5 text-sm font-semibold text-foreground transition-all hover:bg-accent hover:text-accent-foreground backdrop-blur-sm"
-        >
-          {t.showDetail}
-        </Link>
-
-        {p.status === 0 && !isExpired && (
-          <button
-            disabled={!connected || loading}
-            onClick={() => onFund(p.id)}
-            className="flex h-10 items-center justify-center rounded-xl border border-border bg-background/50 px-5 text-sm font-medium text-foreground transition-all hover:bg-accent disabled:opacity-50"
+        {/* ─── Actions ─── */}
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <Link
+            href={`/proposal/${p.id}`}
+            className="flex h-10 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-[10px] font-black uppercase tracking-widest text-foreground transition-all hover:bg-white/[0.08] hover:border-white/10"
           >
-            {loading ? "..." : `${t.supp} ${fundAmount} ${NETWORK.currency}`}
-          </button>
-        )}
+            {t.showDetail}
+          </Link>
 
-        {p.status === 0 && isExpired && (
-          <button
-            disabled={!connected || loading}
-            onClick={() => onFinalize(p.id)}
-            className="flex h-10 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 text-sm font-medium text-emerald-400 transition-all hover:bg-emerald-500/20 disabled:opacity-40"
-          >
-            {loading ? "..." : t.finalizeTrigger}
-          </button>
-        )}
+          {p.status === 0 && !isExpired && (
+            <button
+              disabled={!connected || loading}
+              onClick={() => onFund(p.id)}
+              className="premium-btn flex h-10 items-center justify-center rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-cyan-500/10"
+            >
+              {loading ? <Loader2 size={14} className="animate-spin" /> : `${t.supp} ${fundAmount}`}
+            </button>
+          )}
 
-        {p.status === 2 && isSupported && (
-          <button
-            disabled={!connected || loading}
-            onClick={() => onWithdraw(p.id)}
-            className="flex h-10 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 text-sm font-medium text-amber-400 transition-all hover:bg-amber-500/20 disabled:opacity-40"
-          >
-            {loading ? "..." : t.retFunds}
-          </button>
-        )}
+          {p.status === 0 && isExpired && (
+            <button
+              disabled={!connected || loading}
+              onClick={() => onFinalize(p.id)}
+              className="flex h-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-black uppercase tracking-widest text-cyan-400 transition-all hover:bg-cyan-500/20 disabled:opacity-40 shadow-lg shadow-cyan-500/5"
+            >
+              {loading ? <Loader2 size={14} className="animate-spin" /> : t.finalizeTrigger}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
