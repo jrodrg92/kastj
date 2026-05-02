@@ -1,5 +1,4 @@
-"use client";
-
+import type { JsonRpcSigner } from "ethers";
 import Link from "next/link";
 import { NETWORK } from "../../lib/network";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -12,7 +11,7 @@ import { KastjLogo } from "../../components/brand/KastjLogo";
 type Props = {
   connected: boolean;
   address?: string;
-  signer: any;
+  signer: JsonRpcSigner | null;
   connect: () => void | Promise<void>;
 };
 
@@ -22,7 +21,7 @@ export function AppHeader({
   signer,
   connect,
 }: Props) {
-  const { t, lang, toggleLang } = useLanguage();
+  const { t } = useLanguage();
   const { theme, toggleTheme } = useUiPreferences();
 
   return (

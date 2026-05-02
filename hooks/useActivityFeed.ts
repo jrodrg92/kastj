@@ -1,53 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther } from "ethers";
 import { supabase } from "../lib/supabase";
+import type { DbActivity } from "../types/supabase";
+
+const ACTIVITY_KEY = ["activity", "feed"] as const;
 
 export function useActivityFeed() {
-  const [loadingActivity, setLoadingActivity] = useState(false);
-  const [activity, setActivity] = useState<any[]>([]);
+  const queryClient = useQueryClient();
 
-  async function loadActivity() {
-    setLoadingActivity(true);
+  const query = useQuery({
+    queryKey: ACTIVITY_KEY,
+    queryFn: async (): Promise<DbActivity[]> => {
+      const { data, error } = await supabase
+        .from("activity")
+        .select("*")
+        .order("id", { ascending: false })
+        .limit(10);
 
-    const { data, error } = await supabase
-      .from("activity")
-      .select("*")
-      .order("id", { ascending: false })
-      .limit(10);
+      if (error) {
+        console.error(error);
+        throw error;
+      }
 
-    setLoadingActivity(false);
+      return (data ?? []) as DbActivity[];
+    },
+  });
 
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setActivity(data ?? []);
-  }
-
+  // Real-time subscription: invalidate query on new activity
   useEffect(() => {
-    loadActivity();
-
     const channel = supabase
       .channel("activity-feed")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "activity" },
-        () => loadActivity()
+        () => {
+          void queryClient.invalidateQueries({ queryKey: ACTIVITY_KEY });
+        },
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [queryClient]);
 
   return {
-    activity,
-    loadingActivity,
-    loadActivity,
+    activity: query.data ?? [],
+    loadingActivity: query.isLoading,
+    loadActivity: query.refetch,
   };
 }
 

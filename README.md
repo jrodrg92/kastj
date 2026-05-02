@@ -1,57 +1,103 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# Kastj
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+**Conditional crowdfunding for community proposals on Kaspa.**
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+Kastj lets communities create proposals, lock funds in escrow, and automatically distribute them when goals are met — or enable safe withdrawals if they're not.
 
-## Project Overview
+## How It Works
 
-This example project includes:
+1. **Create a proposal** — Define title, description, goal, recipient wallet, and deadline.
+2. **Community funds it** — Supporters lock funds in escrow until the deadline expires.
+3. **Automatic settlement** — Success: 93% recipient · 5% creator reward · 2% treasury. Failure: supporters withdraw individually.
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+## Architecture
 
-## Usage
+```
+core/
+├── domain/         Pure business logic (state machine, reward policy, rules)
+├── engines/        ProposalEngine abstraction (Mock, ZkEVM, future vProgs)
+├── ports/          Interfaces for external dependencies (repo, chain, metadata)
+features/
+├── proposals/      TanStack Query hooks for CRUD mutations
+app/
+├── page.tsx        Main proposals page
+├── proposal/[id]/  Proposal detail page with real-time updates
+components/         Reusable UI components (proposal, dashboard, wallet, etc.)
+hooks/              Shared hooks (wallet, engine, user dashboard, activity)
+contracts/          Solidity smart contracts (ProposalManager, EscrowVault)
+indexer/            Node.js indexer syncing chain events to Supabase
+```
 
-### Running Tests
+## Tech Stack
 
-To run all the tests in the project, execute the following command:
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS v4, shadcn/ui |
+| Data | TanStack Query v5, Supabase (Realtime + Postgres) |
+| Chain | Ethers v6, Solidity 0.8.28 (Hardhat 3) |
+| i18n | Custom EN/ES with context provider |
 
-```shell
+## Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Copy environment variables
+cp .env.example .env.local
+
+# Start dev server
+npm run dev
+```
+
+### Environment Variables
+
+See [`.env.example`](.env.example) for the frontend and [`indexer/.env.example`](indexer/.env.example) for the indexer.
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key (public) |
+| `NEXT_PUBLIC_PROPOSAL_ENGINE` | `mock` or `kasplex-zkevm` |
+
+## Smart Contracts
+
+```bash
+# Compile contracts
+npx hardhat compile
+
+# Run tests
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
+### Contracts
 
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
+- **ProposalManager.sol** — Creates proposals, handles funding, triggers finalization.
+- **EscrowVault.sol** — Holds funds in escrow, distributes on success (93/5/2), enables withdrawals on failure.
+- **KastjTreasury.sol** — Receives the 2% platform fee.
+
+## ProposalEngine Abstraction
+
+The `ProposalEngine` interface decouples the UI from the blockchain:
+
+```typescript
+interface ProposalEngine {
+  createProposal(ctx, input): Promise<TxResult>;
+  fundProposal(ctx, input): Promise<TxResult>;
+  finalizeProposal(ctx, proposalId): Promise<TxResult>;
+  withdraw(ctx, proposalId): Promise<TxResult>;
+  withdrawMany(ctx, proposalIds): Promise<TxResult>;
+}
 ```
 
-### Make a deployment to Sepolia
+Implementations:
+- `MockProposalEngine` — In-memory for development/testing.
+- `ZkEvmProposalEngine` — Connects to deployed Solidity contracts via ethers.js.
+- `VProgsProposalEngine` — (Future) Native Kaspa L1 smart contracts.
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+Switch via `NEXT_PUBLIC_PROPOSAL_ENGINE` environment variable.
 
-To run the deployment to a local chain:
+## License
 
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+MIT

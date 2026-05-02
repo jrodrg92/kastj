@@ -15,6 +15,7 @@ import {
 } from "../../../lib/time";
 import { AppHeader } from "../../../components/layout/AppHeader";
 
+import type { DbProposal, DbFunding, DbActivity } from "../../../types/supabase";
 import { useFundProposal } from "../../../features/proposals/hooks/useFundProposal";
 import { useFinalizeProposal } from "../../../features/proposals/hooks/useFinalizeProposal";
 import { useWithdrawProposal } from "../../../features/proposals/hooks/useWithdrawProposal";
@@ -87,12 +88,9 @@ export default function ProposalClient() {
   const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
   const proposalId = Number(idParam);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [proposal, setProposal] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [fundings, setFundings] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [activity, setActivity] = useState<any[]>([]);
+  const [proposal, setProposal] = useState<DbProposal | null>(null);
+  const [fundings, setFundings] = useState<DbFunding[]>([]);
+  const [activity, setActivity] = useState<DbActivity[]>([]);
   const [myContribution, setMyContribution] = useState("0");
   const [fundAmount, setFundAmount] = useState("1");
   const [loading, setLoading] = useState(false);
@@ -279,7 +277,7 @@ export default function ProposalClient() {
   }
 
   const metadata = useMemo(() => {
-    return parseMetadata(proposal?.metadata_uri);
+    return parseMetadata(proposal?.metadata_uri ?? undefined);
   }, [proposal]);
 
   if (!Number.isFinite(proposalId)) {
@@ -316,7 +314,7 @@ export default function ProposalClient() {
   const isActive = status === "active";
   const canFund = wallet.connected && isActive && !isExpired;
   const canFinalize =
-    wallet.connected && isActive && isExpired && !proposal.finalized;
+    wallet.connected && isActive && isExpired && !proposal.success;
   const canWithdraw =
     wallet.connected && status === "failed" && Number(myContribution) > 0;
 
@@ -453,7 +451,7 @@ export default function ProposalClient() {
                       <p className="font-semibold">{item.message}</p>
                       <p className="text-sm text-zinc-400">
                         {item.actor ? short(item.actor) : "System"} ·{" "}
-                        {new Date(item.created_at).toLocaleString()}
+                        {new Date(item.created_at ?? 0).toLocaleString()}
                       </p>
                     </div>
                   </div>

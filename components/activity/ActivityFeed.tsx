@@ -2,6 +2,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { NETWORK } from "../../lib/network";
 import { formatActivityAmount } from "../../hooks/useActivityFeed";
+import { useLanguage } from "../../contexts/LanguageContext";
+import type { DbActivity } from "../../types/supabase";
 
 function short(addr?: string | null) {
   if (!addr) return "";
@@ -20,11 +22,12 @@ export function ActivityFeed({
   activity,
   loading,
 }: {
-  activity: any[];
+  activity: DbActivity[];
   loading: boolean;
 }) {
 
   const [collapsed, setCollapsed] = useState(false);
+  const { t } = useLanguage();
 
 
   return (
@@ -33,7 +36,7 @@ export function ActivityFeed({
         onClick={() => setCollapsed(!collapsed)}
         className="w-full flex justify-between items-center p-6"
       >
-        <span className="font-semibold">Actividad reciente</span>
+        <span className="font-semibold">{t.recentActivity}</span>
         <span>{collapsed ? 
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -49,19 +52,19 @@ export function ActivityFeed({
       }`}>
         <div className="mb-5 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold">Actividad reciente</h2>
+            <h2 className="text-2xl font-bold">{t.recentActivity}</h2>
             <p className="text-sm text-zinc-400">
-              Eventos indexados desde contratos.
+              {t.indexedEvents}
             </p>
           </div>
         </div>
 
         {loading && (
-          <p className="text-zinc-400">Cargando actividad...</p>
+          <p className="text-zinc-400">{t.loadingActivityText}</p>
         )}
 
         {!loading && activity.length === 0 && (
-          <p className="text-zinc-400">Todavía no hay actividad.</p>
+          <p className="text-zinc-400">{t.noActivityYet}</p>
         )}
 
         <div className="space-y-3">

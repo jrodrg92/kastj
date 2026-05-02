@@ -160,32 +160,32 @@ export default function HomePage() {
 
   async function handleCreate() {
     if (!wallet.connected) {
-      toast.error("Conecta la wallet primero");
+      toast.error(t.connectWalletFirst);
       return;
     }
 
     if (!title.trim()) {
-      toast.error("El título es obligatorio");
+      toast.error(t.titleRequired);
       return;
     }
 
     if (!description.trim()) {
-      toast.error("La descripción es obligatoria");
+      toast.error(t.descriptionRequired);
       return;
     }
 
     if (!isAddress(recipient)) {
-      toast.error("Wallet destino inválida");
+      toast.error(t.invalidRecipient);
       return;
     }
 
     if (Number(goal) <= 0) {
-      toast.error("El objetivo debe ser mayor que 0");
+      toast.error(t.invalidGoal);
       return;
     }
 
     if (Number(minThreshold) <= 0 || Number(minThreshold) > Number(goal)) {
-      toast.error("El umbral debe ser mayor que 0 y menor o igual al objetivo");
+      toast.error(t.invalidThreshold);
       return;
     }
 
@@ -219,12 +219,12 @@ export default function HomePage() {
     const proposal = proposals.find((p) => p.id === id);
 
     if (!proposal) {
-      toast.error("Propuesta no encontrada");
+      toast.error(t.proposalNotFound);
       return;
     }
 
     if (Number(fundAmount) <= 0) {
-      toast.error("La cantidad debe ser mayor que 0");
+      toast.error(t.invalidAmount);
       return;
     }
 
@@ -366,7 +366,7 @@ export default function HomePage() {
               disabled={proposalsQuery.isFetching}
               className="rounded-xl bg-zinc-800 px-5 py-3 font-bold transition hover:bg-zinc-700 disabled:opacity-40"
             >
-              {proposalsQuery.isFetching ? "Cargando..." : t.refresh}
+              {proposalsQuery.isFetching ? t.loading : t.refresh}
             </button>
           </div>
 
@@ -414,7 +414,7 @@ export default function HomePage() {
 
           <input
             className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-blue-500"
-            placeholder={`Cantidad para apoyar en ${NETWORK.currency}`}
+            placeholder={`${t.fundingFor} ${NETWORK.currency}`}
             value={fundAmount}
             onChange={(event) => setFundAmount(event.target.value)}
           />
@@ -429,13 +429,13 @@ export default function HomePage() {
             filteredProposals.length === 0 &&
             !proposalsQuery.isLoading && (
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
-              No hay propuestas para este filtro o búsqueda.
+              {t.noProposalsFilter}
             </div>
           )}
 
           {wallet.connected && proposalsQuery.isLoading && (
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-8 text-center text-zinc-400">
-              Cargando propuestas...
+              {t.loadingProposals}
             </div>
           )}
 

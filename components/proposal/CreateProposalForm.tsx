@@ -47,7 +47,7 @@ export function CreateProposalForm({
 }: Props) {
   async function handleSubmit() {
     if (!connected) {
-      toast.error("Conecta tu wallet primero");
+      toast.error(t.connectWalletFirst);
       return;
     }
 
@@ -160,7 +160,7 @@ export function CreateProposalForm({
           onClick={handleSubmit}
           className="w-full rounded-xl bg-green-500 px-5 py-3 font-bold text-black transition hover:bg-green-400 disabled:opacity-40 md:w-auto"
         >
-          {loading ? "Creando..." : t.createProposal}
+          {loading ? t.creating : t.createProposal}
         </button>
       </div>
     </section>

@@ -163,7 +163,7 @@ export function ProposalCard({
           onClick={() => onFund(p.id)}
           className="rounded-xl bg-blue-500 px-5 py-3 font-bold text-black transition hover:bg-blue-400 disabled:opacity-40"
         >
-          {loading ? "Procesando..." :  ` ${t.supp} ${fundAmount} ${NETWORK.currency}`}
+          {loading ? t.processing :  ` ${t.supp} ${fundAmount} ${NETWORK.currency}`}
         </button>
 
         <button
