@@ -19,7 +19,7 @@ type Props = {
 };
 
 const durationOptions = [
-  { label: "30 seg", value: "300" },
+  { label: "5 min", value: "300" },
   { label: "1 hora", value: "3600" },
   { label: "1 día", value: "86400" },
   { label: "7 días", value: "604800" },
