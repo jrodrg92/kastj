@@ -23,22 +23,22 @@ export function AppHeader() {
         <div className="flex shrink-0 flex-wrap items-center gap-3">
           <UiToggles />
 
-            {connected && (
-              <Link
-                href="/profile"
-                className="flex h-10 items-center gap-2 rounded-full border border-border bg-card/50 px-4 text-sm font-bold text-foreground transition-all hover:bg-accent hover:shadow-sm active:scale-95 shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
-              >
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-[10px] text-white">
-                  👤
-                </div>
-                {t.profile}
-              </Link>
-            )}
+          {connected && (
+            <Link
+              href="/profile"
+              className="flex h-10 items-center gap-2 rounded-full border border-border bg-card/50 px-4 text-sm font-bold text-foreground transition-all hover:bg-accent hover:shadow-sm active:scale-95 shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
+            >
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-[10px] text-white">
+                👤
+              </div>
+              {t.profile}
+            </Link>
+          )}
 
-            <WalletStatus />
+          <WalletStatus />
         </div>
       </div>
     </header>
-    
+
   );
 }

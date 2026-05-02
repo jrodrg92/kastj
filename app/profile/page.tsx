@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { formatEther } from "ethers";
 import Link from "next/link";
 
@@ -30,6 +30,9 @@ export default function ProfilePage() {
     const dashboard = useUserDashboard(wallet.address);
     const feed = useActivityFeed();
     const proposalsQuery = useInfiniteProposals();
+
+    const [isProposalsCollapsed, setIsProposalsCollapsed] = useState(true);
+    const [isActivityCollapsed, setIsActivityCollapsed] = useState(true);
 
     const allProposals = useMemo(
         () => proposalsQuery.data?.pages.flatMap((p) => p.items) ?? [],
@@ -129,7 +132,7 @@ export default function ProfilePage() {
                         </p>
                     </div>
 
-                    <div className="rounded-2xl border border-border bg-card/50 p-5 shadow-sm backdrop-blur-xl">
+                    <div className="premium-glass rounded-2xl p-6">
                         <p className="text-sm font-medium text-muted-foreground">{t.withdrw}</p>
                         <p className="mt-2 text-2xl font-bold tracking-tight text-emerald-500">
                             {Number(d.withdrawable).toFixed(4)}
@@ -152,104 +155,144 @@ export default function ProfilePage() {
                 </section>
 
                 {/* My Proposals */}
-                <section className="premium-glass rounded-3xl p-8 lg:p-10">
-                    <h2 className="text-2xl font-bold tracking-tight text-foreground">{t.crtdByMe}</h2>
+                <section className="premium-glass overflow-hidden rounded-3xl p-0">
+                    <button 
+                        onClick={() => setIsProposalsCollapsed(!isProposalsCollapsed)}
+                        className="flex w-full items-center justify-between p-6 transition-colors hover:bg-white/5"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="text-emerald-500">📄</span>
+                            <h2 className="text-xl font-bold tracking-tight text-foreground">{t.crtdByMe}</h2>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-black text-emerald-500 border border-emerald-500/20">
+                                {myProposals.length} {t.proposals}
+                            </span>
+                            <span className={`text-muted-foreground transition-transform duration-300 ${isProposalsCollapsed ? "" : "rotate-180"}`}>
+                                ⌄
+                            </span>
+                        </div>
+                    </button>
 
-                    {myProposals.length === 0 && (
-                        <p className="mt-4 text-muted-foreground">
-                            {t.noProposalsFilter}
-                        </p>
+                    {!isProposalsCollapsed && (
+                        <div className="px-6 pb-6">
+                            {myProposals.length === 0 && (
+                                <p className="text-muted-foreground text-sm">
+                                    {t.noProposalsFilter}
+                                </p>
+                            )}
+
+                            <div className="space-y-3">
+                                {myProposals.map((p) => (
+                                    <Link
+                                        key={p.id}
+                                        href={`/proposal/${p.id}`}
+                                        className="flex items-center justify-between rounded-2xl border border-border bg-background/50 p-4 transition-all hover:bg-card/80 hover:shadow-md"
+                                    >
+                                        <div>
+                                            <p className="font-semibold text-foreground">
+                                                {t.proposalHash}{p.id}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {Number(p.totalRaised).toFixed(4)} /{" "}
+                                                {Number(p.goal).toFixed(4)}{" "}
+                                                {NETWORK.currency}
+                                            </p>
+                                        </div>
+                                        <span
+                                            className={`rounded-full px-3 py-1 text-xs font-bold ${
+                                                p.status === 0
+                                                    ? "bg-yellow-500/10 text-yellow-400"
+                                                    : p.status === 1
+                                                      ? "bg-green-500/10 text-green-400"
+                                                      : "bg-red-500/10 text-red-400"
+                                            }`}
+                                        >
+                                            {p.status === 0
+                                                ? t.activeStatus
+                                                : p.status === 1
+                                                  ? t.succeededStatus
+                                                  : t.failedStatus}
+                                        </span>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
                     )}
-
-                    <div className="mt-4 space-y-3">
-                        {myProposals.map((p) => (
-                            <Link
-                                key={p.id}
-                                href={`/proposal/${p.id}`}
-                                className="flex items-center justify-between rounded-2xl border border-border bg-background/50 p-4 transition-all hover:bg-card/80 hover:shadow-md"
-                            >
-                                <div>
-                                    <p className="font-semibold text-foreground">
-                                        {t.proposalHash}{p.id}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {Number(p.totalRaised).toFixed(4)} /{" "}
-                                        {Number(p.goal).toFixed(4)}{" "}
-                                        {NETWORK.currency}
-                                    </p>
-                                </div>
-                                <span
-                                    className={`rounded-full px-3 py-1 text-xs font-bold ${
-                                        p.status === 0
-                                            ? "bg-yellow-500/10 text-yellow-400"
-                                            : p.status === 1
-                                              ? "bg-green-500/10 text-green-400"
-                                              : "bg-red-500/10 text-red-400"
-                                    }`}
-                                >
-                                    {p.status === 0
-                                        ? t.activeStatus
-                                        : p.status === 1
-                                          ? t.succeededStatus
-                                          : t.failedStatus}
-                                </span>
-                            </Link>
-                        ))}
-                    </div>
                 </section>
 
                 {/* My Activity */}
-                <section className="premium-glass rounded-3xl p-8 lg:p-10">
-                    <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                        {t.recentActivity}
-                    </h2>
+                <section className="premium-glass overflow-hidden rounded-3xl p-0">
+                    <button 
+                        onClick={() => setIsActivityCollapsed(!isActivityCollapsed)}
+                        className="flex w-full items-center justify-between p-6 transition-colors hover:bg-white/5"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="text-emerald-500">🕒</span>
+                            <h2 className="text-xl font-bold tracking-tight text-foreground">
+                                {t.recentActivity}
+                            </h2>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-black text-emerald-500 border border-emerald-500/20">
+                                {myActivity.length} events
+                            </span>
+                            <span className={`text-muted-foreground transition-transform duration-300 ${isActivityCollapsed ? "" : "rotate-180"}`}>
+                                ⌄
+                            </span>
+                        </div>
+                    </button>
 
-                    {myActivity.length === 0 && (
-                        <p className="mt-4 text-muted-foreground">
-                            {t.noActivityYet}
-                        </p>
+                    {!isActivityCollapsed && (
+                        <div className="px-6 pb-6">
+                            {myActivity.length === 0 && (
+                                <p className="text-muted-foreground text-sm">
+                                    {t.noActivityYet}
+                                </p>
+                            )}
+
+                            <div className="max-h-[400px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                                {myActivity.map((item) => {
+                                    const amount = formatActivityAmount(
+                                        item.amount,
+                                    );
+
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className="flex items-start gap-3 rounded-2xl border border-border bg-background/50 p-4 transition-all hover:bg-card/80"
+                                        >
+                                            <span className="text-xl flex items-center justify-center h-8 w-8 rounded-full bg-secondary text-secondary-foreground">
+                                                {item.type === "created"
+                                                    ? "✨"
+                                                    : item.type === "funded"
+                                                      ? "💎"
+                                                      : item.type === "succeeded"
+                                                        ? "✅"
+                                                        : "❌"}
+                                            </span>
+                                            <div className="flex-1">
+                                                <p className="font-medium text-foreground">
+                                                    {item.message}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                {t.proposalHash}
+                                                {item.proposal_id}
+                                                    {amount &&
+                                                        ` · ${amount} ${NETWORK.currency}`}
+                                                </p>
+                                            </div>
+                                            <span className="text-xs text-muted-foreground/70">
+                                                {new Date(
+                                                    item.created_at ?? 0,
+                                                ).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     )}
-
-                    <div className="mt-5 max-h-[400px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                        {myActivity.map((item) => {
-                            const amount = formatActivityAmount(
-                                item.amount,
-                            );
-
-                            return (
-                                <div
-                                    key={item.id}
-                                    className="flex items-start gap-3 rounded-2xl border border-border bg-background/50 p-4 transition-all hover:bg-card/80"
-                                >
-                                    <span className="text-xl flex items-center justify-center h-8 w-8 rounded-full bg-secondary text-secondary-foreground">
-                                        {item.type === "created"
-                                            ? "✨"
-                                            : item.type === "funded"
-                                              ? "💎"
-                                              : item.type === "succeeded"
-                                                ? "✅"
-                                                : "❌"}
-                                    </span>
-                                    <div className="flex-1">
-                                        <p className="font-medium text-foreground">
-                                            {item.message}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                        {t.proposalHash}
-                                        {item.proposal_id}
-                                            {amount &&
-                                                ` · ${amount} ${NETWORK.currency}`}
-                                        </p>
-                                    </div>
-                                    <span className="text-xs text-muted-foreground/70">
-                                        {new Date(
-                                            item.created_at ?? 0,
-                                        ).toLocaleDateString()}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
                 </section>
 
 
