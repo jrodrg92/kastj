@@ -45,7 +45,7 @@ export function CreateProposalForm({
   const [step, setStep] = useState(1);
 
   const durationOptions = [
-    { label: t.min5, value: "300" },
+    { label: t.min10, value: "600" },
     { label: t.hour1, value: "3600" },
     { label: t.day1, value: "86400" },
     { label: t.days7, value: "604800" },

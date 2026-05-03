@@ -4,7 +4,7 @@
  */
 
 export const DECIMALS = {
-  KAS: 18, // 18 decimals on Kasplex ZK-EVM (EVM Standard)
+  KAS: 18, // 18 decimals on ZK-EVM
   KAS_L1: 8, // 8 decimals on Kaspa L1
   ETH: 18,
   USDT: 6,

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import toast from "react-hot-toast";
 import { formatEther } from "ethers";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase-client";
 import { NETWORK } from "../lib/network";
 import type { DbActivity } from "../types/supabase";
 

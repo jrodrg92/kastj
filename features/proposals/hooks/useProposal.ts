@@ -9,5 +9,6 @@ export function useProposal(id: number) {
     queryKey: proposalKeys.detail(id),
     queryFn: () => fetchProposal(id),
     enabled: !!id,
+    refetchInterval: (query) => (query.state.data ? false : 2000), // Reintenta cada 2s si no existe
   });
 }

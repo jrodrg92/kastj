@@ -4,7 +4,7 @@ import getQueryClient from "../../../lib/getQueryClient";
 import { proposalKeys } from "../../../features/proposals/queryKeys";
 import { fetchProposal } from "../../../features/proposals/api";
 import { parseMetadataUri } from "../../../lib/proposalUtils";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase-client";
 import ProposalClient from "./ProposalClient";
 
 type Props = {
@@ -15,7 +15,14 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const proposal = await fetchProposal(Number(id));
+  const proposalId = Number(id);
+  const isPending = proposalId < 0;
+  
+  if (isPending) {
+    return { title: "Sincronizando Propuesta... | Kastj" };
+  }
+
+  const proposal = await fetchProposal(proposalId);
   
   const metadata = parseMetadataUri(proposal?.metadataURI);
 
@@ -60,13 +67,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function Page({ params }: Props) {
   const { id } = await params;
   const proposalId = Number(id);
+  const isPending = proposalId < 0;
   const queryClient = getQueryClient();
 
-  // Prefetch main proposal
-  await queryClient.prefetchQuery({
-    queryKey: proposalKeys.detail(proposalId),
-    queryFn: () => fetchProposal(proposalId),
-  });
+  if (!isPending) {
+    // Prefetch main proposal
+    await queryClient.prefetchQuery({
+      queryKey: proposalKeys.detail(proposalId),
+      queryFn: () => fetchProposal(proposalId),
+    });
+  }
 
   // Prefetch activity
   await queryClient.prefetchQuery({

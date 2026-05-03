@@ -26,7 +26,8 @@ export function useCreateProposal(ctx: ProposalEngineContext | null) {
         queryKey: proposalKeys.lists(),
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      if (error.code === "ACTION_REJECTED" || error.code === 4001) return;
       console.error(error);
       toast.error(t.createError);
     },

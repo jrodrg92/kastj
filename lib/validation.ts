@@ -26,7 +26,7 @@ export const createProposalSchema = z.object({
         .string()
         .refine((v) => {
             try {
-                return Number(v) >= 60;
+                return Number(v) >= 600;
             } catch { return false; }
         }, "durationTooShort"),
 }).refine(

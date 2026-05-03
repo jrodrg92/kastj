@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther } from "ethers";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase-client";
 
 interface UserDashboardData {
   totalContributed: string;

@@ -40,19 +40,66 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         checkAutoConnect();
     }, []);
 
+    // Listen to wallet events
+    useEffect(() => {
+        if (!walletType || typeof window === "undefined") return;
+
+        const handleAccountsChanged = (accounts: string[]) => {
+            console.log("Accounts changed", accounts);
+            if (accounts.length === 0) {
+                disconnect();
+            } else {
+                // Silently reconnect to update address and signer
+                connect(walletType, true);
+            }
+        };
+
+        const handleChainChanged = () => {
+            console.log("Chain changed, reloading...");
+            window.location.reload();
+        };
+
+        let provider: any;
+        if (walletType === "metamask") {
+            provider = (window as any).ethereum;
+            if (provider?.providers) {
+                provider = provider.providers.find((p: any) => p.isMetaMask) || provider;
+            }
+        } else if (walletType === "kasware") {
+            provider = (window as any).kasware;
+        }
+
+        if (provider?.on) {
+            provider.on("accountsChanged", handleAccountsChanged);
+            provider.on("chainChanged", handleChainChanged);
+        }
+
+        return () => {
+            if (provider?.removeListener) {
+                provider.removeListener("accountsChanged", handleAccountsChanged);
+                provider.removeListener("chainChanged", handleChainChanged);
+            }
+        };
+    }, [walletType]);
+
     async function connect(type: WalletType = "metamask", isAuto = false) {
         try {
             if (type === "metamask") {
                 let ethereum = (window as any).ethereum;
                 
+                if (!ethereum) {
+                    if (!isAuto) toast.error("No Ethereum wallet found. Please install MetaMask.");
+                    return;
+                }
+
                 // If multiple providers are present, try to find MetaMask
                 if (ethereum?.providers) {
                     ethereum = ethereum.providers.find((p: any) => p.isMetaMask) || ethereum;
                 }
                 
-                console.log("Using provider:", ethereum.isMetaMask ? "MetaMask" : ethereum.isKasWare ? "KasWare" : "Unknown");
+                console.log("Using provider:", ethereum?.isMetaMask ? "MetaMask" : ethereum?.isKasWare ? "KasWare" : "Unknown");
 
-                if (ethereum.isKasWare && type === "metamask") {
+                if (ethereum?.isKasWare && type === "metamask") {
                     toast.error("KasWare is intercepting the connection. Please disable 'EVM compatibility' in KasWare settings to use MetaMask.");
                 }
                 

@@ -77,7 +77,7 @@ export function ProposalCard({
 
   const canFund = connected && !loading && p.status === 0 && !isExpired;
   const canFinalize = connected && !loading && !p.executed && isExpired;
-  const canWithdraw = connected && !loading && p.status === 2;
+  const canWithdraw = connected && !loading && p.status === 2 && isSupported;
 
   /* Status badge styling - adding the dot and glow */
   const statusConfig =

@@ -30,7 +30,8 @@ export function useWithdrawProposal(ctx: ProposalEngineContext | null) {
         }),
       ]);
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      if (error.code === "ACTION_REJECTED" || error.code === 4001) return;
       console.error(error);
       toast.error(t.withdrawError);
     },

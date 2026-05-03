@@ -55,6 +55,18 @@
 }
 
 /* ─── LIGHT MODE ─── */
+/* Hide arrows in input[type=number] */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 :root {
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);

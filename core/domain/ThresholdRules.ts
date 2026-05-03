@@ -14,15 +14,18 @@ export function calculateMinThreshold(
     durationSeconds: number,
     decimals: number = DEFAULT_KAS_DECIMALS
 ): bigint {
-    const ONE_UNIT = 10n ** BigInt(decimals);
+    // Normalizamos a 8 decimales para el cálculo interno si es necesario, 
+    // pero mantenemos la precisión de entrada.
+    const COMPARISON_UNIT = 10n ** BigInt(decimals === 18 ? 8 : decimals);
+    const normalizedGoal = decimals === 18 ? goalAtomic / (10n ** 10n) : goalAtomic;
     
-    // Calculate base percentage based on goal in whole units
+    // Calculate base percentage based on goal in comparison units
     let basePercentage = 0n;
-    if (goalAtomic < 1000n * ONE_UNIT) {
+    if (normalizedGoal < 1000n * COMPARISON_UNIT) {
         basePercentage = 30n;
-    } else if (goalAtomic < 10000n * ONE_UNIT) {
+    } else if (normalizedGoal < 10000n * COMPARISON_UNIT) {
         basePercentage = 40n;
-    } else if (goalAtomic < 50000n * ONE_UNIT) {
+    } else if (normalizedGoal < 50000n * COMPARISON_UNIT) {
         basePercentage = 50n;
     } else {
         basePercentage = 60n;

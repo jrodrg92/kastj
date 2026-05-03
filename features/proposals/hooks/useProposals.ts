@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { formatEther } from "../../../lib/currencyUtils";
-import { supabase } from "../../../lib/supabase";
+import { formatUnits } from "../../../lib/currencyUtils";
+import { supabase } from "../../../lib/supabase-client";
 import { proposalKeys } from "../queryKeys";
 
 function parseStatus(status: string | number) {
@@ -26,25 +26,32 @@ export function useProposals() {
         throw error;
       }
 
-      return (data ?? []).map((proposal) => ({
-        id: Number(proposal.id),
-        creator: proposal.creator,
-        recipient: proposal.recipient,
-        asset:
-          !proposal.token ||
-          proposal.token === "0x0000000000000000000000000000000000000000"
-            ? { type: "native" as const }
-            : {
-                type: "krc20" as const,
-                tokenAddress: proposal.token as `0x${string}`,
-              },
-        goal: formatEther(BigInt(proposal.goal ?? 0)),
-        minThreshold: formatEther(BigInt(proposal.min_threshold ?? proposal.goal ?? 0)),
-        totalRaised: formatEther(BigInt(proposal.total_raised ?? 0)),
-        deadline: Number(proposal.deadline),
-        status: parseStatus(proposal.status),
-        metadataURI: proposal.metadata_uri,
-      }));
+      return (data ?? []).map((proposal) => {
+        const decimals = Number(proposal.decimals ?? 18);
+        return {
+          id: Number(proposal.id),
+          creator: proposal.creator,
+          recipient: proposal.recipient,
+          asset:
+            !proposal.token ||
+            proposal.token === "0x0000000000000000000000000000000000000000"
+              ? { type: "native" as const, decimals: decimals }
+              : {
+                  type: "krc20" as const,
+                  tokenAddress: proposal.token as `0x${string}`,
+                  decimals: decimals,
+                },
+          goal: formatUnits(proposal.goal ?? "0", decimals),
+          minThreshold: formatUnits(proposal.min_threshold ?? proposal.goal ?? "0", decimals),
+          totalRaised: formatUnits(proposal.total_raised ?? "0", decimals),
+          totalRaisedRaw: proposal.total_raised ?? "0",
+          goalRaw: proposal.goal ?? "0",
+          minThresholdRaw: proposal.min_threshold ?? "0",
+          deadline: Number(proposal.deadline),
+          status: parseStatus(proposal.status),
+          metadataURI: proposal.metadata_uri,
+        };
+      });
     },
   });
 }

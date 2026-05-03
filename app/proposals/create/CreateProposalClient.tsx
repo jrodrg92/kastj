@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { AppHeader } from "../../../components/layout/AppHeader";
@@ -13,9 +13,10 @@ import { useProposalEngine } from "../../../hooks/useProposalEngine";
 import { useCreateProposal } from "../../../features/proposals/hooks/useCreateProposal";
 import { prepareProposalMetadata } from "../../../features/proposals/actions";
 import { calculateMinThreshold } from "../../../core/domain/ThresholdRules";
-import { parseUnits, formatUnits } from "../../../lib/currencyUtils";
+import { parseUnits, formatUnits, DECIMALS } from "../../../lib/currencyUtils";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { supabase } from "../../../lib/supabase-client";
 
 export default function CreateProposalClient() {
   const router = useRouter();
@@ -29,11 +30,11 @@ export default function CreateProposalClient() {
   const [recipient, setRecipient] = useState("");
   const [goal, setGoal] = useState("10000");
   const [duration, setDuration] = useState("86400");
-  const [minThreshold, setMinThreshold] = useState("4000");
+  const [minThreshold, setMinThreshold] = useState("6000");
 
   const autoThresholdStr = useMemo(() => {
     try {
-      const decimals = ctx?.chain === "kasplex-zkevm" ? 18 : 8;
+      const decimals = ctx?.chain === "kasplex-zkevm" ? 18 : DECIMALS.KAS;
       const g = parseUnits(goal || "0", decimals);
       const d = Number(duration || "0");
       const wei = calculateMinThreshold(g, d, decimals);
@@ -43,6 +44,13 @@ export default function CreateProposalClient() {
     }
   }, [goal, duration, ctx?.chain]);
 
+  // Sync minThreshold if it becomes invalid after goal/duration changes
+  useEffect(() => {
+    if (Number(minThreshold || "0") < Number(autoThresholdStr)) {
+      setMinThreshold(autoThresholdStr);
+    }
+  }, [autoThresholdStr]);
+
   async function handleCreate() {
     if (!wallet.connected) {
       toast.error(t.connectWalletFirst);
@@ -50,6 +58,7 @@ export default function CreateProposalClient() {
     }
 
     try {
+      // 1. Preparar metadatos y validación en el servidor
       const prepared = await prepareProposalMetadata({
         title,
         description,
@@ -57,27 +66,36 @@ export default function CreateProposalClient() {
         goal,
         minThreshold,
         duration,
-      });
+      }, wallet.address || "", "");
 
-      await createMutation.mutateAsync({
+      // 2. Ejecutar transacción en la blockchain
+      const result = await createMutation.mutateAsync({
         recipient: prepared.recipient,
-        asset: { type: "native", symbol: "KAS", decimals: 18 },
+        asset: { type: "native", symbol: "KAS", decimals: ctx?.chain === "kasplex-zkevm" ? 18 : DECIMALS.KAS },
         goal: prepared.goal,
         minThreshold: prepared.minThreshold,
         durationSeconds: prepared.durationSeconds,
         metadataURI: prepared.metadataURI,
       });
 
-      toast.success(t.proposalCreated);
-      
-      setTitle("");
-      setDescription("");
-      setRecipient("");
-      setGoal("10000");
-      setDuration("86400");
-      setMinThreshold("4000");
+      if (result?.txId) {
+        // 3. Registrar la propuesta pendiente en la DB (vía servidor)
+        // Re-llamamos a la acción pero ahora con el txHash real para guardar en DB
+        const saved = await prepareProposalMetadata({
+          title,
+          description,
+          recipient,
+          goal,
+          minThreshold,
+          duration,
+        }, wallet.address || "", result.txId);
 
-      router.push("/proposals");
+        toast.success(t.proposalCreated);
+        router.push(`/proposal/${saved.tempId}`);
+      } else {
+        toast.success(t.proposalCreated);
+        router.push("/proposals");
+      }
     } catch (e: any) {
       toast.error(e.message || t.createError);
     }

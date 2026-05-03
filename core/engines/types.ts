@@ -31,6 +31,7 @@ export interface ProposalEngineContext {
 export interface TxResult {
     txId: string;
     explorerUrl?: string;
+    proposalId?: string;
 }
 
 // ─── Engine inputs ───

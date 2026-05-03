@@ -13,12 +13,18 @@ export interface ProposalMetadata {
  * Returns null if the URI is invalid or parsing fails.
  */
 export function parseMetadataUri(uri: string | undefined | null): ProposalMetadata | null {
-  if (!uri || (!uri.startsWith("local://") && !uri.startsWith("supabase://"))) {
+  if (!uri) return null;
+
+  // Clean null bytes and whitespace
+  const cleanUri = uri.replace(/[\0\u0000]/g, "").trim();
+  
+  if (!cleanUri.includes("local://") && !cleanUri.includes("supabase://")) {
     return null;
   }
 
   try {
-    const raw = uri.replace("local://", "").replace("supabase://", "");
+    const protocol = cleanUri.includes("local://") ? "local://" : "supabase://";
+    const raw = cleanUri.split(protocol)[1];
     return JSON.parse(decodeURIComponent(raw)) as ProposalMetadata;
   } catch {
     return null;

@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase-client";
 import { useWalletContext } from "../../../contexts/WalletContext";
 import { useUi } from "../../../contexts/UiContext";
 import { useProposalEngine } from "../../../hooks/useProposalEngine";
@@ -56,19 +56,48 @@ export default function ProposalClient() {
   const { t } = useUi();
   const { ctx } = useProposalEngine(wallet.address, wallet.signer);
 
-  const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
-  const proposalId = Number(idParam);
+  const id = params?.id;
+  const proposalId = Number(id);
 
-  const [mounted, setMounted] = useState(false);
+  const { data: proposal, isLoading: isProposalLoading } = useProposal(proposalId);
+  const isPending = proposal && Number(proposal.id) < 0;
+
+  // Listen for confirmation if this is a pending proposal
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (!isPending || !proposal?.tx_hash) return;
 
-  const { data: proposal, isLoading: proposalLoading } = useProposal(proposalId);
-  const { data: activity = [] } = useProposalActivity(proposalId);
-  const { data: fundings = [] } = useProposalFundings(proposalId);
+    const txHash = proposal.tx_hash;
+
+    const channel = supabase
+      .channel(`sync-${txHash}`)
+      .on(
+        "postgres_changes",
+        { 
+          event: "INSERT", 
+          schema: "public", 
+          table: "proposals", 
+          filter: `tx_hash=eq.${txHash}` 
+        },
+        (payload) => {
+          if (Number(payload.new.id) > 0) {
+            router.replace(`/proposal/${payload.new.id}`);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isPending, proposal?.tx_hash, router]);
 
   const metadata = useProposalMetadata(proposal?.metadataURI);
+
+  const displayMetadata = useMemo(() => {
+    if (proposal) return { title: metadata.title || proposal.title, description: metadata.description || proposal.description };
+    return { title: "Cargando...", description: "" };
+  }, [proposal, metadata]);
+
+  const { data: activity = [] } = useProposalActivity(proposalId);
+  const { data: fundings = [] } = useProposalFundings(proposalId);
 
   // Feature hooks for mutations
   const fundMutation = useFundProposal(ctx);
@@ -83,13 +112,29 @@ export default function ProposalClient() {
   const [fundAmount, setFundAmount] = useState("");
   const [copied, setCopied] = useState(false);
   const [isActivityExpanded, setIsActivityExpanded] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const hasWithdrawn = useMemo(() => {
+    if (!wallet.address || !fundings.length) return false;
+    return fundings.some(
+      (f) => 
+        f.supporter?.toLowerCase() === wallet.address?.toLowerCase() &&
+        f.withdrawn
+    );
+  }, [wallet.address, fundings]);
 
   const myContribution = useMemo(() => {
     if (!wallet.address || !fundings.length || !proposal) return "0";
-    const decimals = (proposal as any).decimals || 8;
+    const decimals = (proposal as any).decimals || 18;
     const mine = fundings
       .filter(
-        (f) => f.supporter?.toLowerCase() === wallet.address?.toLowerCase()
+        (f) => 
+          f.supporter?.toLowerCase() === wallet.address?.toLowerCase() &&
+          !f.withdrawn
       )
       .reduce((acc, f) => acc + BigInt(f.amount || 0), 0n);
     return formatUnits(mine, decimals);
@@ -153,12 +198,33 @@ export default function ProposalClient() {
       return;
     }
 
-    await fundMutation.mutateAsync({
-      proposalId,
-      asset: proposal.asset,
-      amount: fundAmount,
-    });
-    setFundAmount("");
+    try {
+      const result = await fundMutation.mutateAsync({
+        proposalId,
+        asset: proposal.asset,
+        amount: fundAmount,
+      });
+
+      if (result?.txId) {
+        // FAST PATH: Registro inmediato como pendiente
+        await fetch("/api/tx/pending", {
+          method: "POST",
+          body: JSON.stringify({
+            hash: result.txId,
+            type: "fund_proposal",
+            payload: { proposalId, amount: fundAmount, supporter: wallet.address }
+          })
+        }).catch(err => console.error("Error saving pending funding:", err));
+
+        toast.success("Aportación enviada. Confirmando...");
+      }
+
+      setFundAmount("");
+    } catch (e: any) {
+      if (e.code !== "ACTION_REJECTED" && e.code !== 4001) {
+        console.error("Fund failed:", e);
+      }
+    }
   }
 
   async function handleFinalize() {
@@ -167,7 +233,13 @@ export default function ProposalClient() {
       return;
     }
 
-    await finalizeMutation.mutateAsync(proposalId);
+    try {
+      await finalizeMutation.mutateAsync(proposalId);
+    } catch (e: any) {
+      if (e.code !== "ACTION_REJECTED" && e.code !== 4001) {
+        console.error("Finalize failed:", e);
+      }
+    }
   }
 
   async function handleWithdraw() {
@@ -181,7 +253,13 @@ export default function ProposalClient() {
       return;
     }
 
-    await withdrawMutation.mutateAsync(proposalId);
+    try {
+      await withdrawMutation.mutateAsync(proposalId);
+    } catch (e: any) {
+      if (e.code !== "ACTION_REJECTED" && e.code !== 4001) {
+        console.error("Withdraw failed:", e);
+      }
+    }
   }
 
   async function copyLink() {
@@ -202,7 +280,7 @@ export default function ProposalClient() {
     );
   }
 
-  if (proposalLoading && !proposal) {
+  if (isProposalLoading && !proposal) {
     return (
       <main className="min-h-screen bg-background text-foreground selection:bg-cyan-500/25">
         <AppHeader />
@@ -223,19 +301,9 @@ export default function ProposalClient() {
 
   if (!proposal) {
     return (
-      <main className="min-h-screen bg-background text-foreground selection:bg-cyan-500/25">
-        <AppHeader />
-        <div className="flex h-[70vh] items-center justify-center p-8">
-          <div className="text-center">
-            <EmptyState 
-              title={t.proposalNotFoundPage} 
-              description="This proposal doesn't exist or has been removed."
-            />
-            <Link href="/" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-cyan-500 hover:text-cyan-400">
-              <ArrowLeft size={16} /> {t.backToHome}
-            </Link>
-          </div>
-        </div>
+      <main className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center">
+        <Loader2 size={40} className="animate-spin text-cyan-500" />
+        <p className="mt-4 text-muted-foreground">Cargando datos de la propuesta...</p>
       </main>
     );
   }
@@ -254,10 +322,10 @@ export default function ProposalClient() {
 
   const isExpired = hasExpired(proposal.deadline);
   const isActive = status === "active";
-  const canFund = wallet.connected && isActive && !isExpired;
+  const canFund = wallet.connected && isActive && !isExpired && !isPending;
   
-  const canFinalize = wallet.connected && isActive && isExpired; 
-  const canWithdraw = wallet.connected && status === "failed" && Number(myContribution) > 0;
+  const canFinalize = wallet.connected && isActive && isExpired && !isPending; 
+  const canWithdraw = wallet.connected && status === "failed" && Number(myContribution) > 0 && !isPending;
 
   const supportersCount = new Set(
     fundings.map((f) => f.supporter?.toLowerCase())
@@ -327,12 +395,17 @@ export default function ProposalClient() {
                   </span>
                 </div>
 
-                <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-5xl leading-[1.15]">
-                  {metadata.title}
+                <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-5xl leading-[1.15] flex items-center flex-wrap gap-4">
+                  {displayMetadata.title}
+                  {isPending && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-[10px] font-bold text-amber-500 uppercase tracking-wider animate-pulse">
+                      <Loader2 size={10} className="animate-spin" /> Sincronizando
+                    </span>
+                  )}
                 </h1>
 
                 <p className="mt-6 text-base leading-relaxed text-muted-foreground/90 md:text-lg">
-                  {metadata.description}
+                  {displayMetadata.description}
                 </p>
 
                 <div className="mt-10 grid gap-4 rounded-2xl border border-white/[0.06] bg-background/40 p-5 text-sm md:grid-cols-2">
@@ -569,6 +642,11 @@ export default function ProposalClient() {
                         <>{t.supp} {proposal.asset.symbol}</>
                       )}
                     </button>
+                    {isPending && (
+                      <p className="text-center text-[10px] text-amber-500 font-bold animate-pulse">
+                        ⌛ Esperando confirmación en blockchain para permitir aportaciones...
+                      </p>
+                    )}
                     <p className="text-center text-[10px] text-muted-foreground/60 font-medium">{t.escrowProtectedDesc}</p>
                   </div>
                 )}
@@ -601,9 +679,9 @@ export default function ProposalClient() {
                   </button>
                 )}
 
-                {status === "failed" && Number(myContribution) <= 0 && (
-                  <div className="rounded-xl border border-white/[0.06] bg-background/40 p-4 text-center text-xs font-semibold text-muted-foreground">
-                    {t.noFundsToWithdraw}
+                {status === "failed" && hasWithdrawn && Number(myContribution) <= 0 && (
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] p-4 text-center text-xs font-bold text-emerald-400 animate-in fade-in zoom-in duration-500">
+                    {t.withdrawalAlreadyDone}
                   </div>
                 )}
                 

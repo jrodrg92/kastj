@@ -56,8 +56,7 @@ export class ZkEvmProposalEngine implements ProposalEngine {
             input.metadataURI,
         );
 
-        const receipt = await tx.wait();
-        return { txId: receipt.hash };
+        return { txId: tx.hash };
     }
 
     async fundProposal(
@@ -72,8 +71,7 @@ export class ZkEvmProposalEngine implements ProposalEngine {
             const tx = await manager.fundNative(input.proposalId, {
                 value: amount,
             });
-            const receipt = await tx.wait();
-            return { txId: receipt.hash };
+            return { txId: tx.hash };
         }
 
         const token = new Contract(
@@ -83,11 +81,12 @@ export class ZkEvmProposalEngine implements ProposalEngine {
         );
 
         const approveTx = await token.approve(CONTRACTS.vault, amount);
+        // We wait for approval because the next tx depends on it, 
+        // but the main action (funding) will return immediately.
         await approveTx.wait();
 
         const fundTx = await manager.fundKrc20(input.proposalId, amount);
-        const receipt = await fundTx.wait();
-        return { txId: receipt.hash };
+        return { txId: fundTx.hash };
     }
 
     async finalizeProposal(
@@ -97,8 +96,7 @@ export class ZkEvmProposalEngine implements ProposalEngine {
         const signer = this.getSigner(ctx);
         const manager = this.getManager(signer);
         const tx = await manager.finalizeProposal(proposalId);
-        const receipt = await tx.wait();
-        return { txId: receipt.hash };
+        return { txId: tx.hash };
     }
 
     async withdraw(
@@ -108,8 +106,7 @@ export class ZkEvmProposalEngine implements ProposalEngine {
         const signer = this.getSigner(ctx);
         const vault = this.getVault(signer);
         const tx = await vault.withdraw(proposalId);
-        const receipt = await tx.wait();
-        return { txId: receipt.hash };
+        return { txId: tx.hash };
     }
 
     async withdrawMany(
@@ -119,8 +116,7 @@ export class ZkEvmProposalEngine implements ProposalEngine {
         const signer = this.getSigner(ctx);
         const vault = this.getVault(signer);
         const tx = await vault.withdrawMany(proposalIds);
-        const receipt = await tx.wait();
-        return { txId: receipt.hash };
+        return { txId: tx.hash };
     }
 
     // Read methods — app reads from Supabase, not from chain directly.

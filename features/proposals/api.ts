@@ -1,5 +1,5 @@
-import { formatUnits } from "../../lib/currencyUtils";
-import { supabase } from "../../lib/supabase";
+import { formatUnits, DECIMALS } from "../../lib/currencyUtils";
+import { supabase } from "../../lib/supabase-client";
 
 export const PAGE_SIZE = 12;
 
@@ -30,7 +30,7 @@ function parseStatus(status: string | number) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapProposal(proposal: any): ProposalListItem {
   const isNative = !proposal.token || proposal.token === "0x0000000000000000000000000000000000000000";
-  const decimals = Number(proposal.decimals ?? (isNative ? 18 : 18));
+  const decimals = Number(proposal.decimals ?? (isNative ? DECIMALS.KAS : 18));
   const symbol = isNative ? "KAS" : (proposal.token_symbol || "TOKEN");
 
   const goalRaw = proposal.goal || "0";
@@ -42,7 +42,7 @@ export function mapProposal(proposal: any): ProposalListItem {
     creator: proposal.creator,
     recipient: proposal.recipient,
     asset: isNative
-      ? { type: "native" as const, symbol: "KAS", decimals: 18 }
+      ? { type: "native" as const, symbol: "KAS", decimals: DECIMALS.KAS }
       : {
           type: "krc20" as const,
           tokenAddress: proposal.token as `0x${string}`,
@@ -101,37 +101,47 @@ export async function fetchProposal(id: number) {
 }
 
 export async function fetchStats() {
-  const { data, error } = await supabase
-    .from("proposals")
-    .select("status, total_raised, token, decimals");
+  try {
+    const { data, error } = await supabase
+      .from("proposals")
+      .select("status, total_raised, token, decimals");
 
-  if (error) {
-    console.error(error);
-    throw error;
-  }
+    if (error) {
+      console.error("Error fetching stats:", error);
+      return { total: 0, active: 0, succeeded: 0, failed: 0, raised: 0 };
+    }
 
-  if (!data) return { total: 0, active: 0, succeeded: 0, failed: 0, raised: 0 };
-  const total = data.length;
-  const active = data.filter((p) => p.status === 0 || p.status === "active").length;
-  const succeeded = data.filter((p) => p.status === 1 || p.status === "succeeded").length;
-  const failed = data.filter((p) => p.status === 2 || p.status === "failed").length;
-  
-  const raisedBig = data.reduce((acc, p) => {
-    const isNative = !p.token || p.token === "0x0000000000000000000000000000000000000000";
-    const decimals = Number(p.decimals ?? (isNative ? 18 : 18));
-    
-    // Ensure val is a valid BigInt string or 0
-    const valStr = (p.total_raised || "0").toString();
-    const val = BigInt(valStr);
-    
-    const scaled = decimals < 18 
-      ? val * (10n ** BigInt(18 - decimals)) 
-      : val / (10n ** BigInt(decimals - 18));
+    if (!data || data.length === 0) {
+      return { total: 0, active: 0, succeeded: 0, failed: 0, raised: 0 };
+    }
+
+    const total = data.length;
+    const active = data.filter((p) => p.status === 0 || p.status === "active").length;
+    const succeeded = data.filter((p) => p.status === 1 || p.status === "succeeded").length;
+    const failed = data.filter((p) => p.status === 2 || p.status === "failed").length;
+
+    const raisedBig = data.reduce((acc, p) => {
+      const isNative = !p.token || p.token === "0x0000000000000000000000000000000000000000";
+      const decimals = Number(p.decimals ?? (isNative ? DECIMALS.KAS : 18));
+      const valStr = (p.total_raised || "0").toString();
       
-    return acc + scaled;
-  }, 0n);
+      try {
+        const val = BigInt(valStr);
+        const scaled = decimals < 18
+          ? val * (10n ** BigInt(18 - decimals))
+          : val / (10n ** BigInt(decimals - 18));
+        return acc + scaled;
+      } catch {
+        return acc;
+      }
+    }, 0n);
 
-  const raised = Number(formatUnits(raisedBig, 18));
+    const raised = Number(formatUnits(raisedBig, 18));
 
-  return { total, active, succeeded, failed, raised };
+    return { total, active, succeeded, failed, raised };
+  } catch (err) {
+    console.error("Failed to calculate stats:", err);
+    return { total: 0, active: 0, succeeded: 0, failed: 0, raised: 0 };
+  }
 }
+

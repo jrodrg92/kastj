@@ -15,7 +15,7 @@ import { SiteFooter } from "../../components/landing/SiteFooter";
 import { ScrollReveal } from "../../components/ui/ScrollReveal";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { NETWORK } from "../../lib/network";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../lib/supabase-client";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useInfiniteProposals } from "../../features/proposals/hooks/useInfiniteProposals";
 import { useFundProposal } from "../../features/proposals/hooks/useFundProposal";
@@ -107,7 +107,11 @@ export function ExplorerClient() {
 
   async function loadMySupportedProposals() {
     if (!wallet.address) return;
-    const { data } = await supabase.from("fundings").select("proposal_id").eq("supporter", wallet.address);
+    const { data } = await supabase
+      .from("fundings")
+      .select("proposal_id")
+      .eq("supporter", wallet.address)
+      .eq("withdrawn", false); // Solo las que NO han sido retiradas
     const ids = Array.from(new Set((data ?? []).map((item) => Number(item.proposal_id))));
     setSupportedIds(ids);
   }
@@ -235,6 +239,12 @@ export function ExplorerClient() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[...Array(6)].map((_, i) => <ProposalSkeleton key={i} />)}
             </div>
+          ) : proposalsQuery.isError ? (
+            <EmptyState 
+              title={t.noProposalsFilter} 
+              description={t.tryAdjustFilters} 
+              className="my-12"
+            />
           ) : filteredProposals.length === 0 ? (
             <EmptyState title={t.noProposalsFilter} description={t.tryAdjustFilters} className="my-12" />
           ) : (
