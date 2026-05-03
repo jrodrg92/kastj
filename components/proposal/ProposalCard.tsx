@@ -121,8 +121,21 @@ export function ProposalCard({
         {metadata.description}
       </p>
 
+      {/* ─── Identity (Single Line) ─── */}
+      <div className="mt-5 flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2 transition-colors group-hover:bg-white/[0.04]">
+        <div className="flex flex-col">
+          <span className="text-[7px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">Creator</span>
+          <span className="font-mono text-[9px] font-bold text-foreground/70">{short(p.creator)}</span>
+        </div>
+        <div className="h-4 w-[1px] bg-white/[0.05]" />
+        <div className="flex flex-col text-right">
+          <span className="text-[7px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">Recipient</span>
+          <span className="font-mono text-[9px] font-bold text-foreground/70">{short(p.recipient)}</span>
+        </div>
+      </div>
+
       {/* ─── Progress ─── */}
-      <div className="mt-8 space-y-4">
+      <div className="mt-6 space-y-4">
         <div className="flex items-end justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">{t.raisedLabel}</p>
@@ -139,13 +152,6 @@ export function ProposalCard({
         </div>
 
         <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/[0.04] shadow-inner">
-          {thresholdPercent > 0 && thresholdPercent < 100 && (
-            <div
-              className="absolute top-0 bottom-0 z-30 w-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]"
-              style={{ left: `${thresholdPercent}%` }}
-              title={`Consensus: ${thresholdPercent}%`}
-            />
-          )}
           <div
             className={`h-full rounded-full transition-all duration-1000 ease-out ${
               percent >= thresholdPercent
@@ -162,15 +168,11 @@ export function ProposalCard({
         <div className="flex items-center justify-between border-t border-white/[0.04] pt-5">
           <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
             <Clock size={12} className="text-cyan-500/50" />
-            {isExpired ? (
-              <span className="text-rose-400/70">{t.expired}</span>
-            ) : (
-              <span className="text-foreground/70">{mounted ? formatRemainingTime(p.deadline) : "--"}</span>
-            )}
+            <span className="text-foreground/70">{mounted ? formatRemainingTime(p.deadline) : "--"}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
             <Users size={12} className="text-cyan-500/50" />
-            <span className="text-foreground/70">{short(p.creator)}</span>
+            <span className="text-foreground/70">{percent.toFixed(0)}% Cap</span>
           </div>
         </div>
 
@@ -178,7 +180,7 @@ export function ProposalCard({
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Link
             href={`/proposal/${p.id}`}
-            className="flex h-10 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-[10px] font-black uppercase tracking-widest text-foreground transition-all hover:bg-white/[0.08] hover:border-white/10"
+            className="premium-btn flex h-11 items-center justify-center rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-cyan-500/20"
           >
             {t.showDetail}
           </Link>
@@ -187,19 +189,9 @@ export function ProposalCard({
             <button
               disabled={!connected || loading}
               onClick={() => onFund(p.id)}
-              className="premium-btn flex h-10 items-center justify-center rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-cyan-500/10"
+              className="flex h-11 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.02] text-[10px] font-black uppercase tracking-widest text-foreground transition-all hover:bg-white/[0.05] disabled:opacity-40"
             >
               {loading ? <Loader2 size={14} className="animate-spin" /> : `${t.supp} ${fundAmount}`}
-            </button>
-          )}
-
-          {p.status === 0 && isExpired && (
-            <button
-              disabled={!connected || loading}
-              onClick={() => onFinalize(p.id)}
-              className="flex h-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-black uppercase tracking-widest text-cyan-400 transition-all hover:bg-cyan-500/20 disabled:opacity-40 shadow-lg shadow-cyan-500/5"
-            >
-              {loading ? <Loader2 size={14} className="animate-spin" /> : t.finalizeTrigger}
             </button>
           )}
         </div>

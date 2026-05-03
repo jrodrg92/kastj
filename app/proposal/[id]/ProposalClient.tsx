@@ -72,11 +72,18 @@ export default function ProposalClient() {
 
     const channel = supabase
       .channel(`sync-${txHash}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposals", filter: `tx_hash=eq.${txHash}` },
+      .on("postgres_changes", { event: "*", schema: "public", table: "proposals", filter: `tx_hash=eq.${txHash}` },
         (payload) => {
-          if (Number(payload.new.id) > 0) {
-            router.replace(`/proposal/${payload.new.id}`);
-            setTimeout(() => { if (window.location.pathname.includes(id as string)) window.location.href = `/proposal/${payload.new.id}`; }, 1500);
+          const newProposal = payload.new as any;
+          // Si detectamos que ya tiene un ID real (>0), redirigimos
+          if (newProposal && Number(newProposal.id) > 0) {
+            router.replace(`/proposal/${newProposal.id}`);
+            // Fallback agresivo para asegurar que el navegador cambie de página
+            setTimeout(() => { 
+              if (window.location.pathname.includes(id as string)) {
+                window.location.href = `/proposal/${newProposal.id}`;
+              }
+            }, 500);
           }
         }
       ).subscribe();
@@ -87,7 +94,7 @@ export default function ProposalClient() {
   const lastKnownTxHash = useRef<string | null>(txFromUrl?.toLowerCase() || null);
   const lastKnownMetadataUri = useRef<string | null>(null);
   if (proposal?.tx_hash) lastKnownTxHash.current = proposal.tx_hash.toLowerCase();
-  if (proposal?.metadata_uri) lastKnownMetadataUri.current = proposal.metadata_uri;
+  if (proposal?.metadataURI) lastKnownMetadataUri.current = proposal.metadataURI;
 
   useEffect(() => {
     if (!isPending) return;
@@ -104,18 +111,29 @@ export default function ProposalClient() {
     return () => clearInterval(checkInterval);
   }, [isPending, id, router]);
 
-  // 3. Reactividad de Datos (Realtime para progreso en vivo)
+  // 3. Sistema de Reactividad Total (Realtime)
   useEffect(() => {
     if (isPending || proposalId <= 0) return;
+
     const channel = supabase
-      .channel(`live-data-${proposalId}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "proposals", filter: `id=eq.${proposalId}` },
+      .channel(`proposal-room-${proposalId}`)
+      // Escucha cambios en la propuesta (progreso, estado, etc)
+      .on("postgres_changes", { event: "*", schema: "public", table: "proposals", filter: `id=eq.${proposalId}` },
         () => { queryClient.invalidateQueries({ queryKey: proposalKeys.detail(proposalId) }); }
       )
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "fundings", filter: `proposal_id=eq.${proposalId}` },
-        () => { queryClient.invalidateQueries({ queryKey: ["fundings", proposalId] }); }
+      // Escucha nuevas aportaciones y RETIROS (marcar como withdrawn)
+      .on("postgres_changes", { event: "*", schema: "public", table: "fundings", filter: `proposal_id=eq.${proposalId}` },
+        () => { 
+          queryClient.invalidateQueries({ queryKey: ["fundings", proposalId] });
+          queryClient.invalidateQueries({ queryKey: proposalKeys.detail(proposalId) });
+        }
+      )
+      // Escucha actividad reciente
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity", filter: `proposal_id=eq.${proposalId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ["activity", proposalId] }); }
       )
       .subscribe();
+
     return () => { supabase.removeChannel(channel); };
   }, [isPending, proposalId, queryClient]);
 
@@ -170,79 +188,6 @@ export default function ProposalClient() {
     const decimals = proposal.asset.decimals;
     return formatUnits(mine, decimals);
   }, [wallet.address, fundings, proposal]);
-
-  useEffect(() => {
-    if (!proposalId) return;
-
-    const channel = supabase
-      .channel(`proposal-detail-${proposalId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "proposals",
-          filter: `id=eq.${proposalId}`,
-        },
-        () => queryClient.invalidateQueries({ queryKey: proposalKeys.detail(proposalId) })
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "fundings",
-          filter: `proposal_id=eq.${proposalId}`,
-        },
-        () => queryClient.invalidateQueries({ queryKey: [...proposalKeys.detail(proposalId), "fundings"] })
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "activity",
-          filter: `proposal_id=eq.${proposalId}`,
-        },
-        () => queryClient.invalidateQueries({ queryKey: [...proposalKeys.detail(proposalId), "activity"] })
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [proposalId, queryClient]);
-
-  // Special listener for pending proposals to handle auto-redirect once synced
-  useEffect(() => {
-    if (!isPending || !proposal?.tx_hash) return;
-
-    const channel = supabase
-      .channel(`pending-sync-${proposalId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*", // Listen to all events for this tx_hash
-          schema: "public",
-          table: "proposals",
-          filter: `tx_hash=eq.${proposal.tx_hash}`,
-        },
-        (payload) => {
-          const newId = payload.new.id;
-          // If the ID changed from negative to positive, it's synced!
-          if (newId > 0) {
-            console.log("Proposal synced! Redirecting to permanent ID:", newId);
-            toast.success("¡Sincronización completada!");
-            router.push(`/proposal/${newId}`);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isPending, proposal?.tx_hash, proposalId, router]);
 
   async function handleFund() {
     if (!wallet.connected) {
@@ -372,14 +317,17 @@ export default function ProposalClient() {
 
   const status = normalizeStatus(proposal.status);
   const goalRaw = BigInt(proposal.goalRaw || "0");
-  const raisedRaw = BigInt(proposal.totalRaisedRaw || "0");
+  
+  // Reactividad total: Sumamos los fundings en tiempo real en lugar de fiarnos del total de la tabla proposal
+  const raisedRaw = fundings.reduce((sum, f) => sum + BigInt(f.amount), 0n);
   const thresholdRaw = BigInt(proposal.minThresholdRaw || "0");
 
-  const percent = goalRaw > 0n ? Number((raisedRaw * 100n) / goalRaw) : 0;
-  const thresholdPercent = goalRaw > 0n ? Number((thresholdRaw * 100n) / goalRaw) : 0;
+  // Cálculo de porcentaje con precisión decimal
+  const percent = goalRaw > 0n ? Number((raisedRaw * 10000n) / goalRaw) / 100 : 0;
+  const thresholdPercent = goalRaw > 0n ? Number((thresholdRaw * 10000n) / goalRaw) / 100 : 0;
 
   const goal = Number(proposal.goal);
-  const raised = Number(proposal.totalRaised);
+  const raised = Number(formatUnits(raisedRaw, proposal.asset.decimals));
   const threshold = Number(proposal.minThreshold);
 
   const isExpired = hasExpired(proposal.deadline);

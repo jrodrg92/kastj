@@ -36,17 +36,6 @@ export function AppHeader() {
         {/* Right: Controls — desktop */}
         <div className="hidden items-center gap-2 md:flex">
           <UiToggles />
-          {connected && (
-            <Link
-              href="/profile"
-              className="flex h-9 items-center gap-2 rounded-full border border-border bg-card/50 px-3.5 text-sm font-semibold text-foreground transition-all hover:bg-accent active:scale-95"
-            >
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 text-[10px] text-white">
-                👤
-              </div>
-              {t.profile}
-            </Link>
-          )}
           <WalletStatus />
         </div>
 

@@ -1,60 +1,60 @@
 export const DEFAULT_KAS_DECIMALS = 8;
 
+type BaseTier = 30 | 40 | 50 | 60;
+type TimePenalty = 0 | 5 | 10;
+
+/**
+ * Calcula el porcentaje final sumando base, penalización y un margen técnico de seguridad.
+ */
+export function getRequiredFundingPercent(
+  baseTier: BaseTier,
+  timePenalty: TimePenalty
+): number {
+  const technicalSafetyMargin = 10;
+  return baseTier + timePenalty + technicalSafetyMargin;
+}
+
 /**
  * Calculates the minimum threshold required for a proposal to be valid.
- * This is based on a pure mathematical formula using the goal amount and duration.
- * 
- * @param goalAtomic The goal amount in atomic units (e.g. Sompi for Kaspa)
- * @param durationSeconds The duration of the proposal in seconds
- * @param decimals The number of decimals for the asset (default 8)
- * @returns The minimum threshold amount in atomic units
+ * Sychronized with the user's requested explicit margin logic.
  */
 export function calculateMinThreshold(
     goalAtomic: bigint,
     durationSeconds: number,
     decimals: number = DEFAULT_KAS_DECIMALS
 ): bigint {
-    // Normalizamos a 8 decimales para el cálculo interno si es necesario, 
-    // pero mantenemos la precisión de entrada.
-    const COMPARISON_UNIT = 10n ** BigInt(decimals === 18 ? 8 : decimals);
-    const normalizedGoal = decimals === 18 ? goalAtomic / (10n ** 10n) : goalAtomic;
+    const oneUnit = 10n ** BigInt(decimals);
     
-    // Calculate base percentage based on goal in comparison units
-    let basePercentage = 0n;
-    if (normalizedGoal < 1000n * COMPARISON_UNIT) {
-        basePercentage = 30n;
-    } else if (normalizedGoal < 10000n * COMPARISON_UNIT) {
-        basePercentage = 40n;
-    } else if (normalizedGoal < 50000n * COMPARISON_UNIT) {
-        basePercentage = 50n;
+    // 1. Determinar BaseTier
+    let baseTier: BaseTier = 30;
+    if (goalAtomic < 1000n * oneUnit) {
+        baseTier = 30;
+    } else if (goalAtomic < 10000n * oneUnit) {
+        baseTier = 40;
+    } else if (goalAtomic < 50000n * oneUnit) {
+        baseTier = 50;
     } else {
-        basePercentage = 60n;
+        baseTier = 60;
     }
 
-    // Calculate duration modifier
-    const days = durationSeconds / (24 * 3600);
-    let durationModifier = 0n;
+    // 2. Determinar TimePenalty
+    const daysCount = Math.floor(durationSeconds / 86400);
+    let timePenalty: TimePenalty = 0;
     
-    if (days <= 3) {
-        durationModifier = -5n;
-    } else if (days <= 14) {
-        durationModifier = 0n;
-    } else if (days <= 30) {
-        durationModifier = 5n;
+    if (daysCount <= 3) {
+        timePenalty = 0; // Eliminamos el negativo por seguridad
+    } else if (daysCount <= 14) {
+        timePenalty = 0;
+    } else if (daysCount <= 30) {
+        timePenalty = 5;
     } else {
-        durationModifier = 10n;
+        timePenalty = 10;
     }
 
-    // Apply modifier and clamp between 25% and 80%
-    let finalPercentage = basePercentage + durationModifier;
-    
-    if (finalPercentage < 25n) {
-        finalPercentage = 25n;
-    } else if (finalPercentage > 80n) {
-        finalPercentage = 80n;
-    }
+    // 3. Calcular porcentaje final con la nueva función solicitada
+    const finalPercentage = BigInt(getRequiredFundingPercent(baseTier, timePenalty));
 
-    // Calculate final atomic amount
+    // 4. Calcular cantidad atómica final
     // (goalAtomic * finalPercentage) / 100
     return (goalAtomic * finalPercentage) / 100n;
 }

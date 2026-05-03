@@ -18,6 +18,9 @@ export interface ProposalListItem {
   deadline: number;
   status: number;
   metadataURI: string | null;
+  tx_hash?: string | null;
+  title?: string | null;
+  description?: string | null;
 }
 
 function parseStatus(status: string | number) {
@@ -59,6 +62,9 @@ export function mapProposal(proposal: any): ProposalListItem {
     deadline: Number(proposal.deadline),
     status: parseStatus(proposal.status),
     metadataURI: proposal.metadata_uri,
+    tx_hash: proposal.tx_hash,
+    title: proposal.title,
+    description: proposal.description,
   };
 }
 

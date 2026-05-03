@@ -44,11 +44,9 @@ export default function CreateProposalClient() {
     }
   }, [goal, duration, ctx?.chain]);
 
-  // Sync minThreshold if it becomes invalid after goal/duration changes
+  // Sincronización automática: Siempre mantenemos el umbral en el mínimo sugerido al cambiar el objetivo
   useEffect(() => {
-    if (Number(minThreshold || "0") < Number(autoThresholdStr)) {
-      setMinThreshold(autoThresholdStr);
-    }
+    setMinThreshold(autoThresholdStr);
   }, [autoThresholdStr]);
 
   async function handleCreate() {

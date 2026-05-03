@@ -18,7 +18,7 @@ export async function prepareProposalMetadata(
   // 1. Validate on server
   const validated = createProposalSchema.safeParse(input);
   if (!validated.success) {
-    const firstError = validated.error.errors[0];
+    const firstError = validated.error.issues[0];
     throw new Error(`${firstError.path.join(".")}: ${firstError.message}`);
   }
 

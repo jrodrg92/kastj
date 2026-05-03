@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { formatEther } from "ethers";
 import { NETWORK } from "../../lib/network";
 import { useUi } from "../../contexts/UiContext";
@@ -54,25 +55,35 @@ export function WalletStatus() {
   }
 
   return (
-    <div className="premium-glass flex h-10 items-center gap-3 rounded-full pl-4 pr-1.5 text-sm font-semibold transition-all hover:shadow-lg">
-      <div className="flex items-center gap-2">
-        <div className="relative flex h-2 w-2">
+    <Link 
+      href="/profile"
+      className="flex h-10 items-center gap-0 rounded-full border border-border bg-card/50 pl-1 pr-1 text-sm font-semibold transition-all hover:bg-accent active:scale-95 group shadow-sm"
+    >
+      {/* Zona Avatar */}
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 text-[12px] text-white transition-transform group-hover:scale-110">
+        👤
+      </div>
+
+      {/* Zona Balance */}
+      <div className="flex items-center gap-2 px-3 border-r border-border/50 h-5">
+        <div className="relative flex h-1.5 w-1.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75"></span>
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]"></span>
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-cyan-500"></span>
         </div>
-        <span className="text-foreground/90">
-          {balance} <span className="text-[10px] text-muted-foreground uppercase">{NETWORK.currency}</span>
+        <span className="text-foreground/90 tabular-nums text-[13px]">
+          {balance} <span className="text-[9px] text-muted-foreground uppercase">{NETWORK.currency}</span>
         </span>
       </div>
       
-      <div className="flex h-7 items-center gap-2 rounded-full bg-background/80 px-3 font-mono text-[11px] text-cyan-500 border border-cyan-500/20 shadow-inner">
-        <div className="flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-full bg-cyan-500/10">
+      {/* Zona Wallet */}
+      <div className="flex items-center gap-2 pl-3 pr-2 font-mono text-[11px] text-cyan-500/80 group-hover:text-cyan-400 transition-colors">
+        <div className="flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-full bg-cyan-500/5">
           {walletType === "kasware" ? (
-            <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-cyan-500" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-current" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 2L2 12l10 10 10-10L12 2zM4.5 12l7.5-7.5 7.5 7.5-7.5 7.5-7.5-7.5z" />
             </svg>
           ) : (
-            <svg viewBox="0 0 256 417" className="h-2.5 w-2.5 fill-cyan-500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
+            <svg viewBox="0 0 256 417" className="h-2.5 w-2.5 fill-current" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
               <path d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" />
               <path d="M127.962 0L0 212.32l127.962 75.638V154.158z" />
               <path d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.59 128.038-180.32z" />
@@ -82,10 +93,10 @@ export function WalletStatus() {
             </svg>
           )}
         </div>
-        <span className="opacity-80">
-          {address?.slice(0, 6)}...{address?.slice(-4)}
+        <span className="font-bold">
+          {address?.slice(0, 4)}...{address?.slice(-4)}
         </span>
       </div>
-    </div>
+    </Link>
   );
 }
