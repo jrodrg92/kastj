@@ -4,7 +4,7 @@ import {
     canFundProposal,
     ProposalStatus,
     resolveProposalStatus,
-} from "../../core/domain/ProposalStateMachine";
+} from "../../core/proposal/proposal.machine";
 
 describe("ProposalStateMachine", function () {
     it("keeps proposal active before deadline", function () {

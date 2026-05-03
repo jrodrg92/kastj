@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { calculateMinThreshold } from "../../core/domain/ThresholdRules";
+import { calculateMinThreshold } from "../../core/proposal/proposal.thresholds";
 
 describe("ThresholdRules", function () {
     const ONE_KAS = 100_000_000n; // 8 decimals

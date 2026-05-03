@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { calculateRewards } from "../../core/domain/RewardPolicy";
+import { calculateRewards } from "../../core/proposal/proposal.rewards";
 
 describe("RewardPolicy", function () {
     it("splits 100 into 93 recipient / 5 creator / 2 platform", function () {

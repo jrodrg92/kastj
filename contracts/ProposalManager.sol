@@ -28,17 +28,26 @@ contract ProposalManager {
         ProposalStatus status;
         SettlementMode settlementMode;
         bool finalized;
+        bool allowOverfunding; // New: explicit decision on overfunding
         string metadataURI;
     }
 
     uint256 public proposalCount;
 
     address public owner;
+    address public pendingOwner;
     address public treasury;
     EscrowVault public vault;
+    bool public paused;
 
     mapping(uint256 => Proposal) public proposals;
     mapping(address => uint8) public tokenDecimals;
+
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event Paused(address account);
+    event Unpaused(address account);
+    event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     event ProposalCreated(
         uint256 indexed proposalId,
@@ -49,6 +58,7 @@ contract ProposalManager {
         uint256 minThreshold,
         uint256 deadline,
         SettlementMode settlementMode,
+        bool allowOverfunding,
         string metadataURI
     );
 
@@ -67,8 +77,31 @@ contract ProposalManager {
         _;
     }
 
+    modifier whenNotPaused() {
+        require(!paused, "Pausable: paused");
+        _;
+    }
+
+    function transferOwnership(address newOwner) external onlyOwner {
+        pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner, newOwner);
+    }
+
+    function acceptOwnership() external {
+        require(msg.sender == pendingOwner, "Not pending owner");
+        emit OwnershipTransferred(owner, pendingOwner);
+        owner = pendingOwner;
+        pendingOwner = address(0);
+    }
+
+    function setPaused(bool _paused) external onlyOwner {
+        paused = _paused;
+        if (_paused) emit Paused(msg.sender);
+        else emit Unpaused(msg.sender);
+    }
+
     function setTokenDecimals(address token, uint8 decimals) external onlyOwner {
-        require(token != address(0), "Native KAS is fixed at 8");
+        require(token != address(0), "Native KAS is fixed");
         require(decimals > 0, "Invalid decimals");
         tokenDecimals[token] = decimals;
     }
@@ -136,8 +169,9 @@ contract ProposalManager {
         uint256 minThreshold,
         uint256 durationSeconds,
         SettlementMode settlementMode,
+        bool allowOverfunding,
         string calldata metadataURI
-    ) external returns (uint256) {
+    ) external whenNotPaused returns (uint256) {
         require(recipient != address(0), "Invalid recipient");
         require(goalAmount > 0, "Invalid goal");
         require(minThreshold > 0, "Invalid threshold");
@@ -145,7 +179,7 @@ contract ProposalManager {
         require(durationSeconds > 0, "Invalid duration");
         require(bytes(metadataURI).length > 0, "Invalid metadata");
 
-        uint8 decimals = 8;
+        uint8 decimals = 18; // Default ZK-EVM
         if (token != address(0)) {
             decimals = tokenDecimals[token];
             require(decimals > 0, "Token not supported");
@@ -171,6 +205,7 @@ contract ProposalManager {
             status: ProposalStatus.Active,
             settlementMode: settlementMode,
             finalized: false,
+            allowOverfunding: allowOverfunding,
             metadataURI: metadataURI
         });
 
@@ -185,13 +220,14 @@ contract ProposalManager {
             minThreshold,
             deadline,
             settlementMode,
+            allowOverfunding,
             metadataURI
         );
 
         return proposalId;
     }
 
-    function fundNative(uint256 proposalId) external payable proposalExists(proposalId) {
+    function fundNative(uint256 proposalId) external payable proposalExists(proposalId) whenNotPaused {
         Proposal storage p = proposals[proposalId];
 
         require(p.status == ProposalStatus.Active, "Not active");
@@ -200,6 +236,10 @@ contract ProposalManager {
         require(p.token == address(0), "Not native proposal");
         require(msg.value > 0, "Invalid amount");
 
+        if (!p.allowOverfunding) {
+            require(p.totalRaised + msg.value <= p.goalAmount, "Overfunding not allowed");
+        }
+
         p.totalRaised += msg.value;
 
         vault.depositNative{value: msg.value}(proposalId, msg.sender);
@@ -207,7 +247,7 @@ contract ProposalManager {
         emit ProposalFunded(proposalId, msg.sender, address(0), msg.value, p.totalRaised);
     }
 
-    function fundKrc20(uint256 proposalId, uint256 amount) external proposalExists(proposalId) {
+    function fundKrc20(uint256 proposalId, uint256 amount) external proposalExists(proposalId) whenNotPaused {
         Proposal storage p = proposals[proposalId];
 
         require(p.status == ProposalStatus.Active, "Not active");
@@ -216,6 +256,10 @@ contract ProposalManager {
         require(p.token != address(0), "Not KRC20 proposal");
         require(amount > 0, "Invalid amount");
 
+        if (!p.allowOverfunding) {
+            require(p.totalRaised + amount <= p.goalAmount, "Overfunding not allowed");
+        }
+
         p.totalRaised += amount;
 
         vault.depositKrc20(proposalId, msg.sender, amount);
@@ -223,7 +267,7 @@ contract ProposalManager {
         emit ProposalFunded(proposalId, msg.sender, p.token, amount, p.totalRaised);
     }
 
-    function finalizeProposal(uint256 proposalId) external proposalExists(proposalId) {
+    function finalizeProposal(uint256 proposalId) external proposalExists(proposalId) whenNotPaused {
         Proposal storage p = proposals[proposalId];
 
         require(p.status == ProposalStatus.Active, "Not active");
@@ -261,6 +305,7 @@ contract ProposalManager {
 
     function setTreasury(address _treasury) external onlyOwner {
         require(_treasury != address(0), "Invalid treasury");
+        emit TreasuryUpdated(treasury, _treasury);
         treasury = _treasury;
     }
 }

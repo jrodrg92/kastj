@@ -14,7 +14,9 @@ contract EscrowVault {
     uint16 public constant PLATFORM_FEE_BPS = 200;
 
     address public owner;
+    address public pendingOwner;
     address public manager;
+    bool public paused;
 
     bool private locked;
 
@@ -26,6 +28,10 @@ contract EscrowVault {
     mapping(uint256 => bool) public withdrawalsEnabled;
     mapping(uint256 => bool) public released;
 
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event Paused(address account);
+    event Unpaused(address account);
     event ManagerSet(address indexed manager);
     event ProposalRegistered(uint256 indexed proposalId, address indexed token);
     event Deposited(
@@ -62,6 +68,11 @@ contract EscrowVault {
         _;
     }
 
+    modifier whenNotPaused() {
+        require(!paused, "Pausable: paused");
+        _;
+    }
+
     modifier nonReentrant() {
         require(!locked, "Reentrancy");
         locked = true;
@@ -73,6 +84,24 @@ contract EscrowVault {
         owner = msg.sender;
     }
 
+    function transferOwnership(address newOwner) external onlyOwner {
+        pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner, newOwner);
+    }
+
+    function acceptOwnership() external {
+        require(msg.sender == pendingOwner, "Not pending owner");
+        emit OwnershipTransferred(owner, pendingOwner);
+        owner = pendingOwner;
+        pendingOwner = address(0);
+    }
+
+    function setPaused(bool _paused) external onlyOwner {
+        paused = _paused;
+        if (_paused) emit Paused(msg.sender);
+        else emit Unpaused(msg.sender);
+    }
+
     function setManager(address _manager) external onlyOwner {
         require(manager == address(0), "Manager already set");
         require(_manager != address(0), "Invalid manager");
@@ -82,7 +111,7 @@ contract EscrowVault {
         emit ManagerSet(_manager);
     }
 
-    function registerProposal(uint256 proposalId, address token) external onlyManager {
+    function registerProposal(uint256 proposalId, address token) external onlyManager whenNotPaused {
         require(proposalId != 0, "Invalid proposal");
         require(!proposalRegistered[proposalId], "Already registered");
 
@@ -92,7 +121,7 @@ contract EscrowVault {
         emit ProposalRegistered(proposalId, token);
     }
 
-    function depositNative(uint256 proposalId, address supporter) external payable onlyManager nonReentrant {
+    function depositNative(uint256 proposalId, address supporter) external payable onlyManager whenNotPaused nonReentrant {
         require(proposalRegistered[proposalId], "Proposal not registered");
         require(proposalToken[proposalId] == address(0), "Not native proposal");
         require(supporter != address(0), "Invalid supporter");
@@ -110,7 +139,7 @@ contract EscrowVault {
         uint256 proposalId,
         address supporter,
         uint256 amount
-    ) external onlyManager nonReentrant {
+    ) external onlyManager whenNotPaused nonReentrant {
         require(proposalRegistered[proposalId], "Proposal not registered");
 
         address token = proposalToken[proposalId];
@@ -134,7 +163,7 @@ contract EscrowVault {
         emit Deposited(proposalId, supporter, token, actualAmount);
     }
 
-    function enableWithdrawals(uint256 proposalId) external onlyManager {
+    function enableWithdrawals(uint256 proposalId) external onlyManager whenNotPaused {
         require(!released[proposalId], "Already released");
 
         withdrawalsEnabled[proposalId] = true;
@@ -142,7 +171,7 @@ contract EscrowVault {
         emit WithdrawalsEnabled(proposalId);
     }
 
-    function withdraw(uint256 proposalId) public nonReentrant {
+    function withdraw(uint256 proposalId) public whenNotPaused nonReentrant {
         require(withdrawalsEnabled[proposalId], "Not allowed");
         require(!released[proposalId], "Already released");
 
@@ -164,7 +193,9 @@ contract EscrowVault {
     }
 
     function withdrawMany(uint256[] calldata proposalIds) external {
-        for (uint256 i = 0; i < proposalIds.length; i++) {
+        uint256 len = proposalIds.length;
+        require(len <= 50, "Too many proposals");
+        for (uint256 i = 0; i < len; i++) {
             withdraw(proposalIds[i]);
         }
     }
@@ -174,7 +205,7 @@ contract EscrowVault {
         address recipient,
         address creator,
         address treasury
-    ) external onlyManager nonReentrant {
+    ) external onlyManager whenNotPaused nonReentrant {
         require(!released[proposalId], "Already released");
         require(!withdrawalsEnabled[proposalId], "Withdrawals enabled");
         require(recipient != address(0), "Invalid recipient");
@@ -232,12 +263,22 @@ contract EscrowVault {
     }
 
     function _safeTokenTransfer(address token, address to, uint256 amount) private {
-        bool ok = IKRC20(token).transfer(to, amount);
-        require(ok, "Token transfer failed");
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(IKRC20.transfer.selector, to, amount)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "SafeTransfer: failed"
+        );
     }
 
     function _safeTransferFrom(address token, address from, address to, uint256 amount) private {
-        bool ok = IKRC20(token).transferFrom(from, to, amount);
-        require(ok, "Token transferFrom failed");
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(IKRC20.transferFrom.selector, from, to, amount)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "SafeTransferFrom: failed"
+        );
     }
 }
