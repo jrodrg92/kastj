@@ -159,42 +159,41 @@ export class ZkEvmProposalEngine implements ProposalEngine {
         }
 
         // We assume 18 decimals for IKAS on L2 if it's the native asset
-        // In a more robust implementation, we'd fetch the decimals from the token contract if p.token != ZeroAddress
         const decimals = 18; 
 
         return {
-            id: proposalId,
+            id: Number(proposalId),
             creator: p.creator,
             recipient: p.recipient,
             asset: { 
                 type: p.token === ZeroAddress ? "native" : "krc20",
                 tokenAddress: p.token,
-                symbol: p.token === ZeroAddress ? "KAS" : "UNKNOWN", // Simplified
+                symbol: p.token === ZeroAddress ? "KAS" : "UNKNOWN",
                 decimals
             },
             goal: {
                 value: formatUnits(p.goalAmount, decimals),
-                raw: p.goalAmount.toString(),
+                raw: BigInt(p.goalAmount).toString(),
                 symbol: "KAS",
                 decimals
             },
             minThreshold: {
                 value: formatUnits(p.minThreshold, decimals),
-                raw: p.minThreshold.toString(),
+                raw: BigInt(p.minThreshold).toString(),
                 symbol: "KAS",
                 decimals
             },
             totalRaised: {
                 value: formatUnits(p.raisedAmount, decimals),
-                raw: p.raisedAmount.toString(),
+                raw: BigInt(p.raisedAmount).toString(),
                 symbol: "KAS",
                 decimals
             },
-            deadline: new Date(Number(p.deadline) * 1000),
+            deadline: Number(p.deadline) * 1000,
             status: Number(p.status) === 0 ? "active" : Number(p.status) === 1 ? "succeeded" : "failed",
             metadataURI: p.metadataURI,
-            canFinalize: false, // Computed locally
-            canWithdraw: false  // Computed locally
+            canFinalize: false,
+            canWithdraw: false
         };
     }
 
@@ -204,17 +203,21 @@ export class ZkEvmProposalEngine implements ProposalEngine {
         );
     }
 
+    /**
+     * Real integrity check: compares local (Supabase) state with on-chain truth.
+     */
     async verifyProposal(proposal: ProposalView, provider?: any): Promise<boolean> {
         try {
             const onChain = await this.getProposal(proposal.id, provider);
             
-            // Check core fields for integrity
-            const sameGoal = onChain.goal.raw === proposal.goal.raw;
-            const sameRaised = onChain.totalRaised.raw === proposal.totalRaised.raw;
+            // Check core fields for integrity using bigint comparisons
+            const sameGoal = BigInt(onChain.goal.raw) === BigInt(proposal.goal.raw);
+            const sameRaised = BigInt(onChain.totalRaised.raw) === BigInt(proposal.totalRaised.raw);
             const sameStatus = onChain.status === proposal.status;
             const sameRecipient = onChain.recipient.toLowerCase() === proposal.recipient.toLowerCase();
+            const sameCreator = onChain.creator.toLowerCase() === proposal.creator.toLowerCase();
 
-            return sameGoal && sameRaised && sameStatus && sameRecipient;
+            return sameGoal && sameRaised && sameStatus && sameRecipient && sameCreator;
         } catch (e) {
             console.error("Verification failed:", e);
             return false;

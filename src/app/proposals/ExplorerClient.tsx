@@ -23,6 +23,8 @@ import { useFinalizeProposal } from "@/features/proposals/hooks/useFinalizePropo
 import { useWithdrawProposal } from "@/features/proposals/hooks/useWithdrawProposal";
 import { parseMetadataUri } from "@/lib/proposalUtils";
 import Link from "next/link";
+import { ExplorerFilters } from "./ExplorerFilters";
+import { ExplorerGrid } from "./ExplorerGrid";
 
 type Filter = "all" | "active" | "mine" | "supported" | "succeeded" | "failed";
 type Sort = "newest" | "raised" | "ending";
@@ -84,24 +86,24 @@ export function ExplorerClient() {
     const normalizedSearch = search.toLowerCase().trim();
     return proposals
       .filter((proposal) => {
-        if (filter === "active" && proposal.status !== 0) return false;
+        if (filter === "active" && proposal.status !== "active") return false;
         if (filter === "mine") return proposal.creator.toLowerCase() === wallet.address?.toLowerCase();
         if (filter === "supported") return supportedIdsSet.has(proposal.id);
-        if (filter === "succeeded" && proposal.status !== 1) return false;
-        if (filter === "failed" && proposal.status !== 2) return false;
+        if (filter === "succeeded" && proposal.status !== "succeeded") return false;
+        if (filter === "failed" && proposal.status !== "failed") return false;
         if (!normalizedSearch) return true;
         return metadataText(proposal.metadataURI).includes(normalizedSearch);
       })
       .sort((a, b) => {
         if (sort === "raised") {
-            const valA = BigInt(a.totalRaisedRaw || "0");
-            const valB = BigInt(b.totalRaisedRaw || "0");
+            const valA = BigInt(a.totalRaised.raw);
+            const valB = BigInt(b.totalRaised.raw);
             if (valA < valB) return 1;
             if (valA > valB) return -1;
             return 0;
         }
-        if (sort === "ending") return Number(a.deadline) - Number(b.deadline);
-        return Number(b.id) - Number(a.id);
+        if (sort === "ending") return a.deadline - b.deadline;
+        return b.id - a.id;
       });
   }, [filter, proposals, search, sort, supportedIdsSet, wallet.address]);
 
@@ -171,105 +173,37 @@ export function ExplorerClient() {
           {proposalsQuery.isLoading ? <StatsSkeleton /> : <StatsBar />}
         </ScrollReveal>
 
-        {/* ─── FILTERS & SEARCH ─── */}
-        <section className="space-y-6">
-          <div className="flex flex-wrap items-center gap-2 p-1 rounded-2xl bg-white/[0.03] border border-white/[0.05] w-fit">
-            {[
-              { key: "all", label: t.all },
-              { key: "active", label: t.active },
-              { key: "mine", label: t.mine },
-              { key: "supported", label: t.sup },
-              { key: "succeeded", label: t.succeeded },
-              { key: "failed", label: t.failed },
-            ].map((item) => (
-              <button
-                key={item.key}
-                onClick={() => setFilter(item.key as Filter)}
-                className={`px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all ${filter === item.key
-                  ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/[0.05]"
-                  }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
+        <ExplorerFilters 
+            filter={filter}
+            setFilter={setFilter}
+            search={search}
+            setSearch={setSearch}
+            sort={sort}
+            setSort={setSort}
+            fundAmount={fundAmount}
+            setFundAmount={setFundAmount}
+            isFetching={proposalsQuery.isFetching}
+            onRefresh={() => proposalsQuery.refetch()}
+            t={t}
+        />
 
-          <div className="premium-glass flex flex-col gap-4 rounded-[2rem] p-4 md:flex-row md:items-center border-white/[0.04] bg-background/20 backdrop-blur-xl">
-            <div className="group relative flex-1">
-              <input
-                type="text"
-                placeholder={t.search}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-14 w-full rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 pl-12 text-sm text-foreground outline-none transition-all focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/30"
-              />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-cyan-500" size={20} />
-            </div>
+        <ExplorerGrid 
+            proposals={filteredProposals}
+            isLoading={proposalsQuery.isLoading}
+            isError={proposalsQuery.isError}
+            isAnyMutationPending={isAnyMutationPending}
+            walletConnected={wallet.connected}
+            supportedIdsSet={supportedIdsSet}
+            fundAmount={fundAmount}
+            onFund={handleFund}
+            onFinalize={handleFinalize}
+            onWithdraw={handleWithdraw}
+            t={t}
+        />
 
-            <div className="flex flex-wrap gap-3">
-              <SortDropdown
-                value={sort}
-                onChange={(val) => setSort(val as Sort)}
-                labels={{ newest: t.newest, raised: t.moreRe, ending: t.endSoon }}
-              />
-
-              <div className="group relative md:w-44">
-                <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-cyan-500" size={18} />
-                <input
-                  className="h-14 w-full rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4 pl-11 pr-12 text-sm font-bold text-foreground outline-none transition-all focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/30"
-                  placeholder={t.minAmount}
-                  value={fundAmount}
-                  onChange={(e) => setFundAmount(e.target.value)}
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground/40">{NETWORK.currency}</div>
-              </div>
-
-              <button
-                onClick={() => proposalsQuery.refetch()}
-                className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.04] bg-white/[0.02] text-muted-foreground transition-all hover:bg-white/[0.05] hover:text-cyan-500 active:rotate-180 duration-500"
-              >
-                <RefreshCw size={20} className={proposalsQuery.isFetching ? "animate-spin" : ""} />
-              </button>
-            </div>
-          </div>
-
-          {/* ─── GRID ─── */}
-          {proposalsQuery.isLoading ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => <ProposalSkeleton key={i} />)}
-            </div>
-          ) : proposalsQuery.isError ? (
-            <EmptyState 
-              title={t.noProposalsFilter} 
-              description={t.tryAdjustFilters} 
-              className="my-12"
-            />
-          ) : filteredProposals.length === 0 ? (
-            <EmptyState title={t.noProposalsFilter} description={t.tryAdjustFilters} className="my-12" />
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredProposals.map((proposal, index) => (
-                <div key={proposal.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
-                  <ProposalCard
-                    proposal={proposal}
-                    fundAmount={fundAmount}
-                    loading={isAnyMutationPending}
-                    connected={wallet.connected}
-                    isSupported={supportedIdsSet.has(proposal.id)}
-                    onFund={handleFund}
-                    onFinalize={handleFinalize}
-                    onWithdraw={handleWithdraw}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div ref={loadMoreRef} className="py-12 flex justify-center">
-            {proposalsQuery.isFetchingNextPage && <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-500/20 border-t-cyan-500" />}
-          </div>
-        </section>
+        <div ref={loadMoreRef} className="py-12 flex justify-center">
+          {proposalsQuery.isFetchingNextPage && <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-500/20 border-t-cyan-500" />}
+        </div>
       </main>
 
       <SiteFooter />

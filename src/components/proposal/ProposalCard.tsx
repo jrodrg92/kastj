@@ -7,25 +7,10 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { InfoTooltip } from "../ui/InfoTooltip";
 import { FeeSplit } from "../ui/FeeSplit";
 
-type Proposal = {
-  id: number;
-  creator: string;
-  recipient: string;
-  goal: string;
-  goalRaw: string;
-  minThreshold: string;
-  minThresholdRaw: string;
-  totalRaised: string;
-  totalRaisedRaw: string;
-  deadline: number;
-  status: number;
-  executed?: boolean;
-  metadataURI?: string | null;
-  asset?: { type: "native"; symbol: "KAS"; decimals: number } | { type: "krc20"; tokenAddress: `0x${string}`; symbol: string; decimals: number };
-};
+import { ProposalView } from "@/core/proposal/proposal.types";
 
 type Props = {
-  proposal: Proposal;
+  proposal: ProposalView;
   fundAmount: string;
   loading: boolean;
   connected: boolean;
@@ -36,7 +21,7 @@ type Props = {
 };
 
 import { useProposalMetadata } from "../../features/proposals/hooks/useProposalMetadata";
-import { statusLabel, statusClass, short } from "../../lib/proposalUtils";
+import { statusLabel, short } from "../../lib/proposalUtils";
 
 export function ProposalCard({
   proposal,
@@ -58,9 +43,9 @@ export function ProposalCard({
   const p = proposal;
   const metadata = useProposalMetadata(p.metadataURI);
 
-  const goalRaw = BigInt(p.goalRaw || "0");
-  const raisedRaw = BigInt(p.totalRaisedRaw || "0");
-  const thresholdRaw = BigInt(p.minThresholdRaw || "0");
+  const goalRaw = BigInt(p.goal.raw);
+  const raisedRaw = BigInt(p.totalRaised.raw);
+  const thresholdRaw = BigInt(p.minThreshold.raw);
 
   const percent =
     goalRaw > 0n
@@ -73,17 +58,16 @@ export function ProposalCard({
       : 0;
 
   const isExpired = hasExpired(p.deadline);
-  const isOverfunded = raisedRaw > goalRaw;
 
-  const canFund = connected && !loading && p.status === 0 && !isExpired;
-  const canFinalize = connected && !loading && !p.executed && isExpired;
-  const canWithdraw = connected && !loading && p.status === 2 && isSupported;
+  const canFund = connected && !loading && p.status === "active" && !isExpired;
+  const canFinalize = connected && !loading && isExpired;
+  const canWithdraw = connected && !loading && p.status === "failed" && isSupported;
 
   /* Status badge styling - adding the dot and glow */
   const statusConfig =
-    p.status === 0
+    p.status === "active"
       ? { label: statusLabel(p.status, t), color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/20", dot: "bg-amber-400" }
-      : p.status === 1
+      : p.status === "succeeded"
         ? { label: statusLabel(p.status, t), color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", dot: "bg-emerald-400" }
         : { label: statusLabel(p.status, t), color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/20", dot: "bg-rose-400" };
 
@@ -140,8 +124,8 @@ export function ProposalCard({
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">{t.raisedLabel}</p>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-black tracking-tighter text-foreground">{p.totalRaised}</span>
-              <span className="text-[10px] font-bold text-muted-foreground/30">/ {p.goal} {NETWORK.currency}</span>
+              <span className="text-xl font-black tracking-tighter text-foreground">{p.totalRaised.value}</span>
+              <span className="text-[10px] font-bold text-muted-foreground/30">/ {p.goal.value} {NETWORK.currency}</span>
             </div>
           </div>
           <div className="text-right">
@@ -185,7 +169,7 @@ export function ProposalCard({
             {t.showDetail}
           </Link>
 
-          {p.status === 0 && !isExpired && (
+          {p.status === "active" && !isExpired && (
             <button
               disabled={!connected || loading}
               onClick={() => onFund(p.id)}

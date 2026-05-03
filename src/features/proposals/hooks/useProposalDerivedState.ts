@@ -8,18 +8,16 @@ export function useProposalDerivedState(proposal: any, fundings: any[], wallet: 
     if (!proposal) return null;
 
     // 1. Unify amounts for calculation
-    const goalRaw = BigInt(proposal.goalRaw || 0);
-    const minThresholdRaw = BigInt(proposal.minThresholdRaw || 0);
-    const realTimeRaisedRaw = fundings.reduce((sum, f) => sum + BigInt(f.amount), 0n);
+    const goalRaw = BigInt(proposal.goal?.raw || 0);
+    const minThresholdRaw = BigInt(proposal.minThreshold?.raw || 0);
+    const realTimeRaisedRaw = fundings.reduce((sum, f) => sum + BigInt(f.amount || 0), 0n);
     
     // 2. Calculate progress
     const progress = goalRaw > 0n ? Number((realTimeRaisedRaw * 10000n) / goalRaw) / 100 : 0;
 
-    // 3. Check time
+    // 3. Check time (already in MS from API)
+    const deadlineMs = Number(proposal.deadline);
     const nowMs = Date.now();
-    const deadlineMs = proposal.deadline instanceof Date 
-      ? proposal.deadline.getTime() 
-      : Number(proposal.deadline) * 1000;
       
     const isExpired = checkExpired({ deadlineMs, nowMs });
 

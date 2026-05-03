@@ -4,6 +4,7 @@ import type {
     FundProposalInput,
     ProposalEngine,
     ProposalEngineContext,
+    ProposalCommand,
     TxResult,
 } from "./proposal-engine.interface";
 import type { ProposalId, ProposalView } from "@/core/proposal/proposal.types";
@@ -68,9 +69,7 @@ export class MockProposalEngine implements ProposalEngine {
                 decimals,
                 symbol,
             },
-            deadline: new Date(
-                Date.now() + input.durationSeconds * 1000,
-            ),
+            deadline: Date.now() + input.durationSeconds * 1000,
             status: "active",
             metadataURI: input.metadataURI,
             canWithdraw: false,
@@ -85,7 +84,7 @@ export class MockProposalEngine implements ProposalEngine {
         input: FundProposalInput,
     ): Promise<TxResult> {
         const proposal = this.proposals.find(
-            (p) => p.id === input.proposalId,
+            (p) => p.id === Number(input.proposalId),
         );
 
         if (proposal) {
@@ -107,7 +106,7 @@ export class MockProposalEngine implements ProposalEngine {
         _ctx: ProposalEngineContext,
         proposalId: ProposalId,
     ): Promise<TxResult> {
-        const proposal = this.proposals.find((p) => p.id === proposalId);
+        const proposal = this.proposals.find((p) => p.id === Number(proposalId));
 
         if (proposal) {
             const raised = BigInt(proposal.totalRaised.raw);
@@ -138,7 +137,7 @@ export class MockProposalEngine implements ProposalEngine {
     }
 
     async getProposal(proposalId: ProposalId): Promise<ProposalView> {
-        const proposal = this.proposals.find((p) => p.id === proposalId);
+        const proposal = this.proposals.find((p) => p.id === Number(proposalId));
 
         if (!proposal) {
             throw new Error("Proposal not found");

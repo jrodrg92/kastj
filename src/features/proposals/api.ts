@@ -1,45 +1,25 @@
 import { formatUnits, DECIMALS } from "../../lib/currencyUtils";
 import { supabase } from "../../lib/supabase-client";
+import { ProposalView, ProposalStatus } from "@/core/proposal/proposal.types";
 
 export const PAGE_SIZE = 12;
 
-export interface ProposalListItem {
-  id: number;
-  creator: string;
-  recipient: string;
-  asset: { type: "native"; symbol: "KAS"; decimals: number } | { type: "krc20"; tokenAddress: `0x${string}`; symbol: string; decimals: number };
-  goal: string;
-  goalRaw: string;
-  minThreshold: string;
-  minThresholdRaw: string;
-  totalRaised: string;
-  totalRaisedRaw: string;
-  decimals: number;
-  deadline: number;
-  status: number;
-  metadataURI: string | null;
-  tx_hash?: string | null;
-  title?: string | null;
-  description?: string | null;
-}
-
-function parseStatus(status: string | number) {
-  if (status === 0 || status === "active") return 0;
-  if (status === 1 || status === "succeeded") return 1;
-  if (status === 2 || status === "failed") return 2;
-  return 0;
+function parseStatus(status: string | number): ProposalStatus {
+  if (status === 0 || status === "active") return "active";
+  if (status === 1 || status === "succeeded") return "succeeded";
+  if (status === 2 || status === "failed") return "failed";
+  return "active";
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function mapProposal(proposal: any): ProposalListItem {
+export function mapProposal(proposal: any): ProposalView {
   const isNative = !proposal.token || proposal.token === "0x0000000000000000000000000000000000000000";
-  // Prioridad: 1. Decimales en DB, 2. Si es Nativo en L2 (18), 3. Default 18
   const decimals = Number(proposal.decimals ?? (isNative ? DECIMALS.IKAS_L2 : 18));
   const symbol = isNative ? "KAS" : (proposal.token_symbol || "TOKEN");
 
-  const goalRaw = proposal.goal || "0";
-  const minThresholdRaw = proposal.min_threshold || goalRaw;
-  const totalRaisedRaw = proposal.total_raised || "0";
+  const goalRaw = BigInt(proposal.goal || "0");
+  const minThresholdRaw = BigInt(proposal.min_threshold || proposal.goal || "0");
+  const totalRaisedRaw = BigInt(proposal.total_raised || "0");
 
   return {
     id: Number(proposal.id),
@@ -53,17 +33,28 @@ export function mapProposal(proposal: any): ProposalListItem {
           symbol: symbol,
           decimals: decimals,
         },
-    goal: formatUnits(goalRaw, decimals),
-    goalRaw,
-    minThreshold: formatUnits(minThresholdRaw, decimals),
-    minThresholdRaw,
-    totalRaised: formatUnits(totalRaisedRaw, decimals),
-    totalRaisedRaw,
-    decimals,
-    deadline: Number(proposal.deadline),
+    goal: {
+      value: formatUnits(goalRaw, decimals),
+      raw: goalRaw.toString(),
+      symbol,
+      decimals
+    },
+    minThreshold: {
+      value: formatUnits(minThresholdRaw, decimals),
+      raw: minThresholdRaw.toString(),
+      symbol,
+      decimals
+    },
+    totalRaised: {
+      value: formatUnits(totalRaisedRaw, decimals),
+      raw: totalRaisedRaw.toString(),
+      symbol,
+      decimals
+    },
+    deadline: Number(proposal.deadline) * 1000,
     status: parseStatus(proposal.status),
     metadataURI: proposal.metadata_uri,
-    tx_hash: proposal.tx_hash,
+    txHash: proposal.tx_hash,
     title: proposal.title,
     description: proposal.description,
   };

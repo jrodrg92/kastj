@@ -123,13 +123,13 @@ export default function ProposalClient() {
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-muted-foreground">{t.totalRaised || "Total Raised"}</p>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-white">{proposal.totalRaised || "0"}</span>
-                        <span className="text-sm font-medium text-cyan-500">KAS</span>
+                        <span className="text-3xl font-bold text-white">{proposal.totalRaised.value || "0"}</span>
+                        <span className="text-sm font-medium text-cyan-500">{proposal.asset.symbol}</span>
                       </div>
                     </div>
                     <div className="text-right space-y-1">
                       <p className="text-sm font-medium text-muted-foreground">{t.goal || "Goal"}</p>
-                      <p className="text-xl font-semibold text-white">{proposal.goal} KAS</p>
+                      <p className="text-xl font-semibold text-white">{proposal.goal.value} {proposal.asset.symbol}</p>
                     </div>
                   </div>
 
@@ -174,7 +174,7 @@ export default function ProposalClient() {
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Minimum Threshold</p>
-                      <p className="text-sm font-semibold text-white">{proposal.minThreshold} KAS</p>
+                      <p className="text-sm font-semibold text-white">{proposal.minThreshold.value} {proposal.asset.symbol}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Deadline</p>

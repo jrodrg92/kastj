@@ -14,22 +14,32 @@ export type ProposalStatus = "active" | "succeeded" | "failed";
 
 export interface ProposalAmount {
     value: string; // human-readable decimal: "1.5"
-    raw: string;   // raw integer value as string (e.g. "150000000")
+    raw: string;   // raw integer value as string (e.g. "1500000000000000000") for serialization
     symbol: string; // "KAS"
     decimals: number;
 }
 
+/**
+ * Standard view of a proposal for UI and engines.
+ */
 export interface ProposalView {
-    id: ProposalId;
+    id: number;
     creator: string;
     recipient: string;
     asset: ProposalAsset;
     goal: ProposalAmount;
     minThreshold: ProposalAmount;
     totalRaised: ProposalAmount;
-    deadline: Date;
+    deadline: number; // timestamp in MS
     status: ProposalStatus;
-    metadataURI?: string;
-    canFinalize: boolean;
-    canWithdraw: boolean;
+    metadataURI?: string | null;
+    
+    // UI derivation flags
+    canFinalize?: boolean;
+    canWithdraw?: boolean;
+    
+    // Extra metadata from DB (optional)
+    title?: string | null;
+    description?: string | null;
+    txHash?: string | null;
 }
