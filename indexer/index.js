@@ -15,8 +15,8 @@ const supabase = createClient(
 );
 
 const ABI = [
-  "event ProposalCreated(uint256 indexed proposalId,address indexed creator,address indexed recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,string metadataURI)",
-  "event ProposalFunded(uint256 indexed proposalId, address indexed supporter, address indexed token, uint256 amount, uint256 totalRaised)",
+  "event ProposalCreated(uint256 indexed proposalId,address indexed creator,address indexed recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,uint8 settlementMode,string metadataURI)",
+  "event ProposalFunded(uint256 indexed proposalId, address indexed supporter, address token, uint256 amount, uint256 totalRaised)",
   "event ProposalFinalized(uint256 indexed proposalId,uint8 status,uint256 totalRaised)",
   "function finalizeProposal(uint256 proposalId) external",
   "function proposalCount() view returns (uint256)",
@@ -53,7 +53,6 @@ function parseMetadata(uri) {
   if (!uri) return { title: "Sin URI", description: "Sin descripción", createdAt: Date.now() };
   
   const cleanUri = sanitize(uri);
-  console.log(`Parsing metadata from URI: ${cleanUri.slice(0, 50)}...`);
 
   if (!cleanUri.includes("local://")) {
     return {
@@ -125,138 +124,100 @@ async function saveActivity({ type, proposalId, actor, amount, message, txHash, 
   }
 }
 
-async function saveProposalFromChain(proposalId) {
+async function upsertProposal(proposalId, onChainData = null, txHash = null) {
   try {
-    const p = await contract.getProposal(proposalId);
-  const metadata = parseMetadata(p.metadataURI);
-  const decimals = await fetchTokenDecimals(p.token);
+    const p = onChainData || (await contract.getProposal(proposalId));
+    const metadata = parseMetadata(p.metadataURI);
+    const decimals = await fetchTokenDecimals(p.token);
 
-  await supabase.from("proposal_metadata").upsert({
-    proposal_id: Number(p.id),
-    title: sanitize(metadata.title),
-    description: sanitize(metadata.description),
-    created_at: Number(metadata.createdAt) || Date.now(),
-  });
+    const cleanMetadataUri = sanitize(p.metadataURI);
+    const normalizedCreator = p.creator.toLowerCase();
+    const normalizedRecipient = p.recipient.toLowerCase();
+    const normalizedToken = p.token.toLowerCase();
 
-  const { error } = await supabase.from("proposals").upsert({
-    id: Number(p.id),
-    creator: sanitize(p.creator),
-    recipient: sanitize(p.recipient),
-    token: sanitize(p.token),
-    decimals: decimals,
-    goal: p.goalAmount.toString(),
-    min_threshold: p.minThreshold.toString(),
-    deadline: Number(p.deadline),
-    total_raised: p.totalRaised.toString(),
-    status: statusToText(p.status),
-    settlement_mode: Number(p.settlementMode),
-    success: Number(p.status) === 1 ? true : Number(p.status) === 2 ? false : null,
-    metadata_uri: sanitize(p.metadataURI),
-    title: sanitize(metadata.title),
-    description: sanitize(metadata.description),
-    created_at: Number(metadata.createdAt) || Date.now(),
-  });
+    // --- RECONCILIATION ---
+    // Buscamos cualquier propuesta "pending" (ID < 0) que coincida por TX Hash O por Metadata URI
+    let pendingQuery = supabase.from("proposals").select("id").lt("id", 0);
 
-  if (error) {
-    console.error(`Error guardando proposal #${proposalId}:`, error);
-    return;
-  }
+    if (txHash) {
+      pendingQuery = pendingQuery.or(`tx_hash.eq.${txHash},metadata_uri.eq.${cleanMetadataUri}`);
+    } else {
+      pendingQuery = pendingQuery.eq("metadata_uri", cleanMetadataUri);
+    }
 
-  console.log("Proposal synced:", Number(proposalId));
+    const { data: pendingItems } = await pendingQuery;
+
+    if (pendingItems && pendingItems.length > 0) {
+      console.log(
+        `[Reconciliation] Found ${pendingItems.length} pending records for Proposal #${proposalId}. Cleaning up...`
+      );
+      for (const item of pendingItems) {
+        await supabase.from("proposals").delete().eq("id", item.id);
+      }
+    }
+
+    // --- UPSERT METADATA ---
+    await supabase.from("proposal_metadata").upsert({
+      proposal_id: Number(p.id),
+      title: sanitize(metadata.title),
+      description: sanitize(metadata.description),
+      created_at: Number(metadata.createdAt) || Date.now(),
+    }, { onConflict: 'proposal_id' });
+
+    // --- UPSERT PROPOSAL ---
+    const { error } = await supabase.from("proposals").upsert({
+      id: Number(p.id),
+      creator: normalizedCreator,
+      recipient: normalizedRecipient,
+      token: normalizedToken,
+      decimals: decimals,
+      goal: p.goalAmount.toString(),
+      min_threshold: p.minThreshold.toString(),
+      deadline: Number(p.deadline),
+      total_raised: p.totalRaised.toString(),
+      status: statusToText(p.status),
+      settlement_mode: Number(p.settlementMode),
+      success: Number(p.status) === 1 ? true : Number(p.status) === 2 ? false : null,
+      metadata_uri: cleanMetadataUri,
+      title: sanitize(metadata.title),
+      description: sanitize(metadata.description),
+      tx_hash: txHash ? txHash.toLowerCase() : null,
+      created_at: Number(metadata.createdAt) || Date.now(),
+    }, { onConflict: 'id' });
+
+    if (error) {
+      console.error(`Error upserting proposal #${proposalId}:`, error.message);
+    } else {
+      console.log(`Proposal #${proposalId} synced successfully.`);
+    }
   } catch (e) {
     console.error(`[Indexer Error] Failed to sync proposal #${proposalId}:`, e.message);
   }
 }
 
-async function syncExistingProposals() {
-  const count = await contract.proposalCount();
-
-  console.log("On-chain proposal count:", count.toString());
-
-  for (let i = 1; i <= Number(count); i++) {
-    await saveProposalFromChain(i);
-  }
-}
-
 async function handleProposalCreated(event) {
-  const {
-    proposalId,
-    creator,
-    recipient,
-    token,
-    goalAmount,
-    minThreshold,
-    deadline,
-    settlementMode,
-    metadataURI,
-  } = event.args;
-  console.log(`Detected ProposalCreated event for ID: ${Number(proposalId)}`);
-
-  const metadata = parseMetadata(metadataURI);
-  const decimals = await fetchTokenDecimals(token);
-
-  await supabase.from("proposal_metadata").upsert({
-    proposal_id: Number(proposalId),
-    title: sanitize(metadata.title),
-    description: sanitize(metadata.description),
-    created_at: Number(metadata.createdAt) || Date.now(),
-  });
-
-  const { error } = await supabase.from("proposals").upsert({
-    id: Number(proposalId),
-    creator: sanitize(creator),
-    recipient: sanitize(recipient),
-    token: sanitize(token),
-    decimals: decimals,
-    goal: goalAmount.toString(),
-    min_threshold: minThreshold.toString(),
-    deadline: Number(deadline),
-    total_raised: "0",
-    status: "active",
-    settlement_mode: Number(settlementMode),
-    success: null,
-    metadata_uri: sanitize(metadataURI),
-    title: sanitize(metadata.title),
-    description: sanitize(metadata.description),
-    created_at: Number(metadata.createdAt) || Date.now(),
-  });
-
-  if (error) {
-    console.error("Error guardando ProposalCreated:", error);
+  if (!event.args) {
+    console.error(`[Indexer] Could not parse ProposalCreated event args at tx ${event.transactionHash}`);
     return;
   }
-
-  // Cleanup pending version (negative ID) with same tx_hash if it exists
-  const txHash = event.transactionHash;
-  if (txHash) {
-    await supabase.from("proposals")
-      .delete()
-      .lt("id", 0)
-      .eq("tx_hash", txHash);
-  }
-
-  await saveActivity({
-    type: "created",
-    proposalId: Number(proposalId),
-    actor: creator,
-    amount: null,
-    message: `New proposal created #${Number(proposalId)}`,
-    txHash: event.transactionHash,
-    logIndex: event.index,
-  });
-
-  console.log("Proposal created saved:", Number(proposalId));
+  const { proposalId } = event.args;
+  console.log(`Detected ProposalCreated event for ID: ${Number(proposalId)}`);
+  await upsertProposal(proposalId, null, event.transactionHash);
 }
 
 async function handleProposalFunded(event) {
+  if (!event.args) {
+    console.error(`[Indexer] Could not parse ProposalFunded event args at tx ${event.transactionHash}`);
+    return;
+  }
   const { proposalId, supporter, token, amount, totalRaised } = event.args;
 
   const { error: fundingError } = await supabase.from("fundings").upsert({
     proposal_id: Number(proposalId),
-    supporter,
-    token,
+    supporter: supporter.toLowerCase(),
+    token: token.toLowerCase(),
     amount: amount.toString(),
-    tx_hash: event.transactionHash,
+    tx_hash: event.transactionHash.toLowerCase(),
     created_at: new Date().toISOString(),
   }, { onConflict: 'tx_hash' });
 
@@ -283,7 +244,7 @@ async function handleProposalFunded(event) {
     actor: supporter,
     amount: amount.toString(),
     message: `Proposal #${Number(proposalId)} received support`,
-    txHash: event.transactionHash,
+    txHash: event.transactionHash.toLowerCase(),
     logIndex: event.index,
   });
 
@@ -291,6 +252,10 @@ async function handleProposalFunded(event) {
 }
 
 async function handleProposalFinalized(event) {
+  if (!event.args) {
+    console.error(`[Indexer] Could not parse ProposalFinalized event args at tx ${event.transactionHash}`);
+    return;
+  }
   const { proposalId, status, totalRaised } = event.args;
   const textStatus = statusToText(status);
 
@@ -317,7 +282,7 @@ async function handleProposalFinalized(event) {
       Number(status) === 1
         ? `Propuesta #${Number(proposalId)} finalizada con éxito`
         : `Propuesta #${Number(proposalId)} falló y permite retiradas`,
-    txHash: event.transactionHash,
+    txHash: event.transactionHash.toLowerCase(),
     logIndex: event.index,
   });
 
@@ -325,6 +290,10 @@ async function handleProposalFinalized(event) {
 }
 
 async function handleWithdrawn(event) {
+  if (!event.args) {
+    console.error(`[Indexer] Could not parse Withdrawn event args at tx ${event.transactionHash}`);
+    return;
+  }
   const { proposalId, supporter, token, amount } = event.args;
 
   // Mark funding as withdrawn in DB
@@ -332,7 +301,7 @@ async function handleWithdrawn(event) {
     .from("fundings")
     .update({ withdrawn: true })
     .eq("proposal_id", Number(proposalId))
-    .eq("supporter", supporter);
+    .eq("supporter", supporter.toLowerCase());
 
   if (error) {
     console.error("Error marcando funding como retirado:", error);
@@ -345,7 +314,7 @@ async function handleWithdrawn(event) {
     actor: supporter,
     amount: amount.toString(),
     message: `Supporter retrieved funds from Proposal #${Number(proposalId)}`,
-    txHash: event.transactionHash,
+    txHash: event.transactionHash.toLowerCase(),
     logIndex: event.index,
   });
 
@@ -379,30 +348,29 @@ async function pollEvents() {
   if (storedBlock !== null && currentBlock < storedBlock) {
     console.warn("⚠️ Blockchain reset detected! Resetting indexer block count to 0...");
     await setLastSyncedBlock(0);
-    return; // Restart poll on next loop
+    return;
   }
   
-  // If we have no stored block, start from current - 10000 to catch recent history
-  // If we have a stored block, start from there + 1
-  let fromBlock = storedBlock ? storedBlock + 1 : Math.max(currentBlock - 10000, 0);
+  // Poll from next block
+  const fromBlock = storedBlock !== null ? storedBlock + 1 : Math.max(currentBlock - 10, 0);
   const toBlock = currentBlock;
 
-  if (fromBlock > toBlock) return;
-  
-  // Cap the range to prevent overwhelming the provider or DB
-  if (toBlock - fromBlock > 5000) {
-      console.log(`Large block gap detected (${toBlock - fromBlock}). Syncing in chunks...`);
-      fromBlock = toBlock - 5000;
+  if (fromBlock > toBlock) {
+    return;
   }
+  
+  // Cap the range
+  const finalToBlock = Math.min(toBlock, fromBlock + 5000);
 
-  console.log(`Polling events from block ${fromBlock} to ${toBlock}...`);
+  // Silencio: Solo logueamos si hay bloques nuevos reales
+  // console.log(`Polling events from block ${fromBlock} to ${finalToBlock}...`);
 
   try {
     // 1. Proposal Events
     const createdEvents = await contract.queryFilter(
       contract.filters.ProposalCreated(),
       fromBlock,
-      toBlock
+      finalToBlock
     );
     for (const event of createdEvents) {
       await handleProposalCreated(event);
@@ -411,7 +379,7 @@ async function pollEvents() {
     const fundedEvents = await contract.queryFilter(
       contract.filters.ProposalFunded(),
       fromBlock,
-      toBlock
+      finalToBlock
     );
     for (const event of fundedEvents) {
       await handleProposalFunded(event);
@@ -420,7 +388,7 @@ async function pollEvents() {
     const finalizedEvents = await contract.queryFilter(
       contract.filters.ProposalFinalized(),
       fromBlock,
-      toBlock
+      finalToBlock
     );
     for (const event of finalizedEvents) {
       await handleProposalFinalized(event);
@@ -430,13 +398,13 @@ async function pollEvents() {
     const withdrawnEvents = await vaultContract.queryFilter(
       vaultContract.filters.Withdrawn(),
       fromBlock,
-      toBlock
+      finalToBlock
     );
     for (const event of withdrawnEvents) {
       await handleWithdrawn(event);
     }
 
-    await setLastSyncedBlock(toBlock);
+    await setLastSyncedBlock(finalToBlock);
   } catch (err) {
     console.error("Error during pollEvents:", err.message);
   }
@@ -490,19 +458,17 @@ async function syncMissingProposals() {
   const onChainCount = await contract.proposalCount();
   const { count: dbCount } = await supabase
     .from("proposals")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .gt("id", 0);
 
   console.log(`Sync check: Chain=${onChainCount}, DB=${dbCount || 0}`);
 
   if (Number(onChainCount) > (dbCount || 0)) {
     console.log("Syncing missing proposals...");
     for (let i = 1; i <= Number(onChainCount); i++) {
-      await saveProposalFromChain(i);
+      await upsertProposal(i);
     }
-    // Update sync state to current block after initial sync
-    const currentBlock = await provider.getBlockNumber();
-    await setLastSyncedBlock(currentBlock);
-    console.log(`Initial sync complete. Synced up to block ${currentBlock}`);
+    console.log(`Initial sync complete. Processed ${onChainCount} proposals.`);
   }
 }
 
@@ -543,9 +509,11 @@ async function main() {
     try {
       await pollEvents();
     } catch (err) {
-      console.error("Poll loop error:", err.message);
+      console.error("❌ Poll loop error:", err.message);
+    } finally {
+      // Ensure the loop ALWAYS continues, even if pollEvents hangs or fails
+      setTimeout(pollLoop, 1000);
     }
-    setTimeout(pollLoop, 5000); // 5 segundos para que parezca tiempo real sin los errores de listeners
   };
 
   const finalizeLoop = async () => {

@@ -11,7 +11,7 @@ import { CreateProposalForm } from "../../../components/proposal/CreateProposalF
 import { useWalletContext } from "../../../contexts/WalletContext";
 import { useProposalEngine } from "../../../hooks/useProposalEngine";
 import { useCreateProposal } from "../../../features/proposals/hooks/useCreateProposal";
-import { prepareProposalMetadata } from "../../../features/proposals/actions";
+import { prepareProposalMetadata, updateProposalTxHash } from "../../../features/proposals/actions";
 import { calculateMinThreshold } from "../../../core/domain/ThresholdRules";
 import { parseUnits, formatUnits, DECIMALS } from "../../../lib/currencyUtils";
 import { ArrowLeft } from "lucide-react";
@@ -58,7 +58,8 @@ export default function CreateProposalClient() {
     }
 
     try {
-      // 1. Preparar metadatos y validación en el servidor
+      // 1. Preparar metadatos y guardar propuesta PENDIENTE en DB antes de la tx
+      // Esto evita que el indexador nos gane la carrera y no encuentre el registro.
       const prepared = await prepareProposalMetadata({
         title,
         description,
@@ -66,9 +67,9 @@ export default function CreateProposalClient() {
         goal,
         minThreshold,
         duration,
-      }, wallet.address || "", "");
+      }, wallet.address || "");
 
-      // 2. Ejecutar transacción en la blockchain
+      // 2. Ejecutar transacción en la blockchain usando la metadata estable
       const result = await createMutation.mutateAsync({
         recipient: prepared.recipient,
         asset: { type: "native", symbol: "KAS", decimals: ctx?.chain === "kasplex-zkevm" ? 18 : DECIMALS.KAS },
@@ -79,19 +80,13 @@ export default function CreateProposalClient() {
       });
 
       if (result?.txId) {
-        // 3. Registrar la propuesta pendiente en la DB (vía servidor)
-        // Re-llamamos a la acción pero ahora con el txHash real para guardar en DB
-        const saved = await prepareProposalMetadata({
-          title,
-          description,
-          recipient,
-          goal,
-          minThreshold,
-          duration,
-        }, wallet.address || "", result.txId);
-
+        // 3. Actualizar el txHash en la DB para vinculación perfecta
+        await updateProposalTxHash(prepared.tempId, result.txId);
+        
         toast.success(t.proposalCreated);
-        router.push(`/proposal/${saved.tempId}`);
+        // Redirigimos al ID temporal incluyendo el hash en la URL como salvavidas 
+        // por si el indexador ya borró el registro para cuando cargue la página.
+        router.push(`/proposal/${prepared.tempId}?tx=${result.txId}`);
       } else {
         toast.success(t.proposalCreated);
         router.push("/proposals");

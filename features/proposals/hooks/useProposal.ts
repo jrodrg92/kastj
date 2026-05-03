@@ -9,6 +9,14 @@ export function useProposal(id: number) {
     queryKey: proposalKeys.detail(id),
     queryFn: () => fetchProposal(id),
     enabled: !!id,
-    refetchInterval: (query) => (query.state.data ? false : 2000), // Reintenta cada 2s si no existe
+    refetchInterval: (query) => {
+      const data = query.state.data as any;
+      // Si no hay datos, reintenta rápido (2s)
+      if (!data) return 2000;
+      // Si está activa, refresca cada 3s para ver el progreso
+      if (data.status === "active" || data.id < 0) return 3000;
+      // Si ya terminó, no refresques más
+      return false;
+    },
   });
 }

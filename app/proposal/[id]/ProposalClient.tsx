@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { formatUnits } from "../../../lib/currencyUtils";
 import toast from "react-hot-toast";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 
@@ -58,37 +58,68 @@ export default function ProposalClient() {
 
   const id = params?.id;
   const proposalId = Number(id);
+  const searchParams = useSearchParams();
+  const txFromUrl = searchParams.get('tx');
 
   const { data: proposal, isLoading: isProposalLoading } = useProposal(proposalId);
-  const isPending = proposal && Number(proposal.id) < 0;
+  // Redirección basada en ID de URL (Negativo = Pendiente)
+  const isPending = proposalId < 0;
 
-  // Listen for confirmation if this is a pending proposal
+  // 1. Listener de Redirección (Realtime)
   useEffect(() => {
-    if (!isPending || !proposal?.tx_hash) return;
-
-    const txHash = proposal.tx_hash;
+    const txHash = (proposal?.tx_hash || txFromUrl)?.toLowerCase();
+    if (!isPending || !txHash) return;
 
     const channel = supabase
       .channel(`sync-${txHash}`)
-      .on(
-        "postgres_changes",
-        { 
-          event: "INSERT", 
-          schema: "public", 
-          table: "proposals", 
-          filter: `tx_hash=eq.${txHash}` 
-        },
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposals", filter: `tx_hash=eq.${txHash}` },
         (payload) => {
           if (Number(payload.new.id) > 0) {
             router.replace(`/proposal/${payload.new.id}`);
+            setTimeout(() => { if (window.location.pathname.includes(id as string)) window.location.href = `/proposal/${payload.new.id}`; }, 1500);
           }
         }
+      ).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isPending, proposal?.tx_hash, txFromUrl, router, id]);
+
+  // 2. Polling de Redirección (Fallback)
+  const lastKnownTxHash = useRef<string | null>(txFromUrl?.toLowerCase() || null);
+  const lastKnownMetadataUri = useRef<string | null>(null);
+  if (proposal?.tx_hash) lastKnownTxHash.current = proposal.tx_hash.toLowerCase();
+  if (proposal?.metadata_uri) lastKnownMetadataUri.current = proposal.metadata_uri;
+
+  useEffect(() => {
+    if (!isPending) return;
+    const checkInterval = setInterval(async () => {
+      const hash = lastKnownTxHash.current;
+      const uri = lastKnownMetadataUri.current;
+      if (!hash && !uri) return;
+      const { data } = await supabase.from("proposals").select("id").gt("id", 0).or(`tx_hash.eq.${hash},metadata_uri.eq.${uri}`).maybeSingle();
+      if (data?.id) {
+        router.replace(`/proposal/${data.id}`);
+        setTimeout(() => { if (window.location.pathname.includes(id as string)) window.location.href = `/proposal/${data.id}`; }, 1500);
+      }
+    }, 3000);
+    return () => clearInterval(checkInterval);
+  }, [isPending, id, router]);
+
+  // 3. Reactividad de Datos (Realtime para progreso en vivo)
+  useEffect(() => {
+    if (isPending || proposalId <= 0) return;
+    const channel = supabase
+      .channel(`live-data-${proposalId}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "proposals", filter: `id=eq.${proposalId}` },
+        () => { queryClient.invalidateQueries({ queryKey: proposalKeys.detail(proposalId) }); }
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "fundings", filter: `proposal_id=eq.${proposalId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ["fundings", proposalId] }); }
       )
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
-  }, [isPending, proposal?.tx_hash, router]);
+  }, [isPending, proposalId, queryClient]);
 
+  // Data & Metadata
   const metadata = useProposalMetadata(proposal?.metadataURI);
 
   const displayMetadata = useMemo(() => {
@@ -128,15 +159,15 @@ export default function ProposalClient() {
   }, [wallet.address, fundings]);
 
   const myContribution = useMemo(() => {
-    if (!wallet.address || !fundings.length || !proposal) return "0";
-    const decimals = (proposal as any).decimals || 18;
+    if (!wallet.address || !fundings || !proposal) return "0";
     const mine = fundings
-      .filter(
-        (f) => 
-          f.supporter?.toLowerCase() === wallet.address?.toLowerCase() &&
-          !f.withdrawn
+      .filter((f) => 
+        f.supporter.toLowerCase() === wallet.address?.toLowerCase() &&
+        !f.withdrawn
       )
-      .reduce((acc, f) => acc + BigInt(f.amount || 0), 0n);
+      .reduce((sum, f) => sum + BigInt(f.amount), 0n);
+    
+    const decimals = proposal.asset.decimals;
     return formatUnits(mine, decimals);
   }, [wallet.address, fundings, proposal]);
 
@@ -181,6 +212,37 @@ export default function ProposalClient() {
       supabase.removeChannel(channel);
     };
   }, [proposalId, queryClient]);
+
+  // Special listener for pending proposals to handle auto-redirect once synced
+  useEffect(() => {
+    if (!isPending || !proposal?.tx_hash) return;
+
+    const channel = supabase
+      .channel(`pending-sync-${proposalId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to all events for this tx_hash
+          schema: "public",
+          table: "proposals",
+          filter: `tx_hash=eq.${proposal.tx_hash}`,
+        },
+        (payload) => {
+          const newId = payload.new.id;
+          // If the ID changed from negative to positive, it's synced!
+          if (newId > 0) {
+            console.log("Proposal synced! Redirecting to permanent ID:", newId);
+            toast.success("¡Sincronización completada!");
+            router.push(`/proposal/${newId}`);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isPending, proposal?.tx_hash, proposalId, router]);
 
   async function handleFund() {
     if (!wallet.connected) {
