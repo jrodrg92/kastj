@@ -7,6 +7,8 @@ import type {
     FundProposalInput,
     ProposalEngine,
     ProposalEngineContext,
+    ProposalCommand,
+    VerificationResult,
     TxResult,
 } from "./proposal-engine.interface";
 import type { ProposalId, ProposalView } from "@/core/proposal/proposal.types";
@@ -75,8 +77,8 @@ export class ZkEvmProposalEngine implements ProposalEngine {
             parseUnits(input.goal, input.asset.decimals),
             parseUnits(input.minThreshold, input.asset.decimals),
             input.durationSeconds,
-            0, // Default to SettlementMode.DeadlineOnly
-            input.allowOverfunding ?? true,
+            0,      // SettlementMode.DeadlineOnly
+            input.allowOverfunding ?? false,
             input.metadataURI,
         );
 
@@ -205,22 +207,51 @@ export class ZkEvmProposalEngine implements ProposalEngine {
 
     /**
      * Real integrity check: compares local (Supabase) state with on-chain truth.
+     * Returns a detailed result with the specific checks performed.
      */
-    async verifyProposal(proposal: ProposalView, provider?: any): Promise<boolean> {
+    async verifyProposal(proposal: ProposalView, provider?: any): Promise<VerificationResult> {
+        const timestamp = Date.now();
         try {
             const onChain = await this.getProposal(proposal.id, provider);
             
-            // Check core fields for integrity using bigint comparisons
-            const sameGoal = BigInt(onChain.goal.raw) === BigInt(proposal.goal.raw);
-            const sameRaised = BigInt(onChain.totalRaised.raw) === BigInt(proposal.totalRaised.raw);
-            const sameStatus = onChain.status === proposal.status;
-            const sameRecipient = onChain.recipient.toLowerCase() === proposal.recipient.toLowerCase();
-            const sameCreator = onChain.creator.toLowerCase() === proposal.creator.toLowerCase();
+            const checks: string[] = [];
+            
+            // 1. Goal Integrity
+            if (BigInt(onChain.goal.raw) === BigInt(proposal.goal.raw)) {
+                checks.push("Goal amount matches on-chain state");
+            } else {
+                return { status: "failed", reason: `Goal mismatch: local=${proposal.goal.value}, on-chain=${onChain.goal.value}`, timestamp };
+            }
 
-            return sameGoal && sameRaised && sameStatus && sameRecipient && sameCreator;
-        } catch (e) {
+            // 2. Raised Integrity
+            if (BigInt(onChain.totalRaised.raw) === BigInt(proposal.totalRaised.raw)) {
+                checks.push("Total raised matches on-chain state");
+            } else {
+                return { status: "failed", reason: `Raised amount mismatch: local=${proposal.totalRaised.value}, on-chain=${onChain.totalRaised.value}`, timestamp };
+            }
+
+            // 3. Status Integrity
+            if (onChain.status === proposal.status) {
+                checks.push(`Status matches on-chain state (${onChain.status})`);
+            } else {
+                return { status: "failed", reason: `Status mismatch: local=${proposal.status}, on-chain=${onChain.status}`, timestamp };
+            }
+
+            // 4. Recipient Integrity
+            if (onChain.recipient.toLowerCase() === proposal.recipient.toLowerCase()) {
+                checks.push("Recipient address matches on-chain state");
+            } else {
+                return { status: "failed", reason: "Recipient address mismatch", timestamp };
+            }
+
+            return { 
+                status: "verified", 
+                checks,
+                timestamp 
+            };
+        } catch (e: any) {
             console.error("Verification failed:", e);
-            return false;
+            return { status: "failed", reason: `On-chain query failed: ${e.message}`, timestamp };
         }
     }
 }

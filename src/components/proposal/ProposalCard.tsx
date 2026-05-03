@@ -72,9 +72,10 @@ export function ProposalCard({
         : { label: statusLabel(p.status, t), color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/20", dot: "bg-rose-400" };
 
   return (
-    <div className="group relative flex h-full flex-col rounded-[2rem] border border-white/[0.05] bg-gradient-to-b from-card/60 to-card/20 p-6 backdrop-blur-xl transition-all duration-500 hover:border-cyan-500/30 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-      {/* Decorative glow */}
-      <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-cyan-500/5 blur-2xl transition-opacity duration-500 group-hover:opacity-100 opacity-0" />
+    <div className={`group relative flex h-full flex-col rounded-[2.5rem] border border-white/[0.05] bg-gradient-to-b from-card/60 to-card/20 p-6 backdrop-blur-xl transition-all duration-500 hover:border-cyan-500/40 hover:shadow-[0_32px_80px_rgba(0,0,0,0.6)] ${p.status === 'active' ? 'animate-shimmer' : ''}`}>
+      {/* Dynamic glow effect */}
+      <div className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-gradient-to-tr from-cyan-500/[0.03] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+      <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-cyan-500/10 blur-[80px] transition-opacity duration-700 group-hover:opacity-100 opacity-0" />
 
       {/* ─── Header ─── */}
       <div className="flex items-start justify-between gap-4">
@@ -92,7 +93,7 @@ export function ProposalCard({
           </div>
         </div>
         
-        <div className={`flex items-center gap-2 rounded-full border ${statusConfig.border} ${statusConfig.bg} px-3 py-1`}>
+        <div className={`flex items-center gap-2 rounded-full border ${statusConfig.border} ${statusConfig.bg} px-3 py-1 transition-all group-hover:scale-105`}>
            <div className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot} shadow-[0_0_8px_currentColor]`} />
            <span className={`text-[9px] font-black uppercase tracking-widest ${statusConfig.color}`}>
              {statusConfig.label}
@@ -106,7 +107,7 @@ export function ProposalCard({
       </p>
 
       {/* ─── Identity (Single Line) ─── */}
-      <div className="mt-5 flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2 transition-colors group-hover:bg-white/[0.04]">
+      <div className="mt-5 flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2 transition-all duration-300 group-hover:bg-white/[0.06] group-hover:border-white/10">
         <div className="flex flex-col">
           <span className="text-[7px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">Creator</span>
           <span className="font-mono text-[9px] font-bold text-foreground/70">{short(p.creator)}</span>
@@ -124,12 +125,12 @@ export function ProposalCard({
           <div className="space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">{t.raisedLabel}</p>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-black tracking-tighter text-foreground">{p.totalRaised.value}</span>
+              <span className="text-xl font-black tracking-tighter text-foreground group-hover:text-cyan-400 transition-colors">{p.totalRaised.value}</span>
               <span className="text-[10px] font-bold text-muted-foreground/30">/ {p.goal.value} {NETWORK.currency}</span>
             </div>
           </div>
           <div className="text-right">
-            <span className={`text-sm font-black tracking-tighter ${percent >= thresholdPercent ? "text-cyan-400" : "text-amber-400"}`}>
+            <span className={`text-sm font-black tracking-tighter transition-all group-hover:scale-110 ${percent >= thresholdPercent ? "text-cyan-400" : "text-amber-400"}`}>
               {percent.toFixed(0)}%
             </span>
           </div>
@@ -150,11 +151,11 @@ export function ProposalCard({
       {/* ─── Metadata Footer ─── */}
       <div className="mt-auto pt-6">
         <div className="flex items-center justify-between border-t border-white/[0.04] pt-5">
-          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 transition-colors group-hover:text-muted-foreground">
             <Clock size={12} className="text-cyan-500/50" />
             <span className="text-foreground/70">{mounted ? formatRemainingTime(p.deadline) : "--"}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 transition-colors group-hover:text-muted-foreground">
             <Users size={12} className="text-cyan-500/50" />
             <span className="text-foreground/70">{percent.toFixed(0)}% Cap</span>
           </div>
@@ -164,7 +165,7 @@ export function ProposalCard({
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Link
             href={`/proposal/${p.id}`}
-            className="premium-btn flex h-11 items-center justify-center rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-cyan-500/20"
+            className="premium-btn flex h-11 items-center justify-center rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-cyan-500/20 active:scale-95"
           >
             {t.showDetail}
           </Link>
@@ -173,8 +174,9 @@ export function ProposalCard({
             <button
               disabled={!connected || loading}
               onClick={() => onFund(p.id)}
-              className="flex h-11 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.02] text-[10px] font-black uppercase tracking-widest text-foreground transition-all hover:bg-white/[0.05] disabled:opacity-40"
+              className="group/btn relative flex h-11 items-center justify-center overflow-hidden rounded-xl border border-white/[0.1] bg-white/[0.02] text-[10px] font-black uppercase tracking-widest text-foreground transition-all hover:bg-white/[0.05] hover:border-white/20 active:scale-95 disabled:opacity-40"
             >
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-1000 group-hover/btn:translate-x-full" />
               {loading ? <Loader2 size={14} className="animate-spin" /> : `${t.supp} ${fundAmount}`}
             </button>
           )}

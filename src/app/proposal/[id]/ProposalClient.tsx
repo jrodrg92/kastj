@@ -58,7 +58,7 @@ export default function ProposalClient() {
   const fundMutation = useFundProposal(ctx);
   const finalizeMutation = useFinalizeProposal(ctx);
   const withdrawMutation = useWithdrawProposal(ctx);
-  const { verify, isVerifying, isVerified } = useVerifyProposal(ctx);
+  const { verify, isVerifying, isVerified, result } = useVerifyProposal(ctx);
 
   const isMutating = fundMutation.isPending || finalizeMutation.isPending || withdrawMutation.isPending;
 
@@ -167,6 +167,7 @@ export default function ProposalClient() {
                     onVerify={() => verify(proposal)}
                     isVerifying={isVerifying}
                     isVerified={isVerified}
+                    result={result}
                     t={t}
                   />
 

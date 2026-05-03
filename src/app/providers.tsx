@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Toaster } from "react-hot-toast";
 import { UiProvider } from "../contexts/UiContext";
 import { WalletProvider } from "../contexts/WalletContext";
+import { TransactionOverlay } from "../components/ui/TransactionOverlay";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -26,6 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <UiProvider>
         <WalletProvider>
           {children}
+          <TransactionOverlay />
           <Toaster 
             position="top-right" 
             toastOptions={{

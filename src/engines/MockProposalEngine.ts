@@ -5,6 +5,7 @@ import type {
     ProposalEngine,
     ProposalEngineContext,
     ProposalCommand,
+    VerificationResult,
     TxResult,
 } from "./proposal-engine.interface";
 import type { ProposalId, ProposalView } from "@/core/proposal/proposal.types";
@@ -150,7 +151,11 @@ export class MockProposalEngine implements ProposalEngine {
         return this.proposals;
     }
 
-    async verifyProposal(_proposal: ProposalView): Promise<boolean> {
-        return true;
+    async verifyProposal(_proposal: ProposalView): Promise<VerificationResult> {
+        return {
+            status: "verified",
+            checks: ["Mock verification always passes for internal testing"],
+            timestamp: Date.now()
+        };
     }
 }

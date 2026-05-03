@@ -1,40 +1,61 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import toast from "react-hot-toast";
-import { ProposalEngineContext } from "@/engines/proposal-engine.interface";
-import { ProposalId } from "@/core/proposal/proposal.types";
 import { getProposalEngine } from "@/engines/ProposalEngineFactory";
 import { proposalKeys } from "../queryKeys";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "../../../contexts/LanguageContext";
+import { useUi } from "../../../contexts/UiContext";
+import { fireConfetti } from "../../../lib/confetti";
+import { ProposalId } from "@/core/proposal/proposal.types";
+import { ProposalEngineContext } from "@/engines/proposal-engine.interface";
 
 export function useWithdrawProposal(ctx: ProposalEngineContext | null) {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
+  const { setTxStatus } = useUi();
 
   return useMutation({
     mutationFn: async (proposalId: ProposalId) => {
-      if (!ctx) {
-        throw new Error("Wallet not connected");
-      }
+      if (!ctx) throw new Error("Wallet not connected");
 
+      setTxStatus({ state: "signing", message: "Withdrawing your funds..." });
+      
       const engine = getProposalEngine();
-      return engine.submit(ctx, { type: "Withdraw", proposalId });
+      const result = await engine.submit(ctx, { 
+        type: "Withdraw", 
+        proposalId 
+      });
+
+      setTxStatus({ 
+        state: "processing", 
+        txHash: result.txId 
+      });
+
+      return result;
     },
     onSuccess: async (_result, proposalId) => {
-      toast.success(t.withdrawSuccess);
+      setTxStatus({ 
+        state: "success", 
+        txHash: _result.txId,
+        message: t.fundsWithdrawn || "Funds withdrawn successfully!" 
+      });
+      
+      fireConfetti();
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: proposalKeys.lists() }),
-        queryClient.invalidateQueries({
-          queryKey: proposalKeys.detail(proposalId),
-        }),
-      ]);
+      await queryClient.invalidateQueries({
+        queryKey: proposalKeys.detail(proposalId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: proposalKeys.lists(),
+      });
     },
     onError: (error: any) => {
-      if (error.code === "ACTION_REJECTED" || error.code === 4001) return;
+      if (error.code === "ACTION_REJECTED" || error.code === 4001) {
+        setTxStatus({ state: "idle" });
+        return;
+      }
       console.error(error);
-      toast.error(t.withdrawError);
+      setTxStatus({ state: "error", message: error.message || t.withdrawError });
     },
   });
 }

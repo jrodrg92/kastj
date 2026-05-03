@@ -4,53 +4,47 @@ import { useState } from "react";
 import { getProposalEngine } from "@/engines/ProposalEngineFactory";
 import { ProposalView } from "@/core/proposal/proposal.types";
 import { ProposalEngineContext } from "@/engines/proposal-engine.interface";
+import { VerificationResult } from "@/engines/proposal-engine.interface";
 import toast from "react-hot-toast";
 
 export function useVerifyProposal(ctx: ProposalEngineContext | null) {
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState<boolean | null>(null);
+  const [result, setResult] = useState<VerificationResult | null>(null);
 
-  const verify = async (proposal: any) => {
+  const verify = async (proposal: ProposalView) => {
     if (!ctx?.provider) {
       toast.error("Connect wallet or provider to verify on-chain");
       return;
     }
 
     setIsVerifying(true);
-    setIsVerified(null);
+    setResult(null);
 
     try {
       const engine = getProposalEngine();
-      // We map the API proposal back to a partial ProposalView for the engine
-      const view: ProposalView = {
-        id: proposal.id,
-        goal: { raw: proposal.goalRaw, value: proposal.goal, symbol: "KAS", decimals: 18 },
-        totalRaised: { raw: proposal.totalRaisedRaw, value: proposal.totalRaised, symbol: "KAS", decimals: 18 },
-        status: proposal.status === 0 ? "active" : proposal.status === 1 ? "succeeded" : "failed",
-        recipient: proposal.recipient,
-        creator: proposal.creator,
-        deadline: new Date(proposal.deadline * 1000),
-        asset: proposal.asset,
-        canFinalize: false,
-        canWithdraw: false
-      };
-
-      const isValid = await engine.verifyProposal(view, ctx.provider);
+      const res = await engine.verifyProposal(proposal, ctx.provider);
       
-      setIsVerified(isValid);
+      setResult(res);
       
-      if (isValid) {
-        toast.success("On-chain verification successful! Data matches.");
+      if (res.status === "verified") {
+        toast.success("On-chain verification successful! Integrity confirmed.");
+      } else if (res.status === "failed") {
+        toast.error(`VERIFICATION FAILED: ${res.reason}`);
       } else {
-        toast.error("ON-CHAIN DATA MISMATCH! Verification failed.");
+        toast.error("Verification not supported for this engine.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Verification error:", error);
-      toast.error("Failed to fetch on-chain data for verification");
+      toast.error(`Verification error: ${error.message}`);
     } finally {
       setIsVerifying(false);
     }
   };
 
-  return { verify, isVerifying, isVerified };
+  return { 
+    verify, 
+    isVerifying, 
+    result,
+    isVerified: result?.status === "verified"
+  };
 }

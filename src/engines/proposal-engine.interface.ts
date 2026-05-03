@@ -54,27 +54,21 @@ export type ProposalCommand =
 
 // ─── Engine interface ───
 
+export type VerificationResult =
+  | { status: "verified"; checks: string[]; timestamp: number }
+  | { status: "failed"; reason: string; timestamp: number }
+  | { status: "unsupported"; reason: string };
+
 export interface ProposalEngine {
     readonly kind: ChainKind;
 
     /**
      * Submits a command for execution. 
-     * In ZkEVM, this maps to a contract transaction.
-     * In vProgs, this might build a proof or submit a commitment.
      */
     submit(
         ctx: ProposalEngineContext,
         command: ProposalCommand,
     ): Promise<TxResult>;
-
-    /**
-     * Verification results for a proposal.
-     */
-    verify?(proposalId: ProposalId): Promise<{
-        commitment: string;
-        proof?: string;
-        valid: boolean;
-    }>;
 
     // --- Data Access (Read Model) ---
 
@@ -84,9 +78,9 @@ export interface ProposalEngine {
 
     /**
      * Verifies the integrity of a proposal's escrow (vProg/Contract).
-     * Returns true if the on-chain logic matches the expected rules.
+     * Compares local state with on-chain source of truth.
      */
-    verifyProposal(proposal: ProposalView, provider?: any): Promise<boolean>;
+    verifyProposal(proposal: ProposalView, provider?: any): Promise<VerificationResult>;
 
     // --- Legacy methods (for transition) ---
 

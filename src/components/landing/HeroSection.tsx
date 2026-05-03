@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { NETWORK } from "../../lib/network";
+import { motion } from "framer-motion";
 
 export function HeroSection() {
   const { t } = useLanguage();
@@ -16,7 +17,12 @@ export function HeroSection() {
 
       <div className="relative z-10 flex flex-col items-center gap-12 lg:flex-row lg:items-center lg:gap-16">
         {/* ─── Left: Copy ─── */}
-        <div className="flex flex-1 flex-col items-center text-center lg:items-start lg:text-left">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="flex flex-1 flex-col items-center text-center lg:items-start lg:text-left"
+        >
           {/* Badge */}
           <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/[0.08] px-4 py-1.5 text-xs font-semibold tracking-wide text-cyan-400">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.6)]" />
@@ -37,23 +43,33 @@ export function HeroSection() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/proposals/create"
-              className="premium-btn rounded-full px-7 py-3 text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="premium-btn rounded-full px-7 py-3 text-sm font-bold transition-all hover:scale-[1.05] active:scale-[0.95]"
             >
               {t.createProposal}
             </Link>
             <Link
               href="/proposals"
-              className="rounded-full border border-border bg-background/50 px-7 py-3 text-sm font-semibold text-foreground backdrop-blur-sm transition-all hover:border-cyan-500/30 hover:bg-cyan-500/[0.04] active:scale-[0.98]"
+              className="rounded-full border border-border bg-background/50 px-7 py-3 text-sm font-semibold text-foreground backdrop-blur-sm transition-all hover:border-cyan-500/30 hover:bg-cyan-500/[0.04] active:scale-[0.95]"
             >
               {t.exploreProposals}
             </Link>
           </div>
-        </div>
+        </motion.div>
 
         {/* ─── Right: Mockup Card ─── */}
-        <div className="w-full max-w-md flex-shrink-0 lg:w-[420px]">
-          <HeroMockupCard />
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9, rotateY: 20 }}
+          animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+          transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+          className="w-full max-w-md flex-shrink-0 lg:w-[420px]"
+        >
+          <motion.div
+            animate={{ y: [0, -10, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <HeroMockupCard />
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );

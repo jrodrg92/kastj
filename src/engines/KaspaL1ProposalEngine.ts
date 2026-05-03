@@ -3,10 +3,11 @@ import type {
     FundProposalInput,
     ProposalEngine,
     ProposalEngineContext,
-    ProposalId,
-    ProposalView,
+    ProposalCommand,
+    VerificationResult,
     TxResult,
-} from "./types";
+} from "./proposal-engine.interface";
+import type { ProposalId, ProposalView } from "@/core/proposal/proposal.types";
 import { parseUnits } from "@/lib/currencyUtils";
 import type { UTXO, UTXOTransactionBuilder } from "./utxo";
 import { VProgVerifier } from "@/core/proposal/commitment/Verifier";
@@ -168,16 +169,35 @@ export class KaspaL1ProposalEngine implements ProposalEngine {
         );
     }
 
-    async verifyProposal(proposal: ProposalView): Promise<boolean> {
+    async verifyProposal(proposal: ProposalView): Promise<VerificationResult> {
+        const timestamp = Date.now();
         console.log(`Verifying Kaspa L1 vProg for proposal ${proposal.id}`);
         
-        const verifier = new VProgVerifier();
-        return verifier.verifyEscrowAddress(proposal.recipient, {
-            creator: proposal.creator,
-            recipient: proposal.recipient,
-            goal: BigInt(proposal.goal.value), // This is a simplification
-            threshold: BigInt(proposal.minThreshold.value),
-            deadline: Math.floor(proposal.deadline.getTime() / 1000),
-        });
+        try {
+            const verifier = new VProgVerifier();
+            const isValid = verifier.verifyEscrowAddress(proposal.recipient, {
+                creator: proposal.creator,
+                recipient: proposal.recipient,
+                goal: BigInt(proposal.goal.raw),
+                threshold: BigInt(proposal.minThreshold.raw),
+                deadline: Math.floor(proposal.deadline / 1000),
+            });
+
+            if (isValid) {
+                return {
+                    status: "verified",
+                    checks: ["Escrow script matches proposal parameters", "Deterministic address verification passed"],
+                    timestamp
+                };
+            } else {
+                return {
+                    status: "failed",
+                    reason: "Escrow address does not match derived script from parameters",
+                    timestamp
+                };
+            }
+        } catch (e: any) {
+            return { status: "failed", reason: `Verification error: ${e.message}`, timestamp };
+        }
     }
 }

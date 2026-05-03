@@ -6,12 +6,21 @@ import { type Lang, translations } from "../lib/i18n";
 type Theme = "light" | "dark";
 type TranslationKeys = (typeof translations)["en"];
 
+export type TransactionStatus = 
+  | { state: "idle" }
+  | { state: "signing"; message?: string }
+  | { state: "processing"; txHash?: string }
+  | { state: "success"; txHash: string; message?: string }
+  | { state: "error"; message: string };
+
 interface UiContextValue {
   lang: Lang;
   setLang: (lang: Lang) => void;
   theme: Theme;
   toggleTheme: () => void;
   t: TranslationKeys;
+  txStatus: TransactionStatus;
+  setTxStatus: (status: TransactionStatus) => void;
 }
 
 const UiContext = createContext<UiContextValue | null>(null);
@@ -19,6 +28,7 @@ const UiContext = createContext<UiContextValue | null>(null);
 export function UiProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
   const [theme, setThemeState] = useState<Theme>("dark");
+  const [txStatus, setTxStatus] = useState<TransactionStatus>({ state: "idle" });
 
   useEffect(() => {
     // Load saved preferences
@@ -58,6 +68,8 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
         theme,
         toggleTheme,
         t: translations[lang],
+        txStatus,
+        setTxStatus,
       }}
     >
       {children}
