@@ -62,6 +62,12 @@
       },
       {
         "indexed": false,
+        "internalType": "enum ProposalManager.SettlementMode",
+        "name": "settlementMode",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
         "internalType": "string",
         "name": "metadataURI",
         "type": "string"
@@ -158,6 +164,11 @@
         "internalType": "uint256",
         "name": "durationSeconds",
         "type": "uint256"
+      },
+      {
+        "internalType": "enum ProposalManager.SettlementMode",
+        "name": "settlementMode",
+        "type": "uint8"
       },
       {
         "internalType": "string",
@@ -278,6 +289,11 @@
             "type": "uint8"
           },
           {
+            "internalType": "enum ProposalManager.SettlementMode",
+            "name": "settlementMode",
+            "type": "uint8"
+          },
+          {
             "internalType": "bool",
             "name": "finalized",
             "type": "bool"
@@ -375,6 +391,11 @@
       {
         "internalType": "enum ProposalManager.ProposalStatus",
         "name": "status",
+        "type": "uint8"
+      },
+      {
+        "internalType": "enum ProposalManager.SettlementMode",
+        "name": "settlementMode",
         "type": "uint8"
       },
       {

@@ -36,8 +36,8 @@ describe("Kastj Escrow", function () {
     it("releases funds with 5% creator reward and 2% platform fee", async () => {
         const { creator, recipient, supporter, treasuryContract, manager } = await deployFixture();
 
-        const goal = ethers.parseEther("100");
-        const amount = ethers.parseEther("100");
+        const goal = ethers.parseUnits("100", 18);
+        const amount = ethers.parseUnits("100", 18);
 
         await manager
             .connect(creator)
@@ -47,6 +47,7 @@ describe("Kastj Escrow", function () {
                 goal,
                 goal,
                 3600,
+                0, // DeadlineOnly
                 "ipfs://proposal-1",
             );
 
@@ -57,25 +58,28 @@ describe("Kastj Escrow", function () {
         const recipientBefore = await ethers.provider.getBalance(recipient.address);
         const creatorBefore = await ethers.provider.getBalance(creator.address);
 
+        await ethers.provider.send("evm_increaseTime", [3601]);
+        await ethers.provider.send("evm_mine", []);
+
         await manager.finalizeProposal(1);
 
         const recipientAfter = await ethers.provider.getBalance(recipient.address);
         const creatorAfter = await ethers.provider.getBalance(creator.address);
 
-        expect(recipientAfter - recipientBefore).to.equal(ethers.parseEther("93"));
-        expect(creatorAfter - creatorBefore).to.equal(ethers.parseEther("5"));
+        expect(recipientAfter - recipientBefore).to.equal(ethers.parseUnits("93", 18));
+        expect(creatorAfter - creatorBefore).to.equal(ethers.parseUnits("5", 18));
 
         expect(await ethers.provider.getBalance(await treasuryContract.getAddress())).to.equal(
-            ethers.parseEther("2"),
+            ethers.parseUnits("2", 18),
         );
     });
 
     it("allows refund when proposal fails", async () => {
         const { creator, recipient, supporter, manager, vault } = await deployFixture();
 
-        const goal = ethers.parseEther("100");
-        const threshold = ethers.parseEther("100");
-        const contribution = ethers.parseEther("10");
+        const goal = ethers.parseUnits("100", 18);
+        const threshold = ethers.parseUnits("100", 18);
+        const contribution = ethers.parseUnits("10", 18);
 
         await manager
             .connect(creator)
@@ -85,6 +89,7 @@ describe("Kastj Escrow", function () {
                 goal,
                 threshold,
                 3600,
+                0, // DeadlineOnly
                 "ipfs://proposal-2",
             );
 
@@ -111,9 +116,9 @@ describe("Kastj Escrow", function () {
     it("prevents double withdraw", async () => {
         const { creator, recipient, supporter, manager, vault } = await deployFixture();
 
-        const goal = ethers.parseEther("100");
-        const threshold = ethers.parseEther("100");
-        const contribution = ethers.parseEther("10");
+        const goal = ethers.parseUnits("100", 18);
+        const threshold = ethers.parseUnits("100", 18);
+        const contribution = ethers.parseUnits("10", 18);
 
         await manager
             .connect(creator)
@@ -123,6 +128,7 @@ describe("Kastj Escrow", function () {
                 goal,
                 threshold,
                 3600,
+                0, // DeadlineOnly
                 "ipfs://proposal-3",
             );
 

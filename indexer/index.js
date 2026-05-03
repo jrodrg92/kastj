@@ -58,6 +58,16 @@ function parseMetadata(uri) {
   }
 }
 
+async function fetchTokenDecimals(tokenAddress) {
+  if (!tokenAddress || tokenAddress === ZERO_ADDRESS) return 18;
+  try {
+    const token = new ethers.Contract(tokenAddress, ["function decimals() view returns (uint8)"], provider);
+    return await token.decimals();
+  } catch {
+    return 18; // Fallback
+  }
+}
+
 async function saveActivity({ type, proposalId, actor, amount, message }) {
   const { error } = await supabase.from("activity").insert({
     type,
@@ -74,6 +84,7 @@ async function saveActivity({ type, proposalId, actor, amount, message }) {
 async function saveProposalFromChain(proposalId) {
   const p = await contract.getProposal(proposalId);
   const metadata = parseMetadata(p.metadataURI);
+  const decimals = await fetchTokenDecimals(p.token);
 
   await supabase.from("proposal_metadata").upsert({
     proposal_id: Number(p.id),
@@ -87,11 +98,13 @@ async function saveProposalFromChain(proposalId) {
     creator: p.creator,
     recipient: p.recipient,
     token: p.token,
+    decimals: decimals,
     goal: p.goalAmount.toString(),
     min_threshold: p.minThreshold.toString(),
     deadline: Number(p.deadline),
     total_raised: p.totalRaised.toString(),
     status: statusToText(p.status),
+    settlement_mode: Number(p.settlementMode),
     success: Number(p.status) === 1 ? true : Number(p.status) === 2 ? false : null,
     metadata_uri: p.metadataURI,
     title: metadata.title,
@@ -126,10 +139,12 @@ async function handleProposalCreated(event) {
     goalAmount,
     minThreshold,
     deadline,
+    settlementMode,
     metadataURI,
   } = event.args;
 
   const metadata = parseMetadata(metadataURI);
+  const decimals = await fetchTokenDecimals(token);
 
   await supabase.from("proposal_metadata").upsert({
     proposal_id: Number(proposalId),
@@ -143,11 +158,13 @@ async function handleProposalCreated(event) {
     creator,
     recipient,
     token,
+    decimals: decimals,
     goal: goalAmount.toString(),
     min_threshold: minThreshold.toString(),
     deadline: Number(deadline),
     total_raised: "0",
     status: "active",
+    settlement_mode: Number(settlementMode),
     success: null,
     metadata_uri: metadataURI,
     title: metadata.title,

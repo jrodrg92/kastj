@@ -12,13 +12,16 @@ type Proposal = {
   creator: string;
   recipient: string;
   goal: string;
+  goalRaw: string;
   minThreshold: string;
-  deadline: number;
+  minThresholdRaw: string;
   totalRaised: string;
+  totalRaisedRaw: string;
+  deadline: number;
   status: number;
   executed?: boolean;
   metadataURI?: string | null;
-  asset?: { type: "native" } | { type: "krc20"; tokenAddress: `0x${string}` };
+  asset?: { type: "native"; symbol: "KAS"; decimals: number } | { type: "krc20"; tokenAddress: `0x${string}`; symbol: string; decimals: number };
 };
 
 type Props = {
@@ -55,18 +58,22 @@ export function ProposalCard({
   const p = proposal;
   const metadata = useProposalMetadata(p.metadataURI);
 
+  const goalRaw = BigInt(p.goalRaw || "0");
+  const raisedRaw = BigInt(p.totalRaisedRaw || "0");
+  const thresholdRaw = BigInt(p.minThresholdRaw || "0");
+
   const percent =
-    Number(p.goal) > 0
-      ? Math.min((Number(p.totalRaised) / Number(p.goal)) * 100, 100)
+    goalRaw > 0n
+      ? Number((raisedRaw * 100n) / goalRaw)
       : 0;
 
   const thresholdPercent =
-    Number(p.goal) > 0
-      ? Math.min((Number(p.minThreshold) / Number(p.goal)) * 100, 100)
+    goalRaw > 0n
+      ? Number((thresholdRaw * 100n) / goalRaw)
       : 0;
 
   const isExpired = hasExpired(p.deadline);
-  const isOverfunded = Number(p.totalRaised) > Number(p.goal);
+  const isOverfunded = raisedRaw > goalRaw;
 
   const canFund = connected && !loading && p.status === 0 && !isExpired;
   const canFinalize = connected && !loading && !p.executed && isExpired;
@@ -156,7 +163,7 @@ export function ProposalCard({
           <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
             <Clock size={12} className="text-cyan-500/50" />
             {isExpired ? (
-              <span className="text-rose-400/70">Expired</span>
+              <span className="text-rose-400/70">{t.expired}</span>
             ) : (
               <span className="text-foreground/70">{mounted ? formatRemainingTime(p.deadline) : "--"}</span>
             )}

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { parseEther } from "ethers";
 import { calculateMinThreshold } from "../core/domain/ThresholdRules";
+import { parseUnits } from "./currencyUtils";
 
 export const createProposalSchema = z.object({
     title: z
@@ -16,25 +16,35 @@ export const createProposalSchema = z.object({
         .regex(/^0x[a-fA-F0-9]{40}$/, "invalidRecipient"),
     goal: z
         .string()
-        .refine((v) => Number(v) > 0, "invalidGoal"),
+        .refine((v) => {
+            try {
+                return BigInt(v) > 0n || Number(v) > 0;
+            } catch { return false; }
+        }, "invalidGoal"),
     minThreshold: z.string(),
     duration: z
         .string()
-        .refine((v) => Number(v) >= 60, "durationTooShort"),
+        .refine((v) => {
+            try {
+                return Number(v) >= 60;
+            } catch { return false; }
+        }, "durationTooShort"),
 }).refine(
     (data) => {
         try {
-            const thresholdNum = Number(data.minThreshold);
-            const goalNum = Number(data.goal);
+            const g = data.goal;
+            const t = data.minThreshold;
 
-            if (thresholdNum <= 0 || thresholdNum > goalNum) return false;
+            if (Number(t) <= 0 || Number(t) > Number(g)) return false;
 
-            const goalWei = parseEther(data.goal);
+            const decimals = 18; 
+            const goalAtomic = parseUnits(g, decimals);
             const durationSecs = Number(data.duration);
-            const minAllowedWei = calculateMinThreshold(goalWei, durationSecs);
-            const thresholdWei = parseEther(data.minThreshold);
+            const minAllowedAtomic = calculateMinThreshold(goalAtomic, durationSecs, decimals);
+            
+            const thresholdAtomic = parseUnits(t, decimals);
 
-            return thresholdWei >= minAllowedWei;
+            return thresholdAtomic >= minAllowedAtomic;
         } catch {
             return false;
         }

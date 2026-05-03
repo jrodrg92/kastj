@@ -38,7 +38,7 @@ export function ExplorerClient() {
   const { ctx } = useProposalEngine(wallet.address, wallet.signer);
   const { t } = useLanguage();
   const proposalsQuery = useInfiniteProposals();
-  
+
   const proposals = useMemo(
     () => proposalsQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [proposalsQuery.data],
@@ -93,7 +93,13 @@ export function ExplorerClient() {
         return metadataText(proposal.metadataURI).includes(normalizedSearch);
       })
       .sort((a, b) => {
-        if (sort === "raised") return Number(b.totalRaised) - Number(a.totalRaised);
+        if (sort === "raised") {
+            const valA = BigInt(a.totalRaisedRaw || "0");
+            const valB = BigInt(b.totalRaisedRaw || "0");
+            if (valA < valB) return 1;
+            if (valA > valB) return -1;
+            return 0;
+        }
         if (sort === "ending") return Number(a.deadline) - Number(b.deadline);
         return Number(b.id) - Number(a.id);
       });
@@ -120,21 +126,21 @@ export function ExplorerClient() {
     try {
       await fundMutation.mutateAsync({ proposalId: id, asset: proposal.asset, amount: fundAmount });
       await loadMySupportedProposals();
-    } catch (e) {}
+    } catch (e) { }
   }
 
   async function handleFinalize(id: number) {
     try {
       await finalizeMutation.mutateAsync(id);
       await loadMySupportedProposals();
-    } catch (e) {}
+    } catch (e) { }
   }
 
   async function handleWithdraw(id: number) {
     try {
       await withdrawMutation.mutateAsync(id);
       await loadMySupportedProposals();
-    } catch (e) {}
+    } catch (e) { }
   }
 
   return (
@@ -145,9 +151,9 @@ export function ExplorerClient() {
         <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
             <h1 className="text-4xl font-bold tracking-tight text-foreground">{t.exploreProposals}</h1>
-            <p className="text-muted-foreground">Discover active campaigns, support community ideas, or create your own proposal.</p>
+            <p className="text-muted-foreground">{t.exploreProposalsDesc}</p>
           </div>
-          
+
           <Link
             href="/proposals/create"
             className="premium-btn flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold shadow-lg shadow-cyan-500/10 transition-transform hover:scale-105 active:scale-95"
@@ -176,8 +182,8 @@ export function ExplorerClient() {
                 key={item.key}
                 onClick={() => setFilter(item.key as Filter)}
                 className={`px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all ${filter === item.key
-                    ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.05]"
+                  ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/[0.05]"
                   }`}
               >
                 {item.label}
@@ -251,7 +257,7 @@ export function ExplorerClient() {
           )}
 
           <div ref={loadMoreRef} className="py-12 flex justify-center">
-             {proposalsQuery.isFetchingNextPage && <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-500/20 border-t-cyan-500" />}
+            {proposalsQuery.isFetchingNextPage && <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-500/20 border-t-cyan-500" />}
           </div>
         </section>
       </main>

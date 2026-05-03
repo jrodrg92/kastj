@@ -1,7 +1,7 @@
 import { ProposalView } from "@/core/engines/types";
 
 export function hasReachedThreshold(proposal: ProposalView): boolean {
-    return Number(proposal.totalRaised.value) >= Number(proposal.minThreshold.value);
+    return BigInt(proposal.totalRaised.raw) >= BigInt(proposal.minThreshold.raw);
 }
 
 export function hasExpired(proposal: ProposalView, now = new Date()): boolean {

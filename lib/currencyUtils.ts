@@ -4,22 +4,32 @@
  */
 
 export const DECIMALS = {
-  KAS: 8,
+  KAS: 18, // 18 decimals on Kasplex ZK-EVM (EVM Standard)
+  KAS_L1: 8, // 8 decimals on Kaspa L1
   ETH: 18,
   USDT: 6,
 };
 
 /**
  * Parses a human-readable decimal string to a BigInt representation.
+ * Handles decimals correctly based on the provided decimal count.
  * Example: parseUnits("1.5", 8) -> 150,000,000n
  */
 export function parseUnits(value: string, decimals: number): bigint {
-  if (!value || isNaN(Number(value))) return 0n;
+  if (!value) return 0n;
   
-  const [integer, fraction = ""] = value.split(".");
+  // Clean string and handle negative sign
+  const cleanValue = value.trim();
+  if (cleanValue === "" || cleanValue === ".") return 0n;
+
+  const isNegative = cleanValue.startsWith("-");
+  const absoluteValue = isNegative ? cleanValue.slice(1) : cleanValue;
+
+  const [integer, fraction = ""] = absoluteValue.split(".");
   const normalizedFraction = fraction.padEnd(decimals, "0").slice(0, decimals);
   
-  return BigInt(integer + normalizedFraction);
+  const result = BigInt(integer + normalizedFraction);
+  return isNegative ? -result : result;
 }
 
 /**
@@ -28,13 +38,20 @@ export function parseUnits(value: string, decimals: number): bigint {
  */
 export function formatUnits(value: bigint | string | number, decimals: number): string {
   const bigValue = BigInt(value);
-  const s = bigValue.toString().padStart(decimals + 1, "0");
+  const isNegative = bigValue < 0n;
+  const absoluteValue = isNegative ? -bigValue : bigValue;
+  
+  const s = absoluteValue.toString().padStart(decimals + 1, "0");
   const pos = s.length - decimals;
-  const result = `${s.slice(0, pos)}.${s.slice(pos)}`.replace(/\.?0+$/, "");
-  return result.endsWith(".") ? result.slice(0, -1) : result;
+  let result = `${s.slice(0, pos)}.${s.slice(pos)}`.replace(/\.?0+$/, "");
+  
+  if (result.endsWith(".")) result = result.slice(0, -1);
+  if (result === ".0" || result === "0") result = "0";
+  
+  return isNegative && result !== "0" ? `-${result}` : result;
 }
 
-/** Legacy-style helpers for quick replacement */
+/** Specific helpers */
 export function parseKAS(value: string): bigint {
   return parseUnits(value, DECIMALS.KAS);
 }
@@ -43,10 +60,5 @@ export function formatKAS(value: bigint | string | number): string {
   return formatUnits(value, DECIMALS.KAS);
 }
 
-export function parseEther(value: string): bigint {
-  return parseUnits(value, DECIMALS.ETH);
-}
-
-export function formatEther(value: bigint | string | number): string {
-  return formatUnits(value, DECIMALS.ETH);
-}
+// NOTE: formatEther/parseEther removed to prevent accidental usage with wrong decimals.
+// Use parseUnits(val, 18) for ETH or explicit decimals for other tokens.

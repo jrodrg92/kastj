@@ -7,13 +7,14 @@ export type ProposalId = string | number;
 export type Address = `0x${string}`;
 
 export type ProposalAsset =
-    | { type: "native" }
-    | { type: "krc20"; tokenAddress: Address };
+    | { type: "native"; symbol: "KAS"; decimals: number }
+    | { type: "krc20"; tokenAddress: Address; symbol: string; decimals: number };
 
 export type ProposalStatus = "active" | "succeeded" | "failed";
 
 export interface ProposalAmount {
     value: string; // human-readable decimal: "1.5"
+    raw: string;   // raw integer value as string (e.g. "150000000")
     symbol: string; // "KAS"
     decimals: number;
 }

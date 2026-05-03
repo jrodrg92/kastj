@@ -1,4 +1,4 @@
-import { Contract, JsonRpcSigner, parseEther, ZeroAddress } from "ethers";
+import { Contract, JsonRpcSigner, parseUnits, ZeroAddress } from "ethers";
 import { CONTRACTS } from "../../lib/contracts";
 import ProposalManagerAbi from "../../abis/ProposalManager.json";
 import EscrowVaultAbi from "../../abis/EscrowVault.json";
@@ -49,9 +49,10 @@ export class ZkEvmProposalEngine implements ProposalEngine {
         const tx = await manager.createProposal(
             input.recipient,
             token,
-            parseEther(input.goal),
-            parseEther(input.minThreshold),
+            parseUnits(input.goal, input.asset.decimals),
+            parseUnits(input.minThreshold, input.asset.decimals),
             input.durationSeconds,
+            0, // Default to SettlementMode.DeadlineOnly
             input.metadataURI,
         );
 
@@ -65,7 +66,7 @@ export class ZkEvmProposalEngine implements ProposalEngine {
     ): Promise<TxResult> {
         const signer = this.getSigner(ctx);
         const manager = this.getManager(signer);
-        const amount = parseEther(input.amount);
+        const amount = parseUnits(input.amount, input.asset.decimals);
 
         if (input.asset.type === "native") {
             const tx = await manager.fundNative(input.proposalId, {

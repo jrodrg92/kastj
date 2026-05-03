@@ -1,4 +1,4 @@
-import { formatEther } from "../../lib/currencyUtils";
+import { formatUnits } from "../../lib/currencyUtils";
 import { supabase } from "../../lib/supabase";
 
 export const PAGE_SIZE = 12;
@@ -7,10 +7,14 @@ export interface ProposalListItem {
   id: number;
   creator: string;
   recipient: string;
-  asset: { type: "native" } | { type: "krc20"; tokenAddress: `0x${string}` };
+  asset: { type: "native"; symbol: "KAS"; decimals: number } | { type: "krc20"; tokenAddress: `0x${string}`; symbol: string; decimals: number };
   goal: string;
+  goalRaw: string;
   minThreshold: string;
+  minThresholdRaw: string;
   totalRaised: string;
+  totalRaisedRaw: string;
+  decimals: number;
   deadline: number;
   status: number;
   metadataURI: string | null;
@@ -25,23 +29,33 @@ function parseStatus(status: string | number) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapProposal(proposal: any): ProposalListItem {
+  const isNative = !proposal.token || proposal.token === "0x0000000000000000000000000000000000000000";
+  const decimals = proposal.decimals || (isNative ? 18 : 18);
+  const symbol = isNative ? "KAS" : (proposal.token_symbol || "TOKEN");
+
+  const goalRaw = proposal.goal || "0";
+  const minThresholdRaw = proposal.min_threshold || goalRaw;
+  const totalRaisedRaw = proposal.total_raised || "0";
+
   return {
     id: Number(proposal.id),
     creator: proposal.creator,
     recipient: proposal.recipient,
-    asset:
-      !proposal.token ||
-      proposal.token === "0x0000000000000000000000000000000000000000"
-        ? { type: "native" as const }
-        : {
-            type: "krc20" as const,
-            tokenAddress: proposal.token as `0x${string}`,
-          },
-    goal: formatEther(BigInt(proposal.goal ?? 0)),
-    minThreshold: formatEther(
-      BigInt(proposal.min_threshold ?? proposal.goal ?? 0),
-    ),
-    totalRaised: formatEther(BigInt(proposal.total_raised ?? 0)),
+    asset: isNative
+      ? { type: "native" as const, symbol: "KAS", decimals: 18 }
+      : {
+          type: "krc20" as const,
+          tokenAddress: proposal.token as `0x${string}`,
+          symbol: symbol,
+          decimals: decimals,
+        },
+    goal: formatUnits(goalRaw, decimals),
+    goalRaw,
+    minThreshold: formatUnits(minThresholdRaw, decimals),
+    minThresholdRaw,
+    totalRaised: formatUnits(totalRaisedRaw, decimals),
+    totalRaisedRaw,
+    decimals,
     deadline: Number(proposal.deadline),
     status: parseStatus(proposal.status),
     metadataURI: proposal.metadata_uri,
@@ -89,7 +103,7 @@ export async function fetchProposal(id: number) {
 export async function fetchStats() {
   const { data, error } = await supabase
     .from("proposals")
-    .select("status, total_raised");
+    .select("status, total_raised, token, decimals");
 
   if (error) {
     console.error(error);
@@ -100,7 +114,17 @@ export async function fetchStats() {
   const active = data.filter((p) => p.status === 0 || p.status === "active").length;
   const succeeded = data.filter((p) => p.status === 1 || p.status === "succeeded").length;
   const failed = data.filter((p) => p.status === 2 || p.status === "failed").length;
-  const raised = data.reduce((acc, p) => acc + Number(formatEther(BigInt(p.total_raised || 0))), 0);
+  
+  const raisedBig = data.reduce((acc, p) => {
+    const isNative = !p.token || p.token === "0x0000000000000000000000000000000000000000";
+    const decimals = p.decimals || (isNative ? 18 : 18);
+    // Since we are summing across different potential decimals, we convert to a common large decimal (e.g. 18) for the number representation
+    const val = BigInt(p.total_raised || 0);
+    const scaled = decimals < 18 ? val * (10n ** BigInt(18 - decimals)) : val / (10n ** BigInt(decimals - 18));
+    return acc + scaled;
+  }, 0n);
+
+  const raised = Number(formatUnits(raisedBig, 18));
 
   return { total, active, succeeded, failed, raised };
 }

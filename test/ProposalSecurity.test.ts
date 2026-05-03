@@ -61,9 +61,10 @@ describe("Kastj escrow security", function () {
             .createProposal(
                 recipient.address,
                 ethers.ZeroAddress,
-                ethers.parseEther(goal),
-                ethers.parseEther(threshold),
+                ethers.parseUnits(goal, 18),
+                ethers.parseUnits(threshold, 18),
                 duration,
+                0, // DeadlineOnly
                 "ipfs://proposal",
             );
 
@@ -266,9 +267,10 @@ describe("Kastj escrow security", function () {
                 manager.connect(creator).createProposal(
                     recipient.address,
                     ethers.ZeroAddress,
-                    ethers.parseEther("10"),
-                    ethers.parseEther("5"), // 50%
+                    ethers.parseUnits("10", 18),
+                    ethers.parseUnits("5", 18), // 50%
                     30 * 24 * 60 * 60,
+                    0, // DeadlineOnly
                     "ipfs://proposal"
                 )
             ).to.be.revertedWith("Threshold below auto-min");
@@ -281,9 +283,10 @@ describe("Kastj escrow security", function () {
             const tx1 = await manager.connect(creator).createProposal(
                 recipient.address,
                 ethers.ZeroAddress,
-                ethers.parseEther("10"),
-                ethers.parseEther("6.5"),
+                ethers.parseUnits("10", 18),
+                ethers.parseUnits("6.5", 18),
                 30 * 24 * 60 * 60,
+                0, // DeadlineOnly
                 "ipfs://proposal"
             );
             await tx1.wait();
@@ -292,9 +295,10 @@ describe("Kastj escrow security", function () {
             const tx2 = await manager.connect(creator).createProposal(
                 recipient.address,
                 ethers.ZeroAddress,
-                ethers.parseEther("10"),
-                ethers.parseEther("10"),
+                ethers.parseUnits("10", 18),
+                ethers.parseUnits("10", 18),
                 30 * 24 * 60 * 60,
+                0, // DeadlineOnly
                 "ipfs://proposal"
             );
             await tx2.wait();

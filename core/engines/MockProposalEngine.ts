@@ -1,3 +1,4 @@
+import { parseUnits, formatUnits } from "../../lib/currencyUtils";
 import type {
     CreateProposalInput,
     FundProposalInput,
@@ -18,6 +19,8 @@ export class MockProposalEngine implements ProposalEngine {
         input: CreateProposalInput,
     ): Promise<TxResult> {
         const id = this.proposals.length + 1;
+        const decimals = input.asset.decimals ?? 18;
+        const symbol = input.asset.symbol || (input.asset.type === "native" ? "KAS" : "TOKEN");
 
         this.proposals.unshift({
             id,
@@ -26,18 +29,21 @@ export class MockProposalEngine implements ProposalEngine {
             asset: input.asset,
             goal: {
                 value: input.goal,
-                decimals: 18,
-                symbol: "KAS",
+                raw: parseUnits(input.goal, decimals).toString(),
+                decimals,
+                symbol,
             },
             minThreshold: {
                 value: input.minThreshold,
-                decimals: 18,
-                symbol: "KAS",
+                raw: parseUnits(input.minThreshold, decimals).toString(),
+                decimals,
+                symbol,
             },
             totalRaised: {
                 value: "0",
-                decimals: 18,
-                symbol: "KAS",
+                raw: "0",
+                decimals,
+                symbol,
             },
             deadline: new Date(
                 Date.now() + input.durationSeconds * 1000,
@@ -59,14 +65,15 @@ export class MockProposalEngine implements ProposalEngine {
             (p) => p.id === input.proposalId,
         );
 
-        // In hybrid mode (mock engine + Supabase data), the proposal
-        // may exist in DB but not in the mock's in-memory array.
         if (proposal) {
+            const rawAmount = parseUnits(input.amount, proposal.totalRaised.decimals);
+            const currentRaw = BigInt(proposal.totalRaised.raw);
+            const newRaw = currentRaw + rawAmount;
+
             proposal.totalRaised = {
                 ...proposal.totalRaised,
-                value: String(
-                    Number(proposal.totalRaised.value) + Number(input.amount),
-                ),
+                raw: newRaw.toString(),
+                value: formatUnits(newRaw, proposal.totalRaised.decimals),
             };
         }
 
@@ -80,8 +87,8 @@ export class MockProposalEngine implements ProposalEngine {
         const proposal = this.proposals.find((p) => p.id === proposalId);
 
         if (proposal) {
-            const raised = Number(proposal.totalRaised.value);
-            const threshold = Number(proposal.minThreshold.value);
+            const raised = BigInt(proposal.totalRaised.raw);
+            const threshold = BigInt(proposal.minThreshold.raw);
 
             proposal.status = raised >= threshold ? "succeeded" : "failed";
             proposal.canFinalize = false;

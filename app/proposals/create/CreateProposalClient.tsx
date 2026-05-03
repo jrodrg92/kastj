@@ -61,7 +61,7 @@ export default function CreateProposalClient() {
 
       await createMutation.mutateAsync({
         recipient: prepared.recipient,
-        asset: { type: "native" },
+        asset: { type: "native", symbol: "KAS", decimals: 18 },
         goal: prepared.goal,
         minThreshold: prepared.minThreshold,
         durationSeconds: prepared.durationSeconds,
@@ -92,10 +92,10 @@ export default function CreateProposalClient() {
           <div className="mb-10 flex items-center justify-between">
             <div>
               <Link href="/" className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-cyan-500">
-                <ArrowLeft size={16} /> Back to home
+                <ArrowLeft size={16} /> {t.backToHome}
               </Link>
-              <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Launch your idea</h1>
-              <p className="mt-2 text-muted-foreground">Fill in the details to start your conditional crowdfunding campaign.</p>
+              <h1 className="text-4xl font-extrabold tracking-tight text-foreground">{t.launchYourIdea}</h1>
+              <p className="mt-2 text-muted-foreground">{t.launchYourIdeaDesc}</p>
             </div>
           </div>
 

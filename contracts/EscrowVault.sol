@@ -92,7 +92,7 @@ contract EscrowVault {
         emit ProposalRegistered(proposalId, token);
     }
 
-    function depositNative(uint256 proposalId, address supporter) external payable onlyManager {
+    function depositNative(uint256 proposalId, address supporter) external payable onlyManager nonReentrant {
         require(proposalRegistered[proposalId], "Proposal not registered");
         require(proposalToken[proposalId] == address(0), "Not native proposal");
         require(supporter != address(0), "Invalid supporter");
@@ -110,7 +110,7 @@ contract EscrowVault {
         uint256 proposalId,
         address supporter,
         uint256 amount
-    ) external onlyManager {
+    ) external onlyManager nonReentrant {
         require(proposalRegistered[proposalId], "Proposal not registered");
 
         address token = proposalToken[proposalId];
@@ -121,12 +121,17 @@ contract EscrowVault {
         require(!withdrawalsEnabled[proposalId], "Withdrawals enabled");
         require(!released[proposalId], "Already released");
 
-        deposits[proposalId][supporter].amount += amount;
-        proposalBalances[proposalId] += amount;
-
+        uint256 balanceBefore = IKRC20(token).balanceOf(address(this));
         _safeTransferFrom(token, supporter, address(this), amount);
+        uint256 balanceAfter = IKRC20(token).balanceOf(address(this));
+        uint256 actualAmount = balanceAfter - balanceBefore;
+        
+        require(actualAmount > 0, "Zero received amount");
 
-        emit Deposited(proposalId, supporter, token, amount);
+        deposits[proposalId][supporter].amount += actualAmount;
+        proposalBalances[proposalId] += actualAmount;
+
+        emit Deposited(proposalId, supporter, token, actualAmount);
     }
 
     function enableWithdrawals(uint256 proposalId) external onlyManager {

@@ -70,8 +70,8 @@ function HeroMockupCard() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 className="text-sm font-bold text-foreground">Community Dev Fund</h4>
-          <p className="mt-0.5 text-[11px] text-muted-foreground/60">Proposal #42</p>
+          <h4 className="text-sm font-bold text-foreground">{t.mockTitle}</h4>
+          <p className="mt-0.5 text-[11px] text-muted-foreground/60">{t.proposalHash}42</p>
         </div>
         <span className="rounded-full bg-cyan-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-400 border border-cyan-500/20">
           {t.active}
@@ -80,7 +80,7 @@ function HeroMockupCard() {
 
       {/* Description */}
       <p className="mt-3 text-xs leading-relaxed text-muted-foreground line-clamp-2">
-        Fund core protocol improvements and developer tooling for the Kaspa ecosystem.
+        {t.mockDesc}
       </p>
 
       {/* Stats row */}
@@ -102,7 +102,7 @@ function HeroMockupCard() {
       {/* Progress bar */}
       <div className="mt-4">
         <div className="flex justify-between text-[10px] font-medium">
-          <span className="text-muted-foreground">8,420 / 10,000 KAS</span>
+          <span className="text-muted-foreground">8,420 / 10,000 {NETWORK.currency}</span>
           <span className="text-emerald-400">84.2%</span>
         </div>
         <div className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">

@@ -94,8 +94,8 @@ export class VProgsProposalEngine implements ProposalEngine {
         return verifier.verifyEscrowAddress(proposal.recipient, {
             creator: proposal.creator,
             recipient: proposal.recipient,
-            goal: BigInt(proposal.goal.value),
-            threshold: BigInt(proposal.minThreshold.value),
+            goal: BigInt(proposal.goal.raw),
+            threshold: BigInt(proposal.minThreshold.raw),
             deadline: Math.floor(proposal.deadline.getTime() / 1000),
         });
     }

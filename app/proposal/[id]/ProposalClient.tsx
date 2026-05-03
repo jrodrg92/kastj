@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatEther } from "../../../lib/currencyUtils";
+import { formatUnits } from "../../../lib/currencyUtils";
 import toast from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -85,14 +85,15 @@ export default function ProposalClient() {
   const [isActivityExpanded, setIsActivityExpanded] = useState(true);
 
   const myContribution = useMemo(() => {
-    if (!wallet.address || !fundings.length) return "0";
+    if (!wallet.address || !fundings.length || !proposal) return "0";
+    const decimals = (proposal as any).decimals || 8;
     const mine = fundings
       .filter(
         (f) => f.supporter?.toLowerCase() === wallet.address?.toLowerCase()
       )
-      .reduce((acc, f) => acc + BigInt(f.amount), 0n);
-    return formatEther(mine);
-  }, [wallet.address, fundings]);
+      .reduce((acc, f) => acc + BigInt(f.amount || 0), 0n);
+    return formatUnits(mine, decimals);
+  }, [wallet.address, fundings, proposal]);
 
   useEffect(() => {
     if (!proposalId) return;
@@ -240,11 +241,16 @@ export default function ProposalClient() {
   }
 
   const status = normalizeStatus(proposal.status);
+  const goalRaw = BigInt(proposal.goalRaw || "0");
+  const raisedRaw = BigInt(proposal.totalRaisedRaw || "0");
+  const thresholdRaw = BigInt(proposal.minThresholdRaw || "0");
+
+  const percent = goalRaw > 0n ? Number((raisedRaw * 100n) / goalRaw) : 0;
+  const thresholdPercent = goalRaw > 0n ? Number((thresholdRaw * 100n) / goalRaw) : 0;
+
   const goal = Number(proposal.goal);
   const raised = Number(proposal.totalRaised);
-  const percent = goal > 0 ? Math.min((raised / goal) * 100, 100) : 0;
   const threshold = Number(proposal.minThreshold);
-  const thresholdPercent = goal > 0 ? Math.min((threshold / goal) * 100, 100) : 0;
 
   const isExpired = hasExpired(proposal.deadline);
   const isActive = status === "active";
@@ -273,10 +279,10 @@ export default function ProposalClient() {
 
   /* Timeline Logic */
   const timelineSteps = [
-    { id: "created", label: "Created", icon: FileText, done: true, color: "text-blue-400", bg: "bg-blue-500/20" },
-    { id: "funding", label: "Funding", icon: Coins, done: percent > 0 || status === 'active', color: "text-cyan-400", bg: "bg-cyan-500/20" },
-    { id: "threshold", label: "Consensus", icon: Target, done: percent >= thresholdPercent, color: percent >= thresholdPercent ? "text-cyan-400" : "text-amber-400", bg: percent >= thresholdPercent ? "bg-cyan-500/20" : "bg-amber-500/20" },
-    { id: "finished", label: status === 'succeeded' ? "Unlocked" : status === 'failed' ? "Failed" : "Finalized", icon: status === 'failed' ? XCircle : CheckCircle2, done: status !== 'active', color: status === 'failed' ? "text-rose-400" : status === 'succeeded' ? "text-cyan-400" : "text-muted-foreground", bg: status === 'failed' ? "bg-rose-500/20" : status === 'succeeded' ? "bg-cyan-500/20" : "bg-secondary" }
+    { id: "created", label: t.lifecycleCreated, icon: FileText, done: true, color: "text-blue-400", bg: "bg-blue-500/20" },
+    { id: "funding", label: t.lifecycleFunding, icon: Coins, done: percent > 0 || status === 'active', color: "text-cyan-400", bg: "bg-cyan-500/20" },
+    { id: "threshold", label: t.lifecycleConsensus, icon: Target, done: percent >= thresholdPercent, color: percent >= thresholdPercent ? "text-cyan-400" : "text-amber-400", bg: percent >= thresholdPercent ? "bg-cyan-500/20" : "bg-amber-500/20" },
+    { id: "finished", label: status === 'succeeded' ? t.succeededStatus : status === 'failed' ? t.failedStatus : t.lifecycleFinalized, icon: status === 'failed' ? XCircle : CheckCircle2, done: status !== 'active', color: status === 'failed' ? "text-rose-400" : status === 'succeeded' ? "text-cyan-400" : "text-muted-foreground", bg: status === 'failed' ? "bg-rose-500/20" : status === 'succeeded' ? "bg-cyan-500/20" : "bg-secondary" }
   ];
 
   return (
@@ -345,7 +351,7 @@ export default function ProposalClient() {
             {/* Timeline Visual */}
             <ScrollReveal delay={100}>
               <div className="premium-glass rounded-3xl p-6 md:p-8">
-                <h3 className="text-lg font-bold text-foreground mb-6">Proposal Lifecycle</h3>
+                <h3 className="text-lg font-bold text-foreground mb-6">{t.proposalLifecycle}</h3>
                 <div className="flex items-center justify-between relative">
                   {/* Background Track */}
                   <div className="absolute left-0 top-6 h-0.5 w-full bg-white/[0.06] -z-10" />
@@ -560,10 +566,10 @@ export default function ProposalClient() {
                       {fundMutation.isPending ? (
                         <><Loader2 size={16} className="animate-spin" /> {t.processingButton}</>
                       ) : (
-                        <>{t.supp} Proposal</>
+                        <>{t.supp} {proposal.asset.symbol}</>
                       )}
                     </button>
-                    <p className="text-center text-[10px] text-muted-foreground/60 font-medium">Funds are securely locked in smart contract escrow.</p>
+                    <p className="text-center text-[10px] text-muted-foreground/60 font-medium">{t.escrowProtectedDesc}</p>
                   </div>
                 )}
 
@@ -622,7 +628,7 @@ export default function ProposalClient() {
 
                 {!wallet.connected && (
                   <p className="text-center text-[11px] font-medium text-rose-400">
-                    {t.conectWallet} to interact.
+                    {t.conectWallet}
                   </p>
                 )}
               </div>

@@ -10,7 +10,7 @@ const ctx: ProposalEngineContext = {
 
 const dummyInput = {
     recipient: "kaspa:qr456",
-    asset: { type: "native" as const },
+    asset: { type: "native" as const, symbol: "KAS", decimals: 8 },
     goal: "100",
     minThreshold: "50",
     durationSeconds: 3600,
@@ -29,13 +29,13 @@ describe("KaspaL1ProposalEngine (stub)", function () {
             await engine.createProposal(ctx, dummyInput);
             expect.fail("Should have thrown");
         } catch (e) {
-            expect((e as Error).message).to.include("not yet implemented");
+            expect((e as Error).message).to.include("KaspaL1ProposalEngine");
         }
     });
 
     it("throws on all write methods", async function () {
         const methods = [
-            () => engine.fundProposal(ctx, { proposalId: 1, asset: { type: "native" }, amount: "10" }),
+            () => engine.fundProposal(ctx, { proposalId: 1, asset: { type: "native", symbol: "KAS", decimals: 8 }, amount: "10" }),
             () => engine.finalizeProposal(ctx, 1),
             () => engine.withdraw(ctx, 1),
             () => engine.withdrawMany(ctx, [1, 2]),
@@ -46,7 +46,7 @@ describe("KaspaL1ProposalEngine (stub)", function () {
                 await fn();
                 expect.fail("Should have thrown");
             } catch (e) {
-                expect((e as Error).message).to.include("not yet implemented");
+                expect((e as Error).message).to.include("KaspaL1ProposalEngine");
             }
         }
     });

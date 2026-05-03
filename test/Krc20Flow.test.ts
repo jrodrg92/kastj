@@ -26,6 +26,8 @@ describe("Kastj KRC20 flow", function () {
         const token = await Token.deploy();
         await token.waitForDeployment();
 
+        await (await manager.setTokenDecimals(await token.getAddress(), 18)).wait();
+
         await token.mint(supporter.address, ethers.parseEther("1000"));
 
         return {
@@ -69,9 +71,10 @@ describe("Kastj KRC20 flow", function () {
             .createProposal(
                 recipient.address,
                 await token.getAddress(),
-                ethers.parseEther(goal),
-                ethers.parseEther(threshold),
+                ethers.parseUnits(goal, 18),
+                ethers.parseUnits(threshold, 18),
                 duration,
+                0, // DeadlineOnly
                 "ipfs://krc20-proposal",
             );
 
@@ -110,19 +113,19 @@ describe("Kastj KRC20 flow", function () {
             token,
         });
 
-        await token.connect(supporter).approve(await vault.getAddress(), ethers.parseEther("100"));
+        await token.connect(supporter).approve(await vault.getAddress(), ethers.parseUnits("100", 18));
 
-        await manager.connect(supporter).fundKrc20(proposalId, ethers.parseEther("100"));
+        await manager.connect(supporter).fundKrc20(proposalId, ethers.parseUnits("100", 18));
 
         await moveAfterDeadline(manager, proposalId);
 
         await manager.connect(attacker).finalizeProposal(proposalId);
 
-        expect(await token.balanceOf(recipient.address)).to.equal(ethers.parseEther("93"));
+        expect(await token.balanceOf(recipient.address)).to.equal(ethers.parseUnits("93", 18));
 
-        expect(await token.balanceOf(creator.address)).to.equal(ethers.parseEther("5"));
+        expect(await token.balanceOf(creator.address)).to.equal(ethers.parseUnits("5", 18));
 
-        expect(await token.balanceOf(await treasury.getAddress())).to.equal(ethers.parseEther("2"));
+        expect(await token.balanceOf(await treasury.getAddress())).to.equal(ethers.parseUnits("2", 18));
 
         expect(await token.balanceOf(await vault.getAddress())).to.equal(0n);
     });
@@ -140,9 +143,9 @@ describe("Kastj KRC20 flow", function () {
             threshold: "50",
         });
 
-        await token.connect(supporter).approve(await vault.getAddress(), ethers.parseEther("20"));
+        await token.connect(supporter).approve(await vault.getAddress(), ethers.parseUnits("20", 18));
 
-        await manager.connect(supporter).fundKrc20(proposalId, ethers.parseEther("20"));
+        await manager.connect(supporter).fundKrc20(proposalId, ethers.parseUnits("20", 18));
 
         await moveAfterDeadline(manager, proposalId);
 
@@ -154,7 +157,7 @@ describe("Kastj KRC20 flow", function () {
 
         const after = await token.balanceOf(supporter.address);
 
-        expect(after - before).to.equal(ethers.parseEther("20"));
+        expect(after - before).to.equal(ethers.parseUnits("20", 18));
         expect(await token.balanceOf(await vault.getAddress())).to.equal(0n);
     });
 
@@ -169,7 +172,7 @@ describe("Kastj KRC20 flow", function () {
         });
 
         await expect(
-            manager.connect(supporter).fundKrc20(proposalId, ethers.parseEther("10")),
+            manager.connect(supporter).fundKrc20(proposalId, ethers.parseUnits("10", 18)),
         ).to.be.revert(ethers);
     });
 
@@ -185,7 +188,7 @@ describe("Kastj KRC20 flow", function () {
 
         await expect(
             manager.connect(supporter).fundNative(proposalId, {
-                value: ethers.parseEther("1"),
+                value: ethers.parseUnits("1", 18),
             }),
         ).to.be.revertedWith("Not native proposal");
     });

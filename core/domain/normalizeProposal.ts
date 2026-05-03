@@ -17,8 +17,8 @@ export function normalizeProposalView(
     proposal: ProposalView,
     now = new Date(),
 ): NormalizedProposalView {
-    const goal = Number(proposal.goal.value);
-    const raised = Number(proposal.totalRaised.value);
+    const rawGoal = BigInt(proposal.goal.raw);
+    const rawRaised = BigInt(proposal.totalRaised.raw);
 
     return {
         ...proposal,
@@ -27,7 +27,9 @@ export function normalizeProposalView(
             isSucceeded: proposal.status === "succeeded",
             isFailed: proposal.status === "failed",
             isExpired: proposal.deadline.getTime() <= now.getTime(),
-            progressPercent: goal > 0 ? Math.min((raised / goal) * 100, 100) : 0,
+            progressPercent: rawGoal > 0n 
+                ? Number((rawRaised * 100n) / rawGoal) 
+                : 0,
             canFinalize: canFinalizeProposal(proposal, now),
             canWithdraw: canWithdrawFromProposal(proposal),
         },

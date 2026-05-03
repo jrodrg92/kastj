@@ -11,6 +11,11 @@ contract ProposalManager {
         Failed
     }
 
+    enum SettlementMode { 
+        DeadlineOnly, 
+        EarlyIfGoalReached 
+    }
+
     struct Proposal {
         uint256 id;
         address creator;
@@ -21,6 +26,7 @@ contract ProposalManager {
         uint256 deadline;
         uint256 totalRaised;
         ProposalStatus status;
+        SettlementMode settlementMode;
         bool finalized;
         string metadataURI;
     }
@@ -42,6 +48,7 @@ contract ProposalManager {
         uint256 goalAmount,
         uint256 minThreshold,
         uint256 deadline,
+        SettlementMode settlementMode,
         string metadataURI
     );
 
@@ -128,6 +135,7 @@ contract ProposalManager {
         uint256 goalAmount,
         uint256 minThreshold,
         uint256 durationSeconds,
+        SettlementMode settlementMode,
         string calldata metadataURI
     ) external returns (uint256) {
         require(recipient != address(0), "Invalid recipient");
@@ -161,6 +169,7 @@ contract ProposalManager {
             deadline: deadline,
             totalRaised: 0,
             status: ProposalStatus.Active,
+            settlementMode: settlementMode,
             finalized: false,
             metadataURI: metadataURI
         });
@@ -175,6 +184,7 @@ contract ProposalManager {
             goalAmount,
             minThreshold,
             deadline,
+            settlementMode,
             metadataURI
         );
 
@@ -222,7 +232,11 @@ contract ProposalManager {
         bool reachedGoal = p.totalRaised >= p.goalAmount;
         bool expired = block.timestamp >= p.deadline;
 
-        require(reachedGoal || expired, "Cannot finalize yet");
+        if (p.settlementMode == SettlementMode.DeadlineOnly) {
+            require(expired, "Must wait for deadline");
+        } else {
+            require(reachedGoal || expired, "Cannot finalize yet");
+        }
 
         p.finalized = true;
 

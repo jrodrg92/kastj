@@ -21,7 +21,7 @@ describe("MockProposalEngine", function () {
     it("creates a proposal and returns it in the list", async function () {
         const input: CreateProposalInput = {
             recipient: "0x2222222222222222222222222222222222222222",
-            asset: { type: "native" },
+            asset: { type: "native", symbol: "KAS", decimals: 8 },
             goal: "100",
             minThreshold: "50",
             durationSeconds: 3600,
@@ -42,7 +42,7 @@ describe("MockProposalEngine", function () {
     it("funds a proposal and increases totalRaised", async function () {
         await engine.createProposal(ctx, {
             recipient: "0x2222222222222222222222222222222222222222",
-            asset: { type: "native" },
+            asset: { type: "native", symbol: "KAS", decimals: 8 },
             goal: "100",
             minThreshold: "50",
             durationSeconds: 3600,
@@ -54,7 +54,7 @@ describe("MockProposalEngine", function () {
 
         await engine.fundProposal(ctx, {
             proposalId: id,
-            asset: { type: "native" },
+            asset: { type: "native", symbol: "KAS", decimals: 8 },
             amount: "25",
         });
 
@@ -65,7 +65,7 @@ describe("MockProposalEngine", function () {
     it("finalizes successfully when threshold is met", async function () {
         await engine.createProposal(ctx, {
             recipient: "0x2222222222222222222222222222222222222222",
-            asset: { type: "native" },
+            asset: { type: "native", symbol: "KAS", decimals: 8 },
             goal: "100",
             minThreshold: "50",
             durationSeconds: 3600,
@@ -77,7 +77,7 @@ describe("MockProposalEngine", function () {
 
         await engine.fundProposal(ctx, {
             proposalId: id,
-            asset: { type: "native" },
+            asset: { type: "native", symbol: "KAS", decimals: 8 },
             amount: "60",
         });
 
@@ -90,7 +90,7 @@ describe("MockProposalEngine", function () {
     it("finalizes as failed when threshold is not met", async function () {
         await engine.createProposal(ctx, {
             recipient: "0x2222222222222222222222222222222222222222",
-            asset: { type: "native" },
+            asset: { type: "native", symbol: "KAS", decimals: 8 },
             goal: "100",
             minThreshold: "50",
             durationSeconds: 3600,
@@ -102,7 +102,7 @@ describe("MockProposalEngine", function () {
 
         await engine.fundProposal(ctx, {
             proposalId: id,
-            asset: { type: "native" },
+            asset: { type: "native", symbol: "KAS", decimals: 8 },
             amount: "10",
         });
 
@@ -136,7 +136,7 @@ describe("MockProposalEngine", function () {
         // In hybrid mode, proposals exist in Supabase but not in mock memory
         const result = await engine.fundProposal(ctx, {
             proposalId: 42,
-            asset: { type: "native" },
+            asset: { type: "native", symbol: "KAS", decimals: 8 },
             amount: "10",
         });
 
