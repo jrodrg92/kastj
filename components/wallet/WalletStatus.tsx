@@ -65,8 +65,26 @@ export function WalletStatus() {
         </span>
       </div>
       
-      <div className="flex h-7 items-center rounded-full bg-background/80 px-3 font-mono text-[11px] text-cyan-500 border border-cyan-500/20 shadow-inner">
-        {walletType === "kasware" ? "K" : "E"}: {address?.slice(0, 6)}...{address?.slice(-4)}
+      <div className="flex h-7 items-center gap-2 rounded-full bg-background/80 px-3 font-mono text-[11px] text-cyan-500 border border-cyan-500/20 shadow-inner">
+        <div className="flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-full bg-cyan-500/10">
+          {walletType === "kasware" ? (
+            <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-cyan-500" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 12l10 10 10-10L12 2zM4.5 12l7.5-7.5 7.5 7.5-7.5 7.5-7.5-7.5z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 256 417" className="h-2.5 w-2.5 fill-cyan-500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
+              <path d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" />
+              <path d="M127.962 0L0 212.32l127.962 75.638V154.158z" />
+              <path d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.59 128.038-180.32z" />
+              <path d="M127.962 416.896V312.187L0 236.386z" />
+              <path d="M127.961 287.958l127.96-75.637-127.96-58.162z" />
+              <path d="M0 212.32l127.962 75.638V154.158z" />
+            </svg>
+          )}
+        </div>
+        <span className="opacity-80">
+          {address?.slice(0, 6)}...{address?.slice(-4)}
+        </span>
       </div>
     </div>
   );

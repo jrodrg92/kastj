@@ -30,7 +30,7 @@ function parseStatus(status: string | number) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapProposal(proposal: any): ProposalListItem {
   const isNative = !proposal.token || proposal.token === "0x0000000000000000000000000000000000000000";
-  const decimals = proposal.decimals || (isNative ? 18 : 18);
+  const decimals = Number(proposal.decimals ?? (isNative ? 18 : 18));
   const symbol = isNative ? "KAS" : (proposal.token_symbol || "TOKEN");
 
   const goalRaw = proposal.goal || "0";
@@ -110,6 +110,7 @@ export async function fetchStats() {
     throw error;
   }
 
+  if (!data) return { total: 0, active: 0, succeeded: 0, failed: 0, raised: 0 };
   const total = data.length;
   const active = data.filter((p) => p.status === 0 || p.status === "active").length;
   const succeeded = data.filter((p) => p.status === 1 || p.status === "succeeded").length;
@@ -117,10 +118,16 @@ export async function fetchStats() {
   
   const raisedBig = data.reduce((acc, p) => {
     const isNative = !p.token || p.token === "0x0000000000000000000000000000000000000000";
-    const decimals = p.decimals || (isNative ? 18 : 18);
-    // Since we are summing across different potential decimals, we convert to a common large decimal (e.g. 18) for the number representation
-    const val = BigInt(p.total_raised || 0);
-    const scaled = decimals < 18 ? val * (10n ** BigInt(18 - decimals)) : val / (10n ** BigInt(decimals - 18));
+    const decimals = Number(p.decimals ?? (isNative ? 18 : 18));
+    
+    // Ensure val is a valid BigInt string or 0
+    const valStr = (p.total_raised || "0").toString();
+    const val = BigInt(valStr);
+    
+    const scaled = decimals < 18 
+      ? val * (10n ** BigInt(18 - decimals)) 
+      : val / (10n ** BigInt(decimals - 18));
+      
     return acc + scaled;
   }, 0n);
 

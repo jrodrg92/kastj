@@ -247,6 +247,7 @@ export const translations = {
     faqA5: "No. Kastj is non-custodial. Funds are held by decentralized smart contracts, not by any central entity.",
     mockTitle: "Community Dev Fund",
     mockDesc: "Fund core protocol improvements and developer tooling for the Kaspa ecosystem.",
+    walletConnected: "Wallet connected!",
   },
 
   es: {
@@ -494,5 +495,6 @@ export const translations = {
     faqA5: "No. Kastj no es custodial. Los fondos son retenidos por contratos inteligentes descentralizados, no por ninguna entidad central.",
     mockTitle: "Fondo de Desarrollo Comunitario",
     mockDesc: "Financie mejoras del protocolo principal y herramientas para desarrolladores para el ecosistema Kaspa.",
+    walletConnected: "¡Wallet conectada!",
   }
 };
