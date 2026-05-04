@@ -38,7 +38,7 @@ export default function ProposalClient() {
   const searchParams = useSearchParams();
   const wallet = useWalletContext();
   const { t } = useUi();
-  const { ctx } = useProposalEngine(wallet.address, wallet.signer);
+  const { ctx } = useProposalEngine(wallet.address, wallet.signer, wallet.provider);
 
   const id = params?.id;
   const proposalId = Number(id);
@@ -52,12 +52,12 @@ export default function ProposalClient() {
   const metadata = useProposalMetadata(proposal?.metadataURI);
 
   // 2. Realtime & Sync Logic
-  useProposalSync({ 
-    id: id || "", 
-    proposalId, 
-    isPending, 
+  useProposalSync({
+    id: id || "",
+    proposalId,
+    isPending,
     txHash: proposal?.txHash || txFromUrl,
-    proposal 
+    proposal
   });
 
   // 3. Mutations & Verification
@@ -72,9 +72,9 @@ export default function ProposalClient() {
   const derived = useProposalDerivedState(proposal, fundings, wallet);
 
   const displayMetadata = useMemo(() => {
-    if (proposal) return { 
-      title: metadata.title || proposal.title || "", 
-      description: metadata.description || proposal.description || "" 
+    if (proposal) return {
+      title: metadata.title || proposal.title || "",
+      description: metadata.description || proposal.description || ""
     };
     return { title: t.loading || "Loading...", description: "" };
   }, [proposal, metadata, t.loading]);
@@ -94,7 +94,7 @@ export default function ProposalClient() {
       <main className="mx-auto max-w-7xl px-4 py-12 md:px-8">
         <ScrollReveal>
           {/* Header Section */}
-          <ProposalHeader 
+          <ProposalHeader
             title={displayMetadata.title}
             creator={proposal?.creator || ""}
             status={proposal?.status || "active"}
@@ -107,9 +107,14 @@ export default function ProposalClient() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/20">
                   <Loader2 className="h-5 w-5 animate-spin text-cyan-500" />
                 </div>
+
                 <div>
-                  <h3 className="text-sm font-bold text-cyan-400">{t.syncingWithBlockchain}</h3>
-                  <p className="text-xs text-muted-foreground/80 mt-1">{t.syncingDesc}</p>
+                  <h3 className="text-sm font-bold text-cyan-400">
+                    {t.syncingWithBlockchain}
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground/80">
+                    {t.syncingDesc}
+                  </p>
                 </div>
               </div>
             </div>
@@ -118,12 +123,12 @@ export default function ProposalClient() {
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
             {/* Left Column: Details & Activity */}
             <div className="lg:col-span-8">
-              <ProposalDescription 
-                description={displayMetadata.description} 
-                t={t} 
+              <ProposalDescription
+                description={displayMetadata.description}
+                t={t}
               />
-              
-              <ProposalActivityFeed 
+
+              <ProposalActivityFeed
                 proposalId={proposalId}
                 activity={activity}
                 fundings={fundings}
@@ -136,86 +141,99 @@ export default function ProposalClient() {
 
             {/* Right Column: Actions & Stats */}
             <div className="lg:col-span-4">
-              {proposal && derived && (
-                <div className="premium-glass sticky top-24 flex flex-col gap-8 rounded-[2.5rem] border-border/50 p-8 shadow-2xl">
-                   {/* Stats Area */}
-                   <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">{t.raisedLabel || "Total Raised"}</p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-foreground">{proposal.totalRaised.value || "0"}</span>
-                        <span className="text-sm font-medium text-cyan-500">{proposal.asset.symbol}</span>
+              <aside className="premium-glass sticky top-24 flex flex-col gap-8 rounded-[2.5rem] border-border/50 p-8 shadow-2xl">
+                {proposal && derived ? (
+                  <>
+                    {/* Stats Area */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {t.raisedLabel || "Total Raised"}
+                        </p>
+
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-bold text-foreground">
+                            {proposal.totalRaised.value || "0"}
+                          </span>
+                          <span className="text-sm font-medium text-cyan-500">
+                            {proposal.asset.symbol}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-right">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {t.goalLabel || "Goal"}
+                        </p>
+
+                        <p className="text-xl font-semibold text-foreground">
+                          {proposal.goal.value} {proposal.asset.symbol}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">{t.goalLabel || "Goal"}</p>
-                      <p className="text-xl font-semibold text-foreground">{proposal.goal.value} {proposal.asset.symbol}</p>
-                    </div>
+
+                    {/* Progress Panel */}
+                    <ProposalProgress
+                      progress={derived.progress}
+                      contributors={fundings.length}
+                      t={t}
+                    />
+
+                    {/* Funding Panel */}
+                    <ProposalFundingPanel
+                      status={proposal.status}
+                      isExpired={derived.isExpired}
+                      isMutating={isMutating || isPending}
+                      walletConnected={wallet.connected}
+                      isVerified={isVerified}
+                      t={t}
+                      onFund={(amount) => {
+                        if (isPending) return;
+
+                        fundMutation.mutate({
+                          proposalId,
+                          amount,
+                          asset: proposal.asset,
+                        });
+                      }}
+                    />
+
+                    {/* Lifecycle Panel */}
+                    <ProposalLifecycle
+                      status={proposal.status}
+                      isExpired={derived.isExpired}
+                      canFinalize={derived.canFinalize && !isPending}
+                      canWithdraw={derived.canWithdraw && !isPending}
+                      isMutating={isMutating || isPending}
+                      t={t}
+                      onFinalize={() => {
+                        if (isPending) return;
+                        finalizeMutation.mutate(proposalId);
+                      }}
+                      onWithdraw={() => {
+                        if (isPending) return;
+                        withdrawMutation.mutate(proposalId);
+                      }}
+                    />
+
+                    {/* Trust Panel */}
+                    <ProposalTrustPanel
+                      onVerify={() => !isPending && verify(proposal)}
+                      isVerifying={isVerifying}
+                      isVerified={isVerified}
+                      result={result}
+                      isPending={isPending}
+                      t={t}
+                    />
+                  </>
+                ) : (
+                  <div className="animate-pulse space-y-8">
+                    <div className="h-20 rounded-2xl bg-muted/20" />
+                    <div className="h-40 rounded-2xl bg-muted/20" />
+                    <div className="h-40 rounded-2xl bg-muted/20" />
                   </div>
-
-                  {/* 1. Progress Panel */}
-                  <ProposalProgress 
-                    progress={derived.progress}
-                    contributors={fundings.length}
-                    t={t}
-                  />
-
-                  {/* 2. Funding Panel */}
-                  <ProposalFundingPanel 
-                    status={proposal.status}
-                    isExpired={derived.isExpired}
-                    isMutating={isMutating || isPending}
-                    walletConnected={wallet.connected}
-                    isVerified={isVerified}
-                    t={t}
-                    onFund={(amount) => {
-                      if (isPending) return;
-                      fundMutation.mutate({ proposalId, amount, asset: proposal.asset });
-                    }}
-                  />
-
-                  {/* 3. Lifecycle Panel */}
-                  <ProposalLifecycle 
-                    status={proposal.status}
-                    isExpired={derived.isExpired}
-                    canFinalize={derived.canFinalize && !isPending}
-                    canWithdraw={derived.canWithdraw && !isPending}
-                    isMutating={isMutating || isPending}
-                    t={t}
-                    onFinalize={() => {
-                      if (isPending) return;
-                      finalizeMutation.mutate(proposalId);
-                    }}
-                    onWithdraw={() => {
-                      if (isPending) return;
-                      withdrawMutation.mutate(proposalId);
-                    }}
-                  />
-
-                  {/* 4. Trust Panel */}
-                  <ProposalTrustPanel 
-                    onVerify={() => verify(proposal)}
-                    isVerifying={isVerifying}
-                    isVerified={isVerified}
-                    result={result}
-                    t={t}
-                  />
-
-                  {/* Extra Stats */}
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Minimum Threshold</p>
-                      <p className="text-sm font-semibold text-foreground">{proposal.minThreshold.value} {proposal.asset.symbol}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Deadline</p>
-                      <p className="text-sm font-semibold text-foreground">
-                        {new Date(derived.deadlineMs).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+                )}
+              </aside>
             </div>
           </div>
         </ScrollReveal>
@@ -224,4 +242,5 @@ export default function ProposalClient() {
       <SiteFooter />
     </div>
   );
+
 }

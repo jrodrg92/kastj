@@ -8,6 +8,7 @@ import type { WalletType } from "../core/ports/WalletAdapter";
 
 interface WalletContextState {
     signer: any | null;
+    provider: BrowserProvider | null;
     address: string | undefined;
     connect: (type?: WalletType) => Promise<void>;
     disconnect: () => void;
@@ -21,6 +22,7 @@ const WalletContext = createContext<WalletContextState | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
     const [signer, setSigner] = useState<any | null>(null);
+    const [provider, setProvider] = useState<BrowserProvider | null>(null);
     const [address, setAddress] = useState<string | undefined>(undefined);
     const [walletType, setWalletType] = useState<WalletType | null>(null);
     const { t } = useLanguage();
@@ -105,8 +107,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 
                 const accounts = await ethereum.request({ method: "eth_requestAccounts" });
                 if (accounts.length > 0) {
-                    const provider = new BrowserProvider(ethereum);
-                    const newSigner = await provider.getSigner();
+                    const newProvider = new BrowserProvider(ethereum);
+                    const newSigner = await newProvider.getSigner();
+                    setProvider(newProvider);
                     setSigner(newSigner);
                     setAddress(await newSigner.getAddress());
                     setWalletType("metamask");
@@ -141,6 +144,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     
     function disconnect() {
         setSigner(null);
+        setProvider(null);
         setAddress(undefined);
         setWalletType(null);
         if (typeof window !== "undefined") {
@@ -152,6 +156,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         <WalletContext.Provider
             value={{
                 signer,
+                provider,
                 address,
                 connect,
                 disconnect,

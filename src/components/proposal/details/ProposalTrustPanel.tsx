@@ -9,6 +9,7 @@ interface ProposalTrustPanelProps {
   isVerifying: boolean;
   isVerified: boolean | null;
   result: VerificationResult | null;
+  isPending?: boolean;
   t: any;
 }
 
@@ -17,12 +18,14 @@ export function ProposalTrustPanel({
   isVerifying,
   isVerified,
   result,
+  isPending,
   t
 }: ProposalTrustPanelProps) {
   
   let badgeStatus: VerificationStatus = "pending";
   if (isVerified === true) badgeStatus = "verified";
   if (isVerified === false) badgeStatus = "mismatch";
+  if (isPending) badgeStatus = "pending";
 
   return (
     <div className="premium-glass relative overflow-hidden rounded-[2.5rem] border-white/5 p-8 space-y-6">
@@ -52,25 +55,25 @@ export function ProposalTrustPanel({
 
       <button
         onClick={onVerify}
-        disabled={isVerifying}
+        disabled={isVerifying || isPending}
         className={`group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border h-14 text-xs font-black uppercase tracking-widest transition-all active:scale-[0.98] ${
           isVerified === true 
           ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]" 
           : isVerified === false
           ? "bg-rose-500 text-white border-rose-400"
           : "bg-white/5 border-white/10 text-white hover:bg-white/10"
-        }`}
+        } ${isPending ? "opacity-50 cursor-not-allowed" : ""}`}
       >
         <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
         
-        {isVerifying ? (
+        {isVerifying || isPending ? (
           <Loader2 size={16} className="animate-spin" />
         ) : isVerified === true ? (
           <CheckCircle2 size={16} />
         ) : (
           <ShieldCheck size={16} />
         )}
-        {isVerified === true ? (t.verifiedOnChain || "Verified On-Chain") : (t.verifyOnChain || "Start Verification")}
+        {isPending ? "Indexing State..." : isVerified === true ? (t.verifiedOnChain || "Verified On-Chain") : (t.verifyOnChain || "Start Verification")}
       </button>
 
       {isVerified === true && result?.status === "verified" && (

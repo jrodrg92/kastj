@@ -15,12 +15,12 @@ const supabase = createClient(
 );
 
 const ABI = [
-  "event ProposalCreated(uint256 indexed proposalId,address indexed creator,address indexed recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,uint8 settlementMode,string metadataURI)",
+  "event ProposalCreated(uint256 indexed proposalId,address indexed creator,address indexed recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,uint8 settlementMode,bool allowOverfunding,string metadataURI)",
   "event ProposalFunded(uint256 indexed proposalId, address indexed supporter, address token, uint256 amount, uint256 totalRaised)",
   "event ProposalFinalized(uint256 indexed proposalId,uint8 status,uint256 totalRaised)",
   "function finalizeProposal(uint256 proposalId) external",
   "function proposalCount() view returns (uint256)",
-  "function getProposal(uint256 proposalId) view returns ((uint256 id,address creator,address recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,uint256 totalRaised,uint8 status,uint8 settlementMode,bool finalized,string metadataURI))",
+  "function getProposal(uint256 proposalId) view returns ((uint256 id,address creator,address recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,uint256 totalRaised,uint8 status,uint8 settlementMode,bool finalized,bool allowOverfunding,string metadataURI))",
 ];
 
 const contract = new ethers.Contract(
@@ -32,8 +32,18 @@ const contract = new ethers.Contract(
 const VAULT_ABI = [
   "event Withdrawn(uint256 indexed proposalId,address indexed supporter,address indexed token,uint256 amount)"
 ];
-const VAULT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, wallet);
+const vaultContract = new ethers.Contract(process.env.VAULT_ADDRESS, VAULT_ABI, wallet);
+
+async function checkCode() {
+  const code = await provider.getCode(process.env.MANAGER_ADDRESS);
+  if (code === "0x" || code === "0x0") {
+    console.error("❌ ERROR CRÍTICO: No hay código desplegado en MANAGER_ADDRESS.");
+    console.error("👉 Asegúrate de ejecutar: npx hardhat run scripts/deploy.ts --network localhost");
+    process.exit(1);
+  }
+}
+
+checkCode();
 
 console.log("Indexer manager:", process.env.MANAGER_ADDRESS);
 console.log("Indexer signer:", wallet.address);
@@ -54,10 +64,11 @@ function parseMetadata(uri) {
   
   const cleanUri = sanitize(uri);
 
+  // If it's a simple string or doesn't have the local prefix, treat as title/description
   if (!cleanUri.includes("local://")) {
     return {
-      title: "Formato no soportado",
-      description: cleanUri.slice(0, 100),
+      title: "Proposal",
+      description: cleanUri,
       createdAt: Date.now(),
     };
   }
@@ -68,7 +79,12 @@ function parseMetadata(uri) {
     const end = decoded.lastIndexOf("}");
     
     if (start === -1 || end === -1 || end <= start) {
-       throw new Error("No JSON structure found in URI");
+       // Fallback for non-JSON URIs
+       return {
+         title: "Proposal",
+         description: decoded.replace("local://", ""),
+         createdAt: Date.now()
+       };
     }
     
     const jsonPart = decoded.substring(start, end + 1);
@@ -77,7 +93,7 @@ function parseMetadata(uri) {
     return {
       title: sanitize(parsed.title) || "Sin título",
       description: sanitize(parsed.description) || "Sin descripción",
-      imageUrl: sanitize(parsed.coverImage) || null,
+      imageUrl: sanitize(parsed.coverImage) || sanitize(parsed.image) || null,
       createdAt: parsed.createdAt || Date.now(),
     };
   } catch (e) {
@@ -128,33 +144,41 @@ async function saveActivity({ type, proposalId, actor, amount, message, txHash, 
 async function upsertProposal(proposalId, onChainData = null, txHash = null) {
   try {
     const p = onChainData || (await contract.getProposal(proposalId));
+    const cleanMetadataUri = p.metadataURI.replace(/[\0\u0000]/g, "").trim();
     const metadata = parseMetadata(p.metadataURI);
     const decimals = await fetchTokenDecimals(p.token);
 
-    const cleanMetadataUri = sanitize(p.metadataURI);
     const normalizedCreator = p.creator.toLowerCase();
     const normalizedRecipient = p.recipient.toLowerCase();
     const normalizedToken = p.token.toLowerCase();
 
     // --- RECONCILIATION ---
-    // Buscamos cualquier propuesta "pending" (ID < 0) que coincida por TX Hash O por Metadata URI
-    let pendingQuery = supabase.from("proposals").select("id").lt("id", 0);
-
+    // We look for any "pending" proposal (ID < 0) that matches by TX Hash OR by Metadata URI.
+    // We use a normalized version of the URI for comparison.
+    let pendingQuery = supabase.from("proposals").select("id, metadata_uri").lt("id", 0);
+    
     if (txHash) {
-      pendingQuery = pendingQuery.or(`tx_hash.eq.${txHash},metadata_uri.eq.${cleanMetadataUri}`);
+      pendingQuery = pendingQuery.or(`tx_hash.eq.${txHash.toLowerCase()},metadata_uri.ilike.%${cleanMetadataUri.slice(-20)}%`);
     } else {
-      pendingQuery = pendingQuery.eq("metadata_uri", cleanMetadataUri);
+      pendingQuery = pendingQuery.ilike("metadata_uri", `%${cleanMetadataUri.slice(-20)}%`);
     }
 
     const { data: pendingItems } = await pendingQuery;
+    
+    // Additional manual filtering to be 100% sure on URI match
+    const matchingPending = pendingItems?.filter(item => {
+      const itemUri = (item.metadata_uri || "").replace(/[\0\u0000]/g, "").trim();
+      return itemUri === cleanMetadataUri;
+    }) || [];
 
-    if (pendingItems && pendingItems.length > 0) {
-      console.log(
-        `[Reconciliation] Found ${pendingItems.length} pending records for Proposal #${proposalId}. Cleaning up...`
-      );
-      for (const item of pendingItems) {
-        await supabase.from("proposals").delete().eq("id", item.id);
+    if (matchingPending.length > 0) {
+      console.log(`[Reconciliation] Found ${matchingPending.length} matching pending records for #${proposalId}. Cleaning up...`);
+      for (const item of matchingPending) {
+        const { error: delError } = await supabase.from("proposals").delete().eq("id", item.id);
+        if (delError) console.error(`[Reconciliation] Failed to delete pending #${item.id}:`, delError.message);
       }
+    } else {
+      console.log(`[Reconciliation] No pending records found for #${proposalId} (Hash: ${txHash?.slice(0, 10)}...)`);
     }
 
     // --- UPSERT METADATA ---
@@ -176,21 +200,18 @@ async function upsertProposal(proposalId, onChainData = null, txHash = null) {
       min_threshold: p.minThreshold.toString(),
       deadline: Number(p.deadline),
       total_raised: p.totalRaised.toString(),
-      status: statusToText(p.status),
-      settlement_mode: Number(p.settlementMode),
-      success: Number(p.status) === 1 ? true : Number(p.status) === 2 ? false : null,
+      status: Number(p.status),
       metadata_uri: cleanMetadataUri,
-      title: sanitize(metadata.title),
-      description: sanitize(metadata.description),
-      image_url: metadata.imageUrl,
-      tx_hash: txHash ? txHash.toLowerCase() : null,
-      created_at: Number(metadata.createdAt) || Date.now(),
+      tx_hash: txHash,
+      title: metadata.title,
+      description: metadata.description,
+      image_url: metadata.imageUrl || metadata.image || metadata.coverImage
     }, { onConflict: 'id' });
 
     if (error) {
       console.error(`Error upserting proposal #${proposalId}:`, error.message);
     } else {
-      console.log(`Proposal #${proposalId} synced successfully.`);
+      console.log(`Proposal #${proposalId} synced successfully. [${metadata.title}]`);
     }
   } catch (e) {
     console.error(`[Indexer Error] Failed to sync proposal #${proposalId}:`, e.message);
@@ -198,12 +219,12 @@ async function upsertProposal(proposalId, onChainData = null, txHash = null) {
 }
 
 async function handleProposalCreated(event) {
-  if (!event.args) {
-    console.error(`[Indexer] Could not parse ProposalCreated event args at tx ${event.transactionHash}`);
+  const proposalId = event.args?.proposalId;
+  if (proposalId === undefined) {
+    console.error(`[Indexer] Could not parse proposalId from event at tx ${event.transactionHash}`);
     return;
   }
-  const { proposalId } = event.args;
-  console.log(`Detected ProposalCreated event for ID: ${Number(proposalId)}`);
+  console.log(`[Event] ProposalCreated detected: ID #${Number(proposalId)} | Tx: ${event.transactionHash.slice(0, 10)}...`);
   await upsertProposal(proposalId, null, event.transactionHash);
 }
 
@@ -358,19 +379,20 @@ async function pollEvents() {
   const toBlock = currentBlock;
 
   if (fromBlock > toBlock) {
+    // Heartbeat cada 5 segundos si no hay bloques nuevos
+    if (Date.now() % 5000 < 1000) {
+      console.log(`[Indexer] Idle. Current block: ${currentBlock} | Waiting for block ${fromBlock}...`);
+    }
     return;
   }
   
-  // Cap the range
   const finalToBlock = Math.min(toBlock, fromBlock + 5000);
-
-  // Silencio: Solo logueamos si hay bloques nuevos reales
-  // console.log(`Polling events from block ${fromBlock} to ${finalToBlock}...`);
+  console.log(`[Indexer] 🔎 Scanning: ${fromBlock} -> ${finalToBlock} (Target: ${currentBlock})`);
 
   try {
     // 1. Proposal Events
     const createdEvents = await contract.queryFilter(
-      contract.filters.ProposalCreated(),
+      "ProposalCreated",
       fromBlock,
       finalToBlock
     );
@@ -379,7 +401,7 @@ async function pollEvents() {
     }
 
     const fundedEvents = await contract.queryFilter(
-      contract.filters.ProposalFunded(),
+      "ProposalFunded",
       fromBlock,
       finalToBlock
     );
@@ -388,7 +410,7 @@ async function pollEvents() {
     }
 
     const finalizedEvents = await contract.queryFilter(
-      contract.filters.ProposalFinalized(),
+      "ProposalFinalized",
       fromBlock,
       finalToBlock
     );
@@ -398,7 +420,7 @@ async function pollEvents() {
 
     // 2. Vault Events
     const withdrawnEvents = await vaultContract.queryFilter(
-      vaultContract.filters.Withdrawn(),
+      "Withdrawn",
       fromBlock,
       finalToBlock
     );
@@ -458,6 +480,15 @@ async function autoFinalizeExpiredProposals() {
 // Optimized startup sync
 async function syncMissingProposals() {
   const onChainCount = await contract.proposalCount();
+  
+  // Si la cadena tiene 0 propuestas (recién reiniciada), pero la DB tiene datos,
+  // probablemente necesitemos limpiar la DB o ignorar el desajuste.
+  if (Number(onChainCount) === 0) {
+    console.log("Chain is empty. Resetting indexer last block to 0.");
+    await setLastSyncedBlock(0);
+    return;
+  }
+
   const { count: dbCount } = await supabase
     .from("proposals")
     .select("*", { count: "exact", head: true })
@@ -529,6 +560,18 @@ async function main() {
 
   pollLoop();
   finalizeLoop();
+  
+  // High-frequency reconciliation loop (every 5 seconds)
+  // This catches any missed events by comparing proposalCount vs DB count
+  const reconciliationLoop = async () => {
+    try {
+      await syncMissingProposals();
+    } catch (err) {
+      console.error("Reconciliation loop error:", err.message);
+    }
+    setTimeout(reconciliationLoop, 5000);
+  };
+  reconciliationLoop();
   
   console.log("Indexer loops and listeners started.");
 }

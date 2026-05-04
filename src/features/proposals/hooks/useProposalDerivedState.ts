@@ -10,9 +10,15 @@ export function useProposalDerivedState(proposal: any, fundings: any[], wallet: 
     // 1. Unify amounts for calculation
     const goalRaw = BigInt(proposal.goal?.raw || 0);
     const minThresholdRaw = BigInt(proposal.minThreshold?.raw || 0);
-    const realTimeRaisedRaw = fundings.reduce((sum, f) => sum + BigInt(f.amount || 0), 0n);
     
-    // 2. Calculate progress
+    // Prioritize the confirmed totalRaised from the proposal record
+    // but allow fundings as a fallback/real-time update
+    const totalRaisedRaw = BigInt(proposal.totalRaised?.raw || 0);
+    const fundingsSumRaw = fundings.reduce((sum, f) => sum + BigInt(f.amount || 0), 0n);
+    
+    const realTimeRaisedRaw = totalRaisedRaw > fundingsSumRaw ? totalRaisedRaw : fundingsSumRaw;
+    
+    // 2. Calculate progress (with 2 decimal precision)
     const progress = goalRaw > 0n ? Number((realTimeRaisedRaw * 10000n) / goalRaw) / 100 : 0;
 
     // 3. Check time (already in MS from API)

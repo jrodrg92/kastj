@@ -18,7 +18,7 @@ export function useFundProposal(ctx: ProposalEngineContext | null) {
       if (!ctx) throw new Error("Wallet not connected");
 
       // 1. Review/Signing Step
-      setTxStatus({ state: "signing", step: "submit" });
+      setTxStatus({ state: "signing", step: "approve" });
       
       const engine = getProposalEngine();
       
@@ -70,7 +70,7 @@ export function useFundProposal(ctx: ProposalEngineContext | null) {
       console.error(error);
       setTxStatus({ 
         state: "error", 
-        step: "submit",
+        step: "approve",
         message: error.message || t.fundError 
       });
     },

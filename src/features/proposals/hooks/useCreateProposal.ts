@@ -17,7 +17,7 @@ export function useCreateProposal(ctx: ProposalEngineContext | null) {
     mutationFn: async (input: CreateProposalInput) => {
       if (!ctx) throw new Error("Wallet not connected");
 
-      setTxStatus({ state: "signing", step: "submit" });
+      setTxStatus({ state: "signing", step: "approve" });
 
       const engine = getProposalEngine();
       const result = await engine.submit(ctx, { type: "proposal.create", input });
@@ -53,7 +53,7 @@ export function useCreateProposal(ctx: ProposalEngineContext | null) {
       console.error(error);
       setTxStatus({ 
         state: "error", 
-        step: "submit",
+        step: "approve",
         message: error.message || t.createError 
       });
     },

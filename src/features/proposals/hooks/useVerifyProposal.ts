@@ -45,6 +45,6 @@ export function useVerifyProposal(ctx: ProposalEngineContext | null) {
     verify, 
     isVerifying, 
     result,
-    isVerified: result?.status === "verified"
+    isVerified: result === null ? null : result.status === "verified"
   };
 }

@@ -1,5 +1,6 @@
-export function formatRemainingTime(deadline: number) {
+export function formatRemainingTime(deadlineMs: number) {
   const now = Math.floor(Date.now() / 1000);
+  const deadline = Math.floor(deadlineMs / 1000);
   const seconds = deadline - now;
 
   if (seconds <= 0) return "Expired";
@@ -15,6 +16,6 @@ export function formatRemainingTime(deadline: number) {
   return `${seconds}s left`;
 }
 
-export function isExpired(deadline: number) {
-  return Math.floor(Date.now() / 1000) >= deadline;
+export function isExpired(deadlineMs: number) {
+  return Date.now() >= deadlineMs;
 }

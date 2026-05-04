@@ -18,7 +18,7 @@ export function useFinalizeProposal(ctx: ProposalEngineContext | null) {
     mutationFn: async (proposalId: ProposalId) => {
       if (!ctx) throw new Error("Wallet not connected");
 
-      setTxStatus({ state: "signing", step: "submit", message: "Finalizing proposal and settling funds..." });
+      setTxStatus({ state: "signing", step: "approve", message: "Finalizing proposal and settling funds..." });
       
       const engine = getProposalEngine();
       const result = await engine.submit(ctx, { 
@@ -57,7 +57,7 @@ export function useFinalizeProposal(ctx: ProposalEngineContext | null) {
         return;
       }
       console.error(error);
-      setTxStatus({ state: "error", step: "submit", message: error.message || t.finalizeError });
+      setTxStatus({ state: "error", step: "approve", message: error.message || t.finalizeError });
     },
   });
 }

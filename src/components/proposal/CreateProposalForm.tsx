@@ -1,11 +1,32 @@
+"use client";
+
 import { useState, useRef } from "react";
 import toast from "react-hot-toast";
-import { Loader2, ArrowLeft, ArrowRight, Check, Image as ImageIcon, Eye, Rocket, Info, Calendar, Target, Wallet, Upload } from "lucide-react";
+import { 
+  Loader2, 
+  ArrowLeft, 
+  ArrowRight, 
+  Check, 
+  Image as ImageIcon, 
+  Rocket, 
+  Info, 
+  Calendar, 
+  Target, 
+  Wallet, 
+  Upload,
+  Type,
+  Coins,
+  Clock,
+  Layout,
+  Sparkles,
+  ShieldCheck
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { NETWORK } from "../../lib/network";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { ScrollReveal } from "../ui/ScrollReveal";
 import ReactMarkdown from "react-markdown";
 import { uploadProposalImage } from "../../lib/upload";
+import { cn } from "../../lib/utils";
 
 type Props = {
   title: string;
@@ -124,78 +145,137 @@ export function CreateProposalForm({
   }
 
   return (
-    <div className="w-full">
-      {/* ─── Stepper ─── */}
-      <div className="flex items-center justify-center gap-8 py-8 border-b border-white/[0.05] bg-white/[0.02]">
-        <button 
-          onClick={() => setStep(1)}
-          className={`flex items-center gap-3 transition-colors ${step === 1 ? "text-cyan-500" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${step === 1 ? "bg-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]" : "bg-white/5 border border-white/10"}`}>
-            1
+    <div className="w-full bg-background transition-colors duration-500">
+      {/* ─── Premium Stepper ─── */}
+      <div className="sticky top-0 z-30 w-full backdrop-blur-2xl border-b border-border/50 bg-background/80">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-6 py-6">
+          <button 
+            onClick={() => setStep(1)}
+            className="group flex flex-col items-center gap-2 outline-none"
+          >
+            <div className={cn(
+              "flex h-12 w-12 items-center justify-center rounded-2xl border-2 transition-all duration-500",
+              step === 1 
+                ? "border-cyan-500 bg-cyan-500/10 text-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.1)]" 
+                : "border-border bg-muted/30 text-muted-foreground group-hover:border-border-foreground"
+            )}>
+              {step === 1 ? <Layout size={20} className="animate-pulse" /> : <Check size={20} />}
+            </div>
+            <span className={cn(
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
+              step === 1 ? "text-cyan-500" : "text-muted-foreground"
+            )}>{t.step1Edit}</span>
+          </button>
+          
+          <div className="flex-1 px-8">
+            <div className="h-[2px] w-full rounded-full bg-border overflow-hidden">
+               <motion.div 
+                 className="h-full bg-cyan-500"
+                 animate={{ width: step === 2 ? "100%" : "0%" }}
+                 transition={{ duration: 0.8, ease: "circOut" }}
+               />
+            </div>
           </div>
-          <span className="text-sm font-bold uppercase tracking-wider">{t.step1Edit}</span>
-        </button>
-        
-        <div className="h-[1px] w-12 bg-white/10" />
 
-        <button 
-          onClick={handleNext}
-          className={`flex items-center gap-3 transition-colors ${step === 2 ? "text-cyan-500" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${step === 2 ? "bg-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]" : "bg-white/5 border border-white/10"}`}>
-            2
-          </div>
-          <span className="text-sm font-bold uppercase tracking-wider">{t.step2Preview}</span>
-        </button>
+          <button 
+            onClick={handleNext}
+            className="group flex flex-col items-center gap-2 outline-none"
+          >
+            <div className={cn(
+              "flex h-12 w-12 items-center justify-center rounded-2xl border-2 transition-all duration-500",
+              step === 2 
+                ? "border-cyan-500 bg-cyan-500/10 text-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.1)]" 
+                : "border-border bg-muted/30 text-muted-foreground group-hover:border-border-foreground"
+            )}>
+              <Sparkles size={20} className={cn(step === 2 && "animate-pulse")} />
+            </div>
+            <span className={cn(
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
+              step === 2 ? "text-cyan-500" : "text-muted-foreground"
+            )}>{t.step2Preview}</span>
+          </button>
+        </div>
       </div>
 
-      {/* ─── Step 1: Edit ─── */}
-      {step === 1 && (
-        <div className="p-6 md:p-10 space-y-12 animate-in fade-in duration-500">
-          {/* Basics Section (Now at the top, full width) */}
-          <section className="space-y-6 pb-8 border-b border-white/5">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <Info size={20} className="text-cyan-500" />
-              {t.basics}
-            </h3>
-            
-            <div className="grid gap-8 lg:grid-cols-2">
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  <Rocket size={14} className="text-cyan-500/60" />
-                  {t.title}
-                </label>
-                <input
-                  className="h-14 w-full rounded-xl border border-white/10 bg-background/50 p-4 text-sm text-white font-bold outline-none transition-all focus:border-cyan-500/40"
-                  placeholder={t.ej1}
-                  value={title}
-                  onChange={(e) => onTitleChange(e.target.value)}
-                />
+      <AnimatePresence mode="wait">
+        {/* ─── Step 1: Edit ─── */}
+        {step === 1 && (
+          <motion.div 
+            key="edit"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="p-6 md:p-12 space-y-16"
+          >
+            {/* Header */}
+            <div className="relative space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-4 py-1.5 border border-cyan-500/20">
+                 <Rocket size={14} className="text-cyan-500" />
+                 <span className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Proposal Builder</span>
               </div>
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  <Wallet size={14} className="text-cyan-500/60" />
-                  {t.walletreceiver}
-                </label>
-                <input
-                  className="h-14 w-full rounded-xl border border-white/10 bg-background/50 p-4 font-mono text-xs text-white outline-none transition-all focus:border-cyan-500/40"
-                  placeholder="0x..."
-                  value={recipient}
-                  onChange={(e) => onRecipientChange(e.target.value)}
-                />
+              <h2 className="text-3xl font-black tracking-tight text-foreground md:text-4xl">
+                Define your <span className="text-gradient-cyan">Impact</span>
+              </h2>
+              <p className="max-w-2xl text-muted-foreground text-sm leading-relaxed">
+                Kastj proposals are smart-contracts. Fill in the details below to initialize your on-chain campaign.
+              </p>
+            </div>
+
+            {/* ─── Basics Card ─── */}
+            <div className="premium-glass rounded-[2rem] p-1 shadow-2xl">
+              <div className="rounded-[1.9rem] p-8 md:p-10 space-y-10">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500">
+                    <Info size={20} />
+                  </div>
+                  <h3 className="text-xl font-black text-foreground">{t.basics}</h3>
+                </div>
+
+                <div className="grid gap-10 lg:grid-cols-2">
+                  <div className="space-y-3 group">
+                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground transition-colors group-focus-within:text-cyan-500">
+                      <Type size={14} />
+                      {t.title}
+                    </label>
+                    <div className="relative">
+                      <input
+                        className="h-16 w-full rounded-2xl border border-border bg-muted/20 px-6 text-sm text-foreground font-bold outline-none transition-all focus:border-cyan-500/50 focus:bg-muted/30 focus:ring-4 focus:ring-cyan-500/10"
+                        placeholder={t.ej1}
+                        value={title}
+                        onChange={(e) => onTitleChange(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 group">
+                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground transition-colors group-focus-within:text-cyan-500">
+                      <Wallet size={14} />
+                      {t.walletreceiver}
+                    </label>
+                    <div className="relative">
+                      <input
+                        className="h-16 w-full rounded-2xl border border-border bg-muted/20 px-6 font-mono text-xs text-foreground outline-none transition-all focus:border-cyan-500/50 focus:bg-muted/30 focus:ring-4 focus:ring-cyan-500/10"
+                        placeholder="0x..."
+                        value={recipient}
+                        onChange={(e) => onRecipientChange(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </section>
 
-          <div className="grid gap-12 lg:grid-cols-2">
-            {/* Left Column: Media */}
-            <div className="space-y-8">
-              <section>
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <ImageIcon size={20} className="text-cyan-500" />
-                  {t.coverImage}
-                </h3>
+            {/* ─── Media & Funding Grid ─── */}
+            <div className="grid gap-10 lg:grid-cols-2">
+              {/* Media Section */}
+              <div className="premium-glass rounded-[2rem] p-8 md:p-10 space-y-8">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500">
+                    <ImageIcon size={20} />
+                  </div>
+                  <h3 className="text-xl font-black text-foreground">{t.coverImage}</h3>
+                </div>
+
                 <div 
                   className="relative group"
                   onDragOver={onDragOver}
@@ -204,40 +284,46 @@ export function CreateProposalForm({
                 >
                   <div 
                     onClick={() => fileInputRef.current?.click()}
-                    className={`aspect-video rounded-3xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center gap-3 cursor-pointer ${
-                      coverImage ? "border-cyan-500/50 bg-cyan-500/5" : "border-white/10 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/20"
-                    } ${isDragging ? "border-cyan-500 bg-cyan-500/10" : ""}`}
+                    className={cn(
+                      "aspect-video rounded-[2rem] border-2 border-dashed transition-all duration-500 overflow-hidden flex flex-col items-center justify-center gap-4 cursor-pointer",
+                      coverImage ? "border-cyan-500/30 bg-muted/20" : "border-border bg-muted/10 hover:bg-muted/20 hover:border-muted-foreground/30",
+                      isDragging && "border-cyan-500 bg-cyan-500/10 scale-[0.98]"
+                    )}
                   >
                     {isUploading ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="h-10 w-10 animate-spin text-cyan-500" />
-                        <p className="text-xs font-bold text-cyan-500 uppercase tracking-widest">{t.updating}</p>
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="h-12 w-12 animate-spin text-cyan-500" />
+                        <p className="text-[10px] font-black text-cyan-500 uppercase tracking-widest">{t.updating}</p>
                       </div>
                     ) : coverImage ? (
-                      <>
-                        <img src={coverImage} alt="Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                           <Upload className="text-white" size={32} />
+                      <div className="relative h-full w-full group/img">
+                        <img src={coverImage} alt="Preview" className="h-full w-full object-cover transition-transform duration-700 group-hover/img:scale-105" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">
+                           <Upload className="text-white animate-bounce" size={32} />
+                           <span className="text-[10px] font-black text-white uppercase tracking-widest">Change Image</span>
                         </div>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             onCoverImageChange("");
                           }}
-                          className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-2 rounded-full text-white hover:bg-rose-500 transition-colors z-10"
+                          className="absolute top-6 right-6 bg-rose-500 p-2.5 rounded-xl text-white hover:bg-rose-600 transition-all z-10 shadow-lg shadow-rose-500/20 active:scale-90"
                         >
                           <ArrowLeft size={16} />
                         </button>
-                      </>
+                      </div>
                     ) : (
                       <>
-                        <div className={`p-4 rounded-2xl transition-colors ${isDragging ? "bg-cyan-500/20 text-cyan-500" : "bg-white/5 text-muted-foreground group-hover:text-cyan-500"}`}>
+                        <div className={cn(
+                          "p-5 rounded-2xl transition-all duration-500",
+                          isDragging ? "bg-cyan-500 text-white scale-110 shadow-2xl shadow-cyan-500/30" : "bg-muted text-muted-foreground group-hover:text-cyan-500 group-hover:scale-110"
+                        )}>
                           <Upload size={32} />
                         </div>
-                        <div className="text-center px-6">
-                          <p className="text-sm font-bold text-foreground mb-1">Click or drag image here</p>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                            Supports JPG, PNG, WEBP (Max 5MB)
+                        <div className="text-center px-10 space-y-2">
+                          <p className="text-sm font-black text-foreground">Click or drag image here</p>
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-[0.2em]">
+                            JPG, PNG, WEBP — MAX 5MB
                           </p>
                         </div>
                       </>
@@ -255,209 +341,285 @@ export function CreateProposalForm({
                     }}
                   />
 
-                  <input
-                    className="mt-4 w-full rounded-xl border border-white/10 bg-background/50 p-3.5 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-cyan-500/40"
-                    placeholder="...or paste an image URL here"
-                    value={coverImage}
-                    onChange={(e) => onCoverImageChange(e.target.value)}
-                  />
+                  <div className="mt-6 flex items-center gap-3 rounded-2xl bg-muted/20 p-2 border border-border group-focus-within:border-cyan-500/30 transition-all">
+                    <div className="px-4 text-muted-foreground"><Layout size={16} /></div>
+                    <input
+                      className="h-10 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/50"
+                      placeholder="...or paste an image URL here"
+                      value={coverImage}
+                      onChange={(e) => onCoverImageChange(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </section>
-            </div>
+              </div>
 
-            {/* Right Column: Funding */}
-            <div className="space-y-8">
-              <section className="space-y-6">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                  <Target size={20} className="text-cyan-500" />
-                  {t.funding}
-                </h3>
-                
-                <div className="grid gap-x-6 gap-y-6 sm:grid-cols-2">
-                  <div className="flex flex-col">
-                    <label className="mb-2 block min-h-[32px] text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      {t.objetive} ({NETWORK.currency})
-                    </label>
-                    <div className="relative flex-1">
+              {/* Funding Section */}
+              <div className="premium-glass rounded-[2rem] p-8 md:p-10 space-y-8">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500">
+                    <Coins size={20} />
+                  </div>
+                  <h3 className="text-xl font-black text-foreground">{t.funding}</h3>
+                </div>
+
+                <div className="space-y-8">
+                  <div className="grid gap-8 sm:grid-cols-2">
+                    <div className="space-y-3 group">
+                      <label className="text-[9px] font-black uppercase tracking-[0.1em] text-muted-foreground group-focus-within:text-cyan-500 transition-colors whitespace-nowrap">
+                        {t.objetive} (KAS)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          className="h-14 w-full rounded-2xl border border-border bg-muted/20 px-6 text-sm text-foreground font-mono outline-none transition-all focus:border-cyan-500/50 focus:bg-muted/30"
+                          value={goal}
+                          onChange={(e) => onGoalChange(e.target.value)}
+                        />
+                        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-cyan-500/40 tracking-widest">KAS</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 group">
+                      <label className="text-[9px] font-black uppercase tracking-[0.1em] text-muted-foreground group-focus-within:text-cyan-500 transition-colors whitespace-nowrap">
+                        {t.timer}
+                      </label>
+                      <div className="relative">
+                        <select
+                          className="h-14 w-full rounded-2xl border border-border bg-muted/20 px-6 pr-10 text-xs font-bold text-foreground outline-none transition-all focus:border-cyan-500/50 focus:bg-muted/30 appearance-none"
+                          value={duration}
+                          onChange={(e) => onDurationChange?.(e.target.value)}
+                        >
+                          {durationOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value} className="bg-background text-foreground">{opt.label}</option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                          <Clock size={16} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                        {t.minThreshold} (KAS)
+                      </label>
+                      <div className="flex items-center gap-2 rounded-full bg-cyan-500/10 px-3 py-1 border border-cyan-500/20">
+                         <Target size={10} className="text-cyan-500" />
+                         <span className="text-[9px] font-black text-cyan-500 uppercase tracking-tighter">Safety Min: {autoThreshold}</span>
+                      </div>
+                    </div>
+                    <div className="relative">
                       <input
                         type="number"
-                        className="h-14 w-full rounded-xl border border-white/10 bg-background/50 p-4 text-sm text-white font-mono outline-none transition-all focus:border-cyan-500/40"
-                        value={goal}
-                        onChange={(e) => onGoalChange(e.target.value)}
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/20 px-6 text-sm text-foreground font-mono outline-none transition-all focus:border-cyan-500/50 focus:bg-muted/30"
+                        value={minThreshold}
+                        onChange={(e) => onMinThresholdChange(e.target.value)}
                       />
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-cyan-500/50">KAS</div>
                     </div>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="mb-2 block min-h-[32px] text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      {t.timer}
-                    </label>
-                    <div className="flex-1">
-                      <select
-                        className="h-14 w-full rounded-xl border border-white/10 bg-background/50 p-4 text-sm text-white outline-none transition-all focus:border-cyan-500/40 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23666%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:20px] bg-[right_1rem_center] bg-no-repeat"
-                        value={duration}
-                        onChange={(e) => onDurationChange?.(e.target.value)}
-                      >
-                        {durationOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
+                    <div className="rounded-xl bg-muted/10 p-4 flex items-start gap-3 border border-border">
+                       <Info size={14} className="text-cyan-500/60 mt-0.5" />
+                       <p className="text-[10px] text-muted-foreground leading-relaxed italic">
+                         If this goal is not reached by the deadline, all contributors receive a full refund. 
+                         Kastj never holds funds—they stay in the proposal escrow.
+                       </p>
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      {t.minThreshold} ({NETWORK.currency})
-                    </label>
-                    <span className="text-[10px] text-cyan-500 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
-                      Min: {autoThreshold}
-                    </span>
+            {/* ─── Description Card ─── */}
+            <div className="premium-glass rounded-[2.5rem] p-1 shadow-2xl">
+              <div className="rounded-[2.4rem] p-8 md:p-12 space-y-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500">
+                      <Calendar size={20} />
+                    </div>
+                    <h3 className="text-xl font-black text-foreground">{t.description}</h3>
                   </div>
-                  <input
-                    type="number"
-                    className="w-full rounded-xl border border-white/10 bg-background/50 p-4 text-sm text-white font-mono outline-none transition-all focus:border-cyan-500/40"
-                    value={minThreshold}
-                    onChange={(e) => onMinThresholdChange(e.target.value)}
-                  />
-                  <p className="mt-2 text-[10px] text-muted-foreground leading-relaxed italic">
-                    If this amount is not reached by the deadline, contributors can claim a refund.
-                  </p>
+                  <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                    Markdown Supported <Check size={12} className="text-cyan-500" />
+                  </div>
                 </div>
-              </section>
-            </div>
-          </div>
-
-          {/* Full Width: Description */}
-          <section className="pt-6 border-t border-white/5">
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <Calendar size={20} className="text-cyan-500" />
-              {t.description}
-            </h3>
-            <textarea
-              className="min-h-[400px] w-full resize-y rounded-2xl border border-white/10 bg-background/50 p-6 text-sm text-foreground outline-none transition-all focus:border-cyan-500/40 leading-relaxed font-mono"
-              placeholder={t.ej2}
-              value={description}
-              onChange={(e) => onDescriptionChange(e.target.value)}
-            />
-          </section>
-
-          <div className="flex items-center justify-between pt-6">
-            <p className="text-xs text-muted-foreground max-w-md italic">
-              All information will be permanently recorded on the blockchain. Ensure accuracy before continuing.
-            </p>
-            <button
-              onClick={handleNext}
-              className="group flex items-center gap-3 rounded-2xl bg-cyan-500 px-10 py-4 text-sm font-black text-white transition-all hover:bg-cyan-600 hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] shadow-lg"
-            >
-              {t.preview} <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Step 2: Preview ─── */}
-      {step === 2 && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {/* Status Bar */}
-          <div className="bg-cyan-500/10 border-y border-cyan-500/20 px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-500">{t.readyToPublish}</span>
-            </div>
-            <span className="text-[10px] text-cyan-500/60 font-mono">ID: DRAFT-{Date.now().toString().slice(-6)}</span>
-          </div>
-
-          <div className="p-8 md:p-12 lg:p-16 max-w-4xl mx-auto space-y-12">
-            {/* Header Preview */}
-            <div className="space-y-6 text-center">
-              {coverImage && (
-                <div className="aspect-[21/9] rounded-[2rem] overflow-hidden shadow-2xl border border-white/10 mb-10">
-                  <img src={coverImage} alt={title} className="w-full h-full object-cover" />
-                </div>
-              )}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.1]">{title}</h1>
-            </div>
-
-            {/* Meta Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 text-center">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{t.objetive}</p>
-                <p className="text-lg font-black text-white">{goal} KAS</p>
+                
+                <textarea
+                  className="min-h-[400px] w-full resize-y rounded-2xl border border-border bg-muted/10 p-8 text-sm text-foreground outline-none transition-all focus:border-cyan-500/30 focus:bg-muted/20 leading-relaxed font-mono"
+                  placeholder={t.ej2}
+                  value={description}
+                  onChange={(e) => onDescriptionChange(e.target.value)}
+                />
               </div>
-              <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 text-center">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{t.minThreshold}</p>
-                <p className="text-lg font-black text-cyan-400">{minThreshold} KAS</p>
-              </div>
-              <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 text-center">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{t.timer}</p>
-                <p className="text-lg font-black text-white">
-                  {durationOptions.find(o => o.value === duration)?.label || duration}
+            </div>
+
+            {/* Final Action Bar */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-8 border-t border-border">
+              <div className="flex items-start gap-4 max-w-lg">
+                <div className="mt-1 h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)] shrink-0" />
+                <p className="text-[11px] text-muted-foreground leading-relaxed italic">
+                  By clicking preview, you will verify the proposal's deterministic address. 
+                  Final deployment requires a one-time transaction to the Kastj Registry.
                 </p>
               </div>
-              <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 text-center">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Status</p>
-                <p className="text-lg font-black text-cyan-500">{t.draft}</p>
-              </div>
-            </div>
 
-            {/* Recipient */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground">
-                  <Wallet size={20} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t.walletreceiver}</p>
-                  <p className="text-xs font-mono text-white/80 mt-0.5 break-all">{recipient}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="prose prose-invert prose-cyan max-w-none border-t border-white/5 pt-12">
-               <ReactMarkdown>{description}</ReactMarkdown>
-            </div>
-
-            {/* Actions */}
-            <div className="pt-12 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
               <button
-                onClick={() => setStep(1)}
-                disabled={loading}
-                className="flex items-center gap-3 text-muted-foreground hover:text-white transition-colors font-bold text-sm"
+                onClick={handleNext}
+                className="group relative flex h-16 items-center gap-4 rounded-2xl bg-cyan-500 px-12 text-sm font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-cyan-600 hover:shadow-[0_20px_40px_-10px_rgba(6,182,212,0.3)] hover:scale-[1.02] active:scale-95 shadow-xl"
               >
-                <ArrowLeft size={18} /> {t.step1Edit}
+                {t.preview} 
+                <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                <div className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity animate-pulse" />
               </button>
+            </div>
+          </motion.div>
+        )}
 
-              <button
-                onClick={handleSubmit}
-                disabled={loading || !connected}
-                className="group relative flex items-center gap-4 rounded-full bg-cyan-500 px-12 py-5 text-lg font-black text-white transition-all hover:bg-cyan-600 hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:scale-100"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={20} className="animate-spin" />
-                    {t.creating}
-                  </>
-                ) : (
-                  <>
-                    <Rocket size={22} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                    {t.publish}
-                  </>
+        {/* ─── Step 2: Preview ─── */}
+        {step === 2 && (
+          <motion.div 
+            key="preview"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="p-8 md:p-16 lg:p-24 space-y-20 max-w-6xl mx-auto"
+          >
+            {/* Status Indicator */}
+            <div className="flex items-center justify-center gap-4">
+               <div className="h-px w-12 bg-gradient-to-r from-transparent to-cyan-500/30" />
+               <div className="flex items-center gap-3 rounded-full bg-cyan-500/10 px-6 py-2 border border-cyan-500/20">
+                  <div className="h-2 w-2 rounded-full bg-cyan-500 animate-ping" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500">Final Verification</span>
+               </div>
+               <div className="h-px w-12 bg-gradient-to-l from-transparent to-cyan-500/30" />
+            </div>
+
+            {/* Main Preview Container */}
+            <div className="space-y-16">
+              {/* Visual Header */}
+              <div className="space-y-10 text-center">
+                {coverImage && (
+                  <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="mx-auto aspect-[21/9] max-w-5xl overflow-hidden rounded-[3rem] border border-border shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] dark:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]"
+                  >
+                    <img src={coverImage} alt={title} className="w-full h-full object-cover" />
+                  </motion.div>
                 )}
-              </button>
-            </div>
+                <h1 className="mx-auto max-w-4xl text-5xl md:text-7xl font-black tracking-tighter text-foreground leading-[1]">
+                  {title}
+                </h1>
+              </div>
 
-            {!connected && (
-              <p className="text-center text-sm text-rose-400 font-medium">
-                {t.connectWalletFirst}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+              {/* Data Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {[
+                  { label: t.objetive, value: `${goal} KAS`, icon: Target },
+                  { label: t.minThreshold, value: `${minThreshold} KAS`, icon: Check, highlight: true },
+                  { label: t.timer, value: durationOptions.find(o => o.value === duration)?.label || duration, icon: Clock },
+                  { label: "Network", value: "Kaspa zkEVM", icon: Layout }
+                ].map((item, i) => (
+                  <div key={i} className={cn(
+                    "premium-glass rounded-3xl p-8 flex flex-col items-center justify-center gap-3 text-center transition-transform hover:scale-105",
+                    item.highlight && "border-cyan-500/40 bg-cyan-500/5"
+                  )}>
+                    <item.icon size={20} className={cn("mb-2", item.highlight ? "text-cyan-500" : "text-muted-foreground")} />
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{item.label}</p>
+                    <p className={cn("text-xl font-black", item.highlight ? "text-cyan-400" : "text-foreground")}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Detailed Recipient */}
+              <div className="premium-glass rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-6">
+                  <div className="h-16 w-16 rounded-[1.2rem] bg-cyan-500/10 flex items-center justify-center text-cyan-500 shadow-inner">
+                    <Wallet size={32} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">{t.walletreceiver}</p>
+                    <p className="text-sm font-mono text-foreground/80 tracking-tight break-all">{recipient}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2 border border-border">
+                   <ShieldCheck className="text-emerald-500" size={16} />
+                   <span className="text-[10px] font-bold text-muted-foreground">Recipient Verified</span>
+                </div>
+              </div>
+
+              {/* Rich Description */}
+              <div className="prose prose-invert prose-cyan dark:prose-invert max-w-none border-t border-border pt-16">
+                 <div className="flex items-center gap-4 mb-10 text-muted-foreground uppercase text-[10px] font-black tracking-[0.3em]">
+                    <div className="h-[2px] w-8 bg-cyan-500" />
+                    <span>Project Narrative</span>
+                 </div>
+                 <div className="text-foreground/80 leading-relaxed text-lg">
+                    <ReactMarkdown>{description}</ReactMarkdown>
+                 </div>
+              </div>
+
+              {/* CTA Section */}
+              <div className="pt-16 border-t border-border">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-12 premium-glass rounded-[3rem] p-12 shadow-2xl overflow-hidden relative">
+                  {/* Decorative Glow */}
+                  <div className="absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-cyan-500/5 dark:bg-cyan-500/10 blur-[100px]" />
+                  
+                  <div className="space-y-4 text-center lg:text-left z-10">
+                    <h3 className="text-3xl font-black text-foreground leading-tight">Ready to launch <br/> on <span className="text-cyan-500">Kaspa?</span></h3>
+                    <p className="text-muted-foreground text-sm max-w-md italic font-medium">
+                      Deployment will create a unique Escrow Vault. This action is irreversible once finalized.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-8 z-10">
+                    <button
+                      onClick={handleSubmit}
+                      disabled={loading || !connected}
+                      className="group relative flex h-20 items-center gap-6 rounded-[1.5rem] bg-cyan-500 px-16 text-xl font-black text-white transition-all hover:bg-cyan-600 hover:scale-[1.05] active:scale-95 shadow-[0_30px_60px_-15px_rgba(6,182,212,0.4)] disabled:opacity-30 disabled:scale-100 disabled:grayscale"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 size={24} className="animate-spin" />
+                          <span>Initializing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Rocket size={28} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                          <span>{t.publish}</span>
+                        </>
+                      )}
+                    </button>
+                    
+                    <button
+                      onClick={() => setStep(1)}
+                      disabled={loading}
+                      className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors font-black text-[11px] uppercase tracking-widest outline-none group"
+                    >
+                      <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-1" /> 
+                      Go back to editing
+                    </button>
+                  </div>
+                </div>
+                
+                {!connected && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-8 text-center"
+                  >
+                    <div className="inline-flex items-center gap-3 rounded-2xl bg-rose-500/10 px-6 py-3 border border-rose-500/20 text-rose-500">
+                      <Wallet size={16} />
+                      <span className="text-xs font-black uppercase tracking-widest">{t.connectWalletFirst}</span>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

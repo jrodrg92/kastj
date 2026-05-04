@@ -11,7 +11,6 @@ interface StepItem {
 const STEPS: StepItem[] = [
   { id: "review", label: "Review" },
   { id: "approve", label: "Approve" },
-  { id: "submit", label: "Submit" },
   { id: "pending", label: "Processing" },
   { id: "confirmed", label: "Confirmed" },
   { id: "indexed", label: "Indexed" },

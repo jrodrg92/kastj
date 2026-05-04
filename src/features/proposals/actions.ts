@@ -58,7 +58,7 @@ export async function prepareProposalMetadata(
     metadata_uri: metadataURI,
     tx_hash: txHash ? txHash.toLowerCase() : null,
     created_at: Math.floor(Date.now() / 1000)
-  }, { onConflict: 'metadata_uri' }).select().single();
+  }, { onConflict: 'id' }).select().single();
 
   if (error) {
     console.error("Error saving pending proposal:", error.message);

@@ -24,7 +24,7 @@ export function ProposalFundingPanel({
 }: ProposalFundingPanelProps) {
   const [amount, setAmount] = useState("");
 
-  const isDisabled = isMutating || !amount || !walletConnected || isVerified === false;
+  const isDisabled = isMutating || !amount || !walletConnected;
 
   const handleFund = () => {
     if (isDisabled) return;
@@ -42,7 +42,7 @@ export function ProposalFundingPanel({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0.00"
-          disabled={isVerified === false}
+          disabled={status === "failed"}
           className="w-full rounded-2xl border border-border bg-muted/50 px-5 py-4 text-xl font-bold text-foreground outline-none transition-all focus:border-cyan-500/50 focus:bg-muted disabled:opacity-50"
         />
         <div className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg bg-border/30 px-3 py-1 text-xs font-bold text-muted-foreground">
