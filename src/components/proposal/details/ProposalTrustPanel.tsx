@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck, ShieldX, CheckCircle2, Loader2, Info } from "lucide-react";
+import { ShieldCheck, ShieldX, CheckCircle2, Loader2, Info, ExternalLink } from "lucide-react";
 import { VerificationResult } from "@/engines/proposal-engine.interface";
 import { VerificationBadge, VerificationStatus } from "@/components/ui/VerificationBadge";
 
@@ -10,6 +10,8 @@ interface ProposalTrustPanelProps {
   isVerified: boolean | null;
   result: VerificationResult | null;
   isPending?: boolean;
+  txHash?: string | null;
+  explorerUrl?: string;
   t: any;
 }
 
@@ -19,6 +21,8 @@ export function ProposalTrustPanel({
   isVerified,
   result,
   isPending,
+  txHash,
+  explorerUrl,
   t
 }: ProposalTrustPanelProps) {
   
@@ -85,10 +89,22 @@ export function ProposalTrustPanel({
               <span>{check}</span>
             </div>
           ))}
-          <div className="pt-4 text-center">
+          <div className="pt-4 flex flex-col items-center gap-3">
             <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-tighter">
               Proof Timestamp: {new Date(result.timestamp).toISOString()}
             </span>
+
+            {txHash && explorerUrl && (
+              <a 
+                href={`${explorerUrl}/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 transition-all hover:bg-white/10 hover:text-white"
+              >
+                <ExternalLink size={12} className="text-cyan-500" />
+                {t.viewOnExplorer || "View on Explorer"}
+              </a>
+            )}
           </div>
         </div>
       )}

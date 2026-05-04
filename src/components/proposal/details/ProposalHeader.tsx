@@ -10,10 +10,17 @@ interface ProposalHeaderProps {
   title: string;
   creator: string;
   status: string | number;
+  explorerUrl: string;
   t: any;
 }
 
-export function ProposalHeader({ title, creator, status, t }: ProposalHeaderProps) {
+export function ProposalHeader({ 
+  title, 
+  creator, 
+  status, 
+  explorerUrl,
+  t 
+}: ProposalHeaderProps) {
   const [copied, setCopied] = useState(false);
 
   const isActive = status === "active" || status === 0;
@@ -40,19 +47,27 @@ export function ProposalHeader({ title, creator, status, t }: ProposalHeaderProp
               {statusLabel(status, t)}
             </span>
             <span className="text-xs text-muted-foreground">
-              By <span className="font-mono text-foreground">{creator.slice(0, 6)}...{creator.slice(-4)}</span>
+              By{" "}
+              <a 
+                href={`${explorerUrl}/address/${creator}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-foreground transition-colors hover:text-cyan-500"
+              >
+                {creator.slice(0, 6)}...{creator.slice(-4)}
+              </a>
             </span>
           </div>
-          <div className="flex items-center gap-6">
-            <h1 className="text-4xl font-black tracking-tight text-foreground md:text-5xl lg:text-6xl">
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-black tracking-tight text-foreground leading-none md:text-5xl lg:text-6xl">
               {title}
             </h1>
             <button
               onClick={copyLink}
-              className="group flex h-10 w-10 items-center justify-center rounded-xl bg-muted/30 text-muted-foreground transition-all hover:bg-cyan-500/10 hover:text-cyan-500 md:h-12 md:w-12"
+              className="group flex shrink-0 translate-y-[6px] items-center justify-center p-2 text-cyan-500 transition-all hover:scale-110 active:scale-95 md:translate-y-[8px]"
               title={t.share || "Share"}
             >
-              {copied ? <Check size={18} className="text-green-500" /> : <Share2 size={18} className="transition-transform group-hover:scale-110" />}
+              {copied ? <Check size={20} className="text-green-500" /> : <Share2 size={20} className="transition-transform group-hover:rotate-12" />}
             </button>
           </div>
         </div>

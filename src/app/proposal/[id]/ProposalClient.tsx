@@ -18,6 +18,7 @@ import { useProposalMetadata } from "@/features/proposals/hooks/useProposalMetad
 import { useProposalSync } from "@/features/proposals/hooks/useProposalSync";
 import { useProposalDerivedState } from "@/features/proposals/hooks/useProposalDerivedState";
 import { useVerifyProposal } from "@/features/proposals/hooks/useVerifyProposal";
+import { NETWORK } from "@/lib/network";
 
 // Mutations
 import { useFundProposal } from "@/features/proposals/hooks/useFundProposal";
@@ -52,11 +53,14 @@ export default function ProposalClient() {
   const metadata = useProposalMetadata(proposal?.metadataURI);
 
   // 2. Realtime & Sync Logic
+  // Prioritize URL tx over proposal tx during pending state to ensure redirection
+  const effectiveTxHash = txFromUrl || proposal?.txHash;
+
   useProposalSync({
     id: id || "",
     proposalId,
     isPending,
-    txHash: proposal?.txHash || txFromUrl,
+    txHash: effectiveTxHash,
     proposal
   });
 
@@ -119,6 +123,7 @@ export default function ProposalClient() {
                 title={displayMetadata.title}
                 creator={proposal?.creator || ""}
                 status={proposal?.status || "active"}
+                explorerUrl={NETWORK.explorerUrl}
                 t={t}
               />
               <ProposalDescription
@@ -243,6 +248,8 @@ export default function ProposalClient() {
                       isVerified={isVerified}
                       result={result}
                       isPending={isPending}
+                      txHash={proposal.txHash}
+                      explorerUrl={NETWORK.explorerUrl}
                       t={t}
                     />
                   </>
