@@ -47,6 +47,7 @@ type Props = {
   onMinThresholdChange: (value: string) => void;
   onDurationChange?: (value: string) => void;
   onCreate: () => Promise<void>;
+  descriptionPlaceholder?: string;
 };
 
 export function CreateProposalForm({
@@ -68,6 +69,7 @@ export function CreateProposalForm({
   onMinThresholdChange,
   onDurationChange,
   onCreate,
+  descriptionPlaceholder,
 }: Props) {
   const { t } = useLanguage();
   const [step, setStep] = useState(1); // 1: Edit, 2: Preview
@@ -447,7 +449,7 @@ export function CreateProposalForm({
                 
                 <textarea
                   className="min-h-[400px] w-full resize-y rounded-2xl border border-border bg-muted/10 p-8 text-sm text-foreground outline-none transition-all focus:border-cyan-500/30 focus:bg-muted/20 leading-relaxed font-mono"
-                  placeholder={t.ej2}
+                  placeholder={descriptionPlaceholder || t.ej2}
                   value={description}
                   onChange={(e) => onDescriptionChange(e.target.value)}
                 />

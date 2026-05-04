@@ -45,7 +45,7 @@ export default function CreateProposalClient() {
 
   const [title, setTitle] = useState("");
   const [coverImage, setCoverImage] = useState("");
-  const [description, setDescription] = useState(DESCRIPTION_TEMPLATE);
+  const [description, setDescription] = useState("");
   const [recipient, setRecipient] = useState("");
   const [goal, setGoal] = useState("10000");
   const [duration, setDuration] = useState("604800"); // 7 days default
@@ -190,6 +190,7 @@ export default function CreateProposalClient() {
                 onMinThresholdChange={setMinThreshold}
                 onDurationChange={setDuration}
                 onCreate={handleCreate}
+                descriptionPlaceholder={DESCRIPTION_TEMPLATE}
               />
             </div>
           </div>

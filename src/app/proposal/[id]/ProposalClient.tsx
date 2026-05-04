@@ -93,14 +93,6 @@ export default function ProposalClient() {
 
       <main className="mx-auto max-w-7xl px-4 py-12 md:px-8">
         <ScrollReveal>
-          {/* Header Section */}
-          <ProposalHeader
-            title={displayMetadata.title}
-            creator={proposal?.creator || ""}
-            status={proposal?.status || "active"}
-            t={t}
-          />
-
           {isPending && (
             <div className="mb-10 animate-pulse rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-6 backdrop-blur-md">
               <div className="flex items-center gap-4">
@@ -121,8 +113,14 @@ export default function ProposalClient() {
           )}
 
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
-            {/* Left Column: Details & Activity */}
+            {/* Left Column: Header, Details & Activity */}
             <div className="lg:col-span-8">
+              <ProposalHeader
+                title={displayMetadata.title}
+                creator={proposal?.creator || ""}
+                status={proposal?.status || "active"}
+                t={t}
+              />
               <ProposalDescription
                 description={displayMetadata.description}
                 t={t}
@@ -144,6 +142,28 @@ export default function ProposalClient() {
               <aside className="premium-glass sticky top-24 flex flex-col gap-8 rounded-[2.5rem] border-border/50 p-8 shadow-2xl">
                 {proposal && derived ? (
                   <>
+                    {/* Proposal Cover Image */}
+                    <div className="relative mb-6 aspect-square overflow-hidden rounded-3xl border border-white/5 shadow-inner">
+                      {proposal.imageUrl ? (
+                        <img 
+                          src={proposal.imageUrl} 
+                          alt={proposal.title}
+                          className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan-500/10 to-indigo-500/10 backdrop-blur-3xl">
+                          <div className="text-cyan-500/20">
+                            {/* Placeholder Icon or Pattern */}
+                            <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                      {/* Subtle Overlay Gradient */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />
+                    </div>
+
                     {/* Stats Area */}
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">

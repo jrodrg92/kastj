@@ -27,13 +27,7 @@ export function ProposalHeader({ title, creator, status, t }: ProposalHeaderProp
   };
 
   return (
-    <div className="mb-8">
-      <Link 
-        href="/proposals" 
-        className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-cyan-500"
-      >
-        <ArrowLeft size={16} /> {t.backToProposals || "Back to Proposals"}
-      </Link>
+    <div className="mb-6">
 
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="flex-1">
@@ -49,18 +43,19 @@ export function ProposalHeader({ title, creator, status, t }: ProposalHeaderProp
               By <span className="font-mono text-foreground">{creator.slice(0, 6)}...{creator.slice(-4)}</span>
             </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-5xl">
-            {title}
-          </h1>
+          <div className="flex items-center gap-6">
+            <h1 className="text-4xl font-black tracking-tight text-foreground md:text-5xl lg:text-6xl">
+              {title}
+            </h1>
+            <button
+              onClick={copyLink}
+              className="group flex h-10 w-10 items-center justify-center rounded-xl bg-muted/30 text-muted-foreground transition-all hover:bg-cyan-500/10 hover:text-cyan-500 md:h-12 md:w-12"
+              title={t.share || "Share"}
+            >
+              {copied ? <Check size={18} className="text-green-500" /> : <Share2 size={18} className="transition-transform group-hover:scale-110" />}
+            </button>
+          </div>
         </div>
-
-        <button
-          onClick={copyLink}
-          className="flex items-center gap-2 self-start rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-muted"
-        >
-          {copied ? <Check size={16} className="text-green-500" /> : <Share2 size={16} />}
-          {t.share || "Share"}
-        </button>
       </div>
     </div>
   );
