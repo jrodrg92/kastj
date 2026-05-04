@@ -18,16 +18,17 @@ export function useWithdrawProposal(ctx: ProposalEngineContext | null) {
     mutationFn: async (proposalId: ProposalId) => {
       if (!ctx) throw new Error("Wallet not connected");
 
-      setTxStatus({ state: "signing", message: "Withdrawing your funds..." });
+      setTxStatus({ state: "signing", step: "submit", message: "Withdrawing your funds..." });
       
       const engine = getProposalEngine();
       const result = await engine.submit(ctx, { 
-        type: "Withdraw", 
+        type: "proposal.withdraw", 
         proposalId 
       });
 
       setTxStatus({ 
         state: "processing", 
+        step: "pending",
         txHash: result.txId 
       });
 
@@ -36,6 +37,7 @@ export function useWithdrawProposal(ctx: ProposalEngineContext | null) {
     onSuccess: async (_result, proposalId) => {
       setTxStatus({ 
         state: "success", 
+        step: "verified",
         txHash: _result.txId,
         message: t.fundsWithdrawn || "Funds withdrawn successfully!" 
       });
@@ -55,7 +57,7 @@ export function useWithdrawProposal(ctx: ProposalEngineContext | null) {
         return;
       }
       console.error(error);
-      setTxStatus({ state: "error", message: error.message || t.withdrawError });
+      setTxStatus({ state: "error", step: "submit", message: error.message || t.withdrawError });
     },
   });
 }

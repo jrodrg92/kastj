@@ -6,6 +6,7 @@ import type {
     ProposalCommand,
     VerificationResult,
     TxResult,
+    SimulationResult,
 } from "./proposal-engine.interface";
 import type { ProposalId, ProposalView } from "@/core/proposal/proposal.types";
 import { parseUnits } from "@/lib/currencyUtils";
@@ -20,26 +21,33 @@ import { VProgVerifier } from "@/core/proposal/commitment/Verifier";
  * via the UTXOTransactionBuilder interface.
  */
 export class KaspaL1ProposalEngine implements ProposalEngine {
-    readonly kind = "kaspa-l1" as const;
+    readonly chainKind = "kaspa-l1" as const;
+
+    async simulate(
+        _ctx: ProposalEngineContext,
+        _command: ProposalCommand
+    ): Promise<SimulationResult> {
+        return { success: true, gasEstimate: "0" };
+    }
 
     async submit(
         ctx: ProposalEngineContext,
         command: ProposalCommand,
     ): Promise<TxResult> {
         switch (command.type) {
-            case "CreateProposal":
+            case "proposal.create":
                 return this.createProposal(ctx, command.input);
-            case "FundProposal":
+            case "proposal.fund":
                 return this.fundProposal(ctx, {
                     proposalId: command.proposalId,
                     amount: command.amount,
                     asset: command.asset,
                 });
-            case "FinalizeProposal":
+            case "proposal.finalize":
                 return this.finalizeProposal(ctx, command.proposalId);
-            case "Withdraw":
+            case "proposal.withdraw":
                 return this.withdraw(ctx, command.proposalId);
-            case "WithdrawMany":
+            case "proposal.withdrawMany":
                 return this.withdrawMany(ctx, command.proposalIds);
             default:
                 throw new Error(`KaspaL1Engine: unknown command type`);
@@ -58,12 +66,7 @@ export class KaspaL1ProposalEngine implements ProposalEngine {
             throw new Error("KaspaL1ProposalEngine: UTXO builder not configured.");
         }
 
-        // 1. Fetch UTXOs for the creator
-        // In a real scenario, this would call a Kaspa API or the wallet
         const utxos = await this.fetchAccountUtxos(ctx.account);
-
-        // 2. Build the Escrow Lock Transaction
-        // We define the conditions: threshold met AND platform sig OR deadline passed
         const durationSeconds = BigInt(input.durationSeconds);
         const deadline = BigInt(Math.floor(Date.now() / 1000)) + durationSeconds;
 
@@ -78,17 +81,13 @@ export class KaspaL1ProposalEngine implements ProposalEngine {
             }
         );
 
-        // 3. Request Signature from Kaspa Wallet (e.g. Kasware)
         const signedTx = await this.signWithKaspaWallet(ctx, txToSign);
-
-        // 4. Broadcast
         const txId = await this.broadcastKaspaTransaction(signedTx);
 
         return { txId };
     }
 
     private async fetchAccountUtxos(_address: string): Promise<UTXO[]> {
-        // Stub: Fetch from Kaspa API (e.g. https://api.kaspa.org/addresses/{address}/utxos)
         return [];
     }
 
@@ -100,7 +99,6 @@ export class KaspaL1ProposalEngine implements ProposalEngine {
     }
 
     private async broadcastKaspaTransaction(_signedTx: string): Promise<string> {
-        // Stub: Post to Kaspa API
         return "kaspa-tx-id-stub";
     }
 
@@ -116,16 +114,8 @@ export class KaspaL1ProposalEngine implements ProposalEngine {
             throw new Error("KaspaL1ProposalEngine: Account required for funding.");
         }
 
-        // Logic for UTXO-based funding:
-        // 1. Fetch available UTXOs for ctx.account
-        // 2. Build script conditions based on proposal state (from Supabase/Indexer)
-        // 3. Build and sign transaction using the builder
-        
         const amount = parseUnits(input.amount, 8);
         console.log(`Building native Kaspa transaction for ${amount} sompi`);
-
-        // This is where the UTXO abstraction shines:
-        // const tx = await this.builder.buildEscrowLock(...)
         
         throw new Error("KaspaL1ProposalEngine.fundProposal: requires wallet integration for UTXO signing.");
     }
@@ -157,6 +147,17 @@ export class KaspaL1ProposalEngine implements ProposalEngine {
         );
     }
 
+    async verify(
+        proposalId: ProposalId, 
+        provider?: any
+    ): Promise<VerificationResult> {
+        // This would require fetching the proposal from Supabase first
+        // Since verify in the interface now only takes proposalId, 
+        // we'd need to fetch the proposal data to verify its L1 script.
+        return { status: "unsupported", reason: "L1 Verification requires proposal metadata" };
+    }
+
+    // Read methods (legacy/internal)
     async getProposal(_proposalId: ProposalId): Promise<ProposalView> {
         throw new Error(
             "KaspaL1ProposalEngine.getProposal: use Supabase queries.",
@@ -167,37 +168,5 @@ export class KaspaL1ProposalEngine implements ProposalEngine {
         throw new Error(
             "KaspaL1ProposalEngine.listProposals: use Supabase queries.",
         );
-    }
-
-    async verifyProposal(proposal: ProposalView): Promise<VerificationResult> {
-        const timestamp = Date.now();
-        console.log(`Verifying Kaspa L1 vProg for proposal ${proposal.id}`);
-        
-        try {
-            const verifier = new VProgVerifier();
-            const isValid = await verifier.verifyEscrowAddress(proposal.recipient, {
-                creator: proposal.creator,
-                recipient: proposal.recipient,
-                goal: BigInt(proposal.goal.raw),
-                threshold: BigInt(proposal.minThreshold.raw),
-                deadline: Math.floor(proposal.deadline / 1000),
-            });
-
-            if (isValid) {
-                return {
-                    status: "verified",
-                    checks: ["Escrow script matches proposal parameters", "Deterministic address verification passed"],
-                    timestamp
-                };
-            } else {
-                return {
-                    status: "failed",
-                    reason: "Escrow address does not match derived script from parameters",
-                    timestamp
-                };
-            }
-        } catch (e: any) {
-            return { status: "failed", reason: `Verification error: ${e.message}`, timestamp };
-        }
     }
 }

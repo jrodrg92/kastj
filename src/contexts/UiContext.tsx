@@ -6,13 +6,21 @@ import { type Lang, translations } from "../lib/i18n";
 type Theme = "light" | "dark";
 type TranslationKeys = (typeof translations)["en"];
 
+export type TransactionStep = 
+  | "review"
+  | "approve"
+  | "submit"
+  | "pending"
+  | "confirmed"
+  | "indexed"
+  | "verified";
+
 export type TransactionStatus = 
   | { state: "idle" }
-  | { state: "signing"; message?: string }
-  | { state: "approving"; txHash?: string }
-  | { state: "processing"; txHash?: string }
-  | { state: "success"; txHash: string; message?: string }
-  | { state: "error"; message: string };
+  | { state: "signing"; step: TransactionStep; message?: string }
+  | { state: "processing"; step: TransactionStep; txHash?: string }
+  | { state: "success"; step: "verified"; txHash: string; message?: string }
+  | { state: "error"; step: TransactionStep; message: string };
 
 interface UiContextValue {
   lang: Lang;

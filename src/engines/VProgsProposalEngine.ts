@@ -6,6 +6,7 @@ import type {
     ProposalCommand,
     VerificationResult,
     TxResult,
+    SimulationResult,
 } from "./proposal-engine.interface";
 import type { ProposalId, ProposalView } from "@/core/proposal/proposal.types";
 import { VProgVerifier } from "@/core/proposal/commitment/Verifier";
@@ -14,40 +15,35 @@ import { VProgVerifier } from "@/core/proposal/commitment/Verifier";
  * vProgs (Virtual Programs) engine stub.
  *
  * vProgs are Kaspa's native smart contract system, currently in development.
- * This engine will replace the zkEVM bridge once vProgs are live on mainnet.
- *
- * Key differences from zkEVM:
- * - Native KAS instead of wrapped tokens
- * - DAG-based consensus instead of EVM block finality
- * - Kaspa-native wallet signing (no MetaMask)
- * - Potentially different state model (UTXO-based vs account-based)
- *
- * Implementation will require:
- * - vProgs SDK (not yet available)
- * - vProgs contract deployment tooling
- * - Kaspa-native wallet adapter (Kasware / KSPR)
  */
 export class VProgsProposalEngine implements ProposalEngine {
-    readonly kind = "vprogs" as const;
+    readonly chainKind = "vprogs" as const;
+
+    async simulate(
+        _ctx: ProposalEngineContext,
+        _command: ProposalCommand
+    ): Promise<SimulationResult> {
+        return { success: true, gasEstimate: "0" };
+    }
 
     async submit(
         ctx: ProposalEngineContext,
         command: ProposalCommand,
     ): Promise<TxResult> {
         switch (command.type) {
-            case "CreateProposal":
+            case "proposal.create":
                 return this.createProposal(ctx, command.input);
-            case "FundProposal":
+            case "proposal.fund":
                 return this.fundProposal(ctx, {
                     proposalId: command.proposalId,
                     amount: command.amount,
                     asset: command.asset,
                 });
-            case "FinalizeProposal":
+            case "proposal.finalize":
                 return this.finalizeProposal(ctx, command.proposalId);
-            case "Withdraw":
+            case "proposal.withdraw":
                 return this.withdraw(ctx, command.proposalId);
-            case "WithdrawMany":
+            case "proposal.withdrawMany":
                 return this.withdrawMany(ctx, command.proposalIds);
             default:
                 throw new Error(`VProgsEngine: unknown command type`);
@@ -101,6 +97,14 @@ export class VProgsProposalEngine implements ProposalEngine {
         );
     }
 
+    async verify(
+        _proposalId: ProposalId, 
+        _provider?: any
+    ): Promise<VerificationResult> {
+        return { status: "unsupported", reason: "vProgs Verification requires proposal metadata" };
+    }
+
+    // Read methods (legacy/internal)
     async getProposal(_proposalId: ProposalId): Promise<ProposalView> {
         throw new Error(
             "VProgsProposalEngine.getProposal: not yet implemented.",
@@ -111,36 +115,5 @@ export class VProgsProposalEngine implements ProposalEngine {
         throw new Error(
             "VProgsProposalEngine.listProposals: not yet implemented.",
         );
-    }
-
-    async verifyProposal(proposal: ProposalView): Promise<VerificationResult> {
-        const timestamp = Date.now();
-        // vProgs are the prime candidate for client-side verification
-        try {
-            const verifier = new VProgVerifier();
-            const isValid = await verifier.verifyEscrowAddress(proposal.recipient, {
-                creator: proposal.creator,
-                recipient: proposal.recipient,
-                goal: BigInt(proposal.goal.raw),
-                threshold: BigInt(proposal.minThreshold.raw),
-                deadline: Math.floor(proposal.deadline / 1000),
-            });
-
-            if (isValid) {
-                return {
-                    status: "verified",
-                    checks: ["Escrow script matches proposal parameters", "vProg state commitment verified"],
-                    timestamp
-                };
-            } else {
-                return {
-                    status: "failed",
-                    reason: "Escrow address mismatch with vProg deterministic generation",
-                    timestamp
-                };
-            }
-        } catch (e: any) {
-            return { status: "failed", reason: `Verification error: ${e.message}`, timestamp };
-        }
     }
 }

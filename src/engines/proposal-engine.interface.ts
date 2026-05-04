@@ -5,9 +5,9 @@ import type {
     ProposalAsset 
 } from "@/core/proposal/proposal.types";
 
-export type { ChainKind, ProposalId, ProposalView, ProposalAsset };
-
 import type { JsonRpcSigner, BrowserProvider } from "ethers";
+
+export type { ChainKind, ProposalId, ProposalView, ProposalAsset };
 
 // ─── Engine context ───
 
@@ -19,7 +19,12 @@ export interface ProposalEngineContext {
     account: string;
     signer?: WalletSigner;
     provider?: WalletProvider;
-    onProgress?: (status: { state: string; txHash?: string; message?: string }) => void;
+    onProgress?: (status: { 
+        state: "signing" | "processing"; 
+        step: "approve" | "submit" | "pending" | "confirmed" | "indexed" | "verified"; 
+        txHash?: string; 
+        message?: string 
+    }) => void;
 }
 
 export interface TxResult {
@@ -46,69 +51,60 @@ export interface FundProposalInput {
     amount: string; // human decimal
 }
 
-// ─── Engine commands ───
+// ─── Phase 4: Command-based architecture ───
 
 export type ProposalCommand =
-    | { type: "CreateProposal"; input: CreateProposalInput }
-    | { type: "FundProposal"; proposalId: ProposalId; amount: string; asset: ProposalAsset }
-    | { type: "FinalizeProposal"; proposalId: ProposalId; nowMs: number }
-    | { type: "Withdraw"; proposalId: ProposalId }
-    | { type: "WithdrawMany"; proposalIds: ProposalId[] };
+    | { type: "proposal.create"; input: CreateProposalInput }
+    | { type: "proposal.fund"; proposalId: ProposalId; amount: string; asset: ProposalAsset }
+    | { type: "proposal.finalize"; proposalId: ProposalId }
+    | { type: "proposal.withdraw"; proposalId: ProposalId }
+    | { type: "proposal.withdrawMany"; proposalIds: ProposalId[] };
 
-// ─── Engine interface ───
+export interface SimulationResult {
+    success: boolean;
+    gasEstimate?: string;
+    error?: string;
+    payload?: any;
+}
 
 export type VerificationResult =
   | { status: "verified"; checks: string[]; timestamp: number }
   | { status: "failed"; reason: string; timestamp: number }
   | { status: "unsupported"; reason: string };
 
+/**
+ * Principal ProposalEngine Interface
+ * Standardized across all Kaspa layers (zkEVM, L1, vProgs).
+ */
 export interface ProposalEngine {
-    readonly kind: ChainKind;
+    readonly chainKind: ChainKind;
 
     /**
-     * Submits a command for execution. 
+     * Simulates a command execution without submitting a transaction.
+     * Crucial for UX safety and gas estimation.
+     */
+    simulate(
+        ctx: ProposalEngineContext,
+        command: ProposalCommand
+    ): Promise<SimulationResult>;
+
+    /**
+     * Submits a command for execution on the target chain.
      */
     submit(
         ctx: ProposalEngineContext,
         command: ProposalCommand,
     ): Promise<TxResult>;
 
-    // --- Data Access (Read Model) ---
-
-    getProposal(proposalId: ProposalId, provider?: any): Promise<ProposalView>;
-
-    listProposals(): Promise<ProposalView[]>;
-
     /**
-     * Verifies the integrity of a proposal's escrow (vProg/Contract).
-     * Compares local state with on-chain source of truth.
+     * Verifies the integrity of a proposal against on-chain state.
      */
-    verifyProposal(proposal: ProposalView, provider?: any): Promise<VerificationResult>;
+    verify(
+        proposalId: ProposalId, 
+        provider?: any
+    ): Promise<VerificationResult>;
 
-    // --- Legacy methods (for transition) ---
-
-    createProposal(
-        ctx: ProposalEngineContext,
-        input: CreateProposalInput,
-    ): Promise<TxResult>;
-
-    fundProposal(
-        ctx: ProposalEngineContext,
-        input: FundProposalInput,
-    ): Promise<TxResult>;
-
-    finalizeProposal(
-        ctx: ProposalEngineContext,
-        proposalId: ProposalId,
-    ): Promise<TxResult>;
-
-    withdraw(
-        ctx: ProposalEngineContext,
-        proposalId: ProposalId,
-    ): Promise<TxResult>;
-
-    withdrawMany(
-        ctx: ProposalEngineContext,
-        proposalIds: ProposalId[],
-    ): Promise<TxResult>;
+    // --- Legacy compatibility (deprecated) ---
+    getProposal?(proposalId: ProposalId, provider?: any): Promise<ProposalView>;
+    listProposals?(): Promise<ProposalView[]>;
 }

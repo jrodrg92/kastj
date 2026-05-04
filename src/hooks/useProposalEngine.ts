@@ -9,7 +9,7 @@ export function useProposalEngine(account?: string, signer?: unknown) {
 
     const ctx: ProposalEngineContext | null = account
         ? {
-              chain: engine.kind,
+              chain: engine.chainKind,
               account,
               signer,
           }

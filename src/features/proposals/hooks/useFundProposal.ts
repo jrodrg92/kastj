@@ -17,33 +17,37 @@ export function useFundProposal(ctx: ProposalEngineContext | null) {
     mutationFn: async (input: FundProposalInput) => {
       if (!ctx) throw new Error("Wallet not connected");
 
-      setTxStatus({ state: "signing" });
+      // 1. Review/Signing Step
+      setTxStatus({ state: "signing", step: "submit" });
       
       const engine = getProposalEngine();
       
-      // Inject progress callback to update global UI state
       const ctxWithProgress: ProposalEngineContext = {
         ...ctx,
         onProgress: (p) => setTxStatus(p as any)
       };
 
       const result = await engine.submit(ctxWithProgress, { 
-        type: "FundProposal", 
+        type: "proposal.fund", 
         proposalId: input.proposalId,
         amount: input.amount,
         asset: input.asset
       });
 
+      // 2. Broadcasted Step
       setTxStatus({ 
         state: "processing", 
+        step: "pending",
         txHash: result.txId 
       });
 
       return result;
     },
     onSuccess: async (_result, input) => {
+      // 3. Final Verification Step (Simplified for now)
       setTxStatus({ 
         state: "success", 
+        step: "verified",
         txHash: _result.txId,
         message: t.proposalFunded 
       });
@@ -66,6 +70,7 @@ export function useFundProposal(ctx: ProposalEngineContext | null) {
       console.error(error);
       setTxStatus({ 
         state: "error", 
+        step: "submit",
         message: error.message || t.fundError 
       });
     },

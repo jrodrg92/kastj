@@ -19,7 +19,7 @@ export function useWithdrawMany(ctx: ProposalEngineContext | null) {
       }
 
       const engine = getProposalEngine();
-      return engine.submit(ctx, { type: "WithdrawMany", proposalIds });
+      return engine.submit(ctx, { type: "proposal.withdrawMany", proposalIds });
     },
     onSuccess: async () => {
       toast.success(t.withdrawSuccess);

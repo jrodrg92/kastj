@@ -17,13 +17,14 @@ export function useCreateProposal(ctx: ProposalEngineContext | null) {
     mutationFn: async (input: CreateProposalInput) => {
       if (!ctx) throw new Error("Wallet not connected");
 
-      setTxStatus({ state: "signing" });
+      setTxStatus({ state: "signing", step: "submit" });
 
       const engine = getProposalEngine();
-      const result = await engine.submit(ctx, { type: "CreateProposal", input });
+      const result = await engine.submit(ctx, { type: "proposal.create", input });
 
       setTxStatus({ 
         state: "processing", 
+        step: "pending",
         txHash: result.txId 
       });
 
@@ -32,6 +33,7 @@ export function useCreateProposal(ctx: ProposalEngineContext | null) {
     onSuccess: async (_result) => {
       setTxStatus({ 
         state: "success", 
+        step: "verified",
         txHash: _result.txId,
         message: t.proposalCreated 
       });
@@ -51,6 +53,7 @@ export function useCreateProposal(ctx: ProposalEngineContext | null) {
       console.error(error);
       setTxStatus({ 
         state: "error", 
+        step: "submit",
         message: error.message || t.createError 
       });
     },

@@ -7,32 +7,40 @@ import type {
     ProposalCommand,
     VerificationResult,
     TxResult,
+    SimulationResult,
 } from "./proposal-engine.interface";
 import type { ProposalId, ProposalView } from "@/core/proposal/proposal.types";
 
 export class MockProposalEngine implements ProposalEngine {
-    readonly kind = "mock" as const;
+    readonly chainKind = "mock" as const;
 
     private proposals: ProposalView[] = [];
+
+    async simulate(
+        _ctx: ProposalEngineContext,
+        _command: ProposalCommand
+    ): Promise<SimulationResult> {
+        return { success: true, gasEstimate: "0" };
+    }
 
     async submit(
         ctx: ProposalEngineContext,
         command: ProposalCommand,
     ): Promise<TxResult> {
         switch (command.type) {
-            case "CreateProposal":
+            case "proposal.create":
                 return this.createProposal(ctx, command.input);
-            case "FundProposal":
+            case "proposal.fund":
                 return this.fundProposal(ctx, {
                     proposalId: command.proposalId,
                     amount: command.amount,
                     asset: command.asset,
                 });
-            case "FinalizeProposal":
+            case "proposal.finalize":
                 return this.finalizeProposal(ctx, command.proposalId);
-            case "Withdraw":
+            case "proposal.withdraw":
                 return this.withdraw(ctx, command.proposalId);
-            case "WithdrawMany":
+            case "proposal.withdrawMany":
                 return this.withdrawMany(ctx, command.proposalIds);
             default:
                 throw new Error(`MockEngine: unknown command type`);
@@ -137,6 +145,17 @@ export class MockProposalEngine implements ProposalEngine {
         };
     }
 
+    async verify(
+        _proposalId: ProposalId, 
+        _provider?: any
+    ): Promise<VerificationResult> {
+        return {
+            status: "verified",
+            checks: ["Mock verification always passes for internal testing"],
+            timestamp: Date.now()
+        };
+    }
+
     async getProposal(proposalId: ProposalId): Promise<ProposalView> {
         const proposal = this.proposals.find((p) => p.id === Number(proposalId));
 
@@ -149,13 +168,5 @@ export class MockProposalEngine implements ProposalEngine {
 
     async listProposals(): Promise<ProposalView[]> {
         return this.proposals;
-    }
-
-    async verifyProposal(_proposal: ProposalView): Promise<VerificationResult> {
-        return {
-            status: "verified",
-            checks: ["Mock verification always passes for internal testing"],
-            timestamp: Date.now()
-        };
     }
 }

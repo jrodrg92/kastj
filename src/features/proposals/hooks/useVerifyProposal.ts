@@ -22,7 +22,7 @@ export function useVerifyProposal(ctx: ProposalEngineContext | null) {
 
     try {
       const engine = getProposalEngine();
-      const res = await engine.verifyProposal(proposal, ctx.provider);
+      const res = await engine.verify(proposal.id, ctx.provider);
       
       setResult(res);
       

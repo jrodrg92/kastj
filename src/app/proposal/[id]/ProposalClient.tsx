@@ -166,6 +166,7 @@ export default function ProposalClient() {
                     isExpired={derived.isExpired}
                     isMutating={isMutating || isPending}
                     walletConnected={wallet.connected}
+                    isVerified={isVerified}
                     t={t}
                     onFund={(amount) => {
                       if (isPending) return;
