@@ -41,6 +41,14 @@ export function TransactionOverlay() {
                 </div>
               </div>
             )}
+            {txStatus.state === "approving" && (
+              <div className="relative">
+                <Loader2 size={80} className="animate-spin text-amber-500 opacity-20" />
+                <div className="absolute inset-0 flex items-center justify-center text-amber-500">
+                  <Shield size={32} className="animate-pulse" />
+                </div>
+              </div>
+            )}
             {txStatus.state === "processing" && (
               <div className="relative">
                 <Loader2 size={80} className="animate-spin text-cyan-500 opacity-20" />
@@ -63,6 +71,7 @@ export function TransactionOverlay() {
 
           <h3 className="text-2xl font-black tracking-tight text-white">
             {txStatus.state === "signing" && "Awaiting Signature"}
+            {txStatus.state === "approving" && "Approving Token Allowance"}
             {txStatus.state === "processing" && "Processing on Blockchain"}
             {txStatus.state === "success" && "Transaction Successful"}
             {txStatus.state === "error" && "Transaction Failed"}
@@ -70,7 +79,8 @@ export function TransactionOverlay() {
 
           <p className="mt-3 text-sm leading-relaxed text-zinc-400">
             {txStatus.state === "signing" && (txStatus.message || "Please confirm the action in your wallet to proceed.")}
-            {txStatus.state === "processing" && "Your transaction is being confirmed. This usually takes a few seconds."}
+            {txStatus.state === "approving" && "Step 1/2: Allowing Kastj to use your tokens. This is a one-time safety step."}
+            {txStatus.state === "processing" && "Step 2/2: Confirming your contribution on-chain."}
             {txStatus.state === "success" && (txStatus.message || "Everything went perfectly! Your contribution is now active.")}
             {txStatus.state === "error" && txStatus.message}
           </p>

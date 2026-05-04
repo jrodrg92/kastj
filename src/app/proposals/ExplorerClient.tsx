@@ -112,7 +112,7 @@ export function ExplorerClient() {
     const { data } = await supabase
       .from("fundings")
       .select("proposal_id")
-      .eq("supporter", wallet.address)
+      .eq("supporter", wallet.address.toLowerCase())
       .eq("withdrawn", false); // Solo las que NO han sido retiradas
     const ids = Array.from(new Set((data ?? []).map((item) => Number(item.proposal_id))));
     setSupportedIds(ids);
@@ -155,9 +155,9 @@ export function ExplorerClient() {
 
       <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 md:px-8">
         <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">{t.exploreProposals}</h1>
-            <p className="text-muted-foreground">{t.exploreProposalsDesc}</p>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black tracking-tight text-foreground md:text-5xl">{t.exploreProposals}</h1>
+            <p className="text-lg text-muted-foreground">{t.exploreProposalsDesc}</p>
           </div>
 
           <Link

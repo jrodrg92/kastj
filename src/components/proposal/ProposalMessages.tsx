@@ -98,7 +98,7 @@ export function ProposalMessages({
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
             <MessageSquare size={20} />
           </div>
-          <h2 className="text-xl font-bold text-white">{t.messages || "Messages"}</h2>
+          <h2 className="text-xl font-bold text-foreground">{t.messages || "Messages"}</h2>
         </div>
         
         <div className="rounded-full bg-cyan-500/10 px-4 py-1.5 text-xs font-bold text-cyan-500 border border-cyan-500/20">
@@ -127,7 +127,7 @@ export function ProposalMessages({
             );
           })
         ) : !isLoading ? (
-          <div className="premium-glass rounded-[2rem] p-12 text-center border-cyan-500/10 bg-cyan-500/[0.02] dark:bg-cyan-500/[0.01]">
+          <div className="premium-glass rounded-[2rem] p-12 text-center border-cyan-500/20 bg-cyan-500/[0.03] dark:bg-cyan-500/[0.01]">
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-cyan-500/10 text-cyan-500 shadow-[0_8px_30px_rgba(6,182,212,0.15)] ring-1 ring-cyan-500/20">
               <MessageSquare className="h-10 w-10" />
             </div>
@@ -139,7 +139,7 @@ export function ProposalMessages({
         ) : (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="premium-glass h-32 rounded-2xl animate-pulse bg-white/[0.02]" />
+              <div key={i} className="premium-glass h-32 rounded-2xl animate-pulse bg-muted/30" />
             ))}
           </div>
         )}

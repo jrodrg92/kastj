@@ -22,8 +22,10 @@ export function useProposalMetadata(uri: string | undefined | null): ProposalMet
 
     return {
       title: parsed.title || t.noTitle || "Untitled Proposal",
+      summary: parsed.summary || "",
       description: parsed.description || t.noDescription || "No description available.",
-      image: parsed.image,
+      image: parsed.image || parsed.coverImage,
+      coverImage: parsed.coverImage || parsed.image,
     };
   }, [uri, t]);
 }

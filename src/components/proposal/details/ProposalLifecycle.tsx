@@ -29,7 +29,7 @@ export function ProposalLifecycle({
         <button
           onClick={onFinalize}
           disabled={isMutating}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/10 py-4 font-bold text-white transition-all hover:bg-white/20"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-muted/50 py-4 font-bold text-foreground transition-all hover:bg-muted"
         >
           {isMutating ? <Loader2 className="animate-spin" /> : <Target size={20} />}
           {t.finalizeProposal || "Finalize Proposal"}

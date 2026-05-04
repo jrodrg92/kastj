@@ -1,18 +1,26 @@
 import { formatUnits, DECIMALS } from "../../lib/currencyUtils";
 import { supabase } from "../../lib/supabase-client";
 import { ProposalView, ProposalStatus } from "@/core/proposal/proposal.types";
+import { RawProposal } from "./db.types";
 
 export const PAGE_SIZE = 12;
 
-function parseStatus(status: string | number): ProposalStatus {
-  if (status === 0 || status === "active") return "active";
-  if (status === 1 || status === "succeeded") return "succeeded";
-  if (status === 2 || status === "failed") return "failed";
+function parseStatus(status: string | number | null): ProposalStatus {
+  if (status === 0 || status === "active" || status === "0") return "active";
+  if (status === 1 || status === "succeeded" || status === "1") return "succeeded";
+  if (status === 2 || status === "failed" || status === "2") return "failed";
   return "active";
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function mapProposal(proposal: any): ProposalView {
+// Column selection string to avoid select("*") and over-fetching
+const PROPOSAL_COLUMNS = `
+  id, creator, recipient, token, decimals, 
+  goal, min_threshold, total_raised, deadline, 
+  status, metadata_uri, tx_hash, title, 
+  description, image_url
+`;
+
+export function mapProposal(proposal: RawProposal): ProposalView {
   const isNative = !proposal.token || proposal.token === "0x0000000000000000000000000000000000000000";
   const decimals = Number(proposal.decimals ?? (isNative ? DECIMALS.IKAS_L2 : 18));
   const symbol = isNative ? "KAS" : (proposal.token_symbol || "TOKEN");
@@ -57,6 +65,7 @@ export function mapProposal(proposal: any): ProposalView {
     txHash: proposal.tx_hash,
     title: proposal.title,
     description: proposal.description,
+    imageUrl: proposal.image_url,
   };
 }
 
@@ -66,7 +75,7 @@ export async function fetchProposalsPage(pageParam = 0) {
 
   const { data, error } = await supabase
     .from("proposals")
-    .select("*")
+    .select(PROPOSAL_COLUMNS)
     .order("id", { ascending: false })
     .range(from, to);
 
@@ -86,7 +95,7 @@ export async function fetchProposalsPage(pageParam = 0) {
 export async function fetchProposal(id: number) {
   const { data, error } = await supabase
     .from("proposals")
-    .select("*")
+    .select(PROPOSAL_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
@@ -98,47 +107,29 @@ export async function fetchProposal(id: number) {
   return data ? mapProposal(data) : null;
 }
 
+/**
+ * Highly optimized statistics fetch using a database RPC.
+ * Replaces the previous client-side calculation that required fetching all proposals.
+ */
 export async function fetchStats() {
   try {
-    const { data, error } = await supabase
-      .from("proposals")
-      .select("status, total_raised, token, decimals");
+    const { data, error } = await supabase.rpc('get_platform_stats');
 
     if (error) {
-      console.error("Error fetching stats:", error);
+      console.error("Error fetching optimized stats:", error);
+      // Fallback or re-throw
       return { total: 0, active: 0, succeeded: 0, failed: 0, raised: 0 };
     }
 
-    if (!data || data.length === 0) {
-      return { total: 0, active: 0, succeeded: 0, failed: 0, raised: 0 };
-    }
-
-    const total = data.length;
-    const active = data.filter((p) => p.status === 0 || p.status === "active").length;
-    const succeeded = data.filter((p) => p.status === 1 || p.status === "succeeded").length;
-    const failed = data.filter((p) => p.status === 2 || p.status === "failed").length;
-
-    const raisedBig = data.reduce((acc, p) => {
-      const isNative = !p.token || p.token === "0x0000000000000000000000000000000000000000";
-      const decimals = Number(p.decimals ?? (isNative ? DECIMALS.IKAS_L2 : 18));
-      const valStr = (p.total_raised || "0").toString();
-      
-      try {
-        const val = BigInt(valStr);
-        const scaled = decimals < 18
-          ? val * (10n ** BigInt(18 - decimals))
-          : val / (10n ** BigInt(decimals - 18));
-        return acc + scaled;
-      } catch {
-        return acc;
-      }
-    }, 0n);
-
-    const raised = Number(formatUnits(raisedBig, 18));
-
-    return { total, active, succeeded, failed, raised };
+    return {
+      total: Number(data.total || 0),
+      active: Number(data.active || 0),
+      succeeded: Number(data.succeeded || 0),
+      failed: Number(data.failed || 0),
+      raised: Number(data.raised || 0),
+    };
   } catch (err) {
-    console.error("Failed to calculate stats:", err);
+    console.error("Failed to fetch platform stats via RPC:", err);
     return { total: 0, active: 0, succeeded: 0, failed: 0, raised: 0 };
   }
 }

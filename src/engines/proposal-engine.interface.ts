@@ -5,18 +5,21 @@ import type {
     ProposalAsset 
 } from "@/core/proposal/proposal.types";
 
+export type { ChainKind, ProposalId, ProposalView, ProposalAsset };
+
 import type { JsonRpcSigner, BrowserProvider } from "ethers";
 
 // ─── Engine context ───
 
-export type WalletSigner = JsonRpcSigner | any; // 'any' for non-EVM wallets like Kaspa/Mock
-export type WalletProvider = BrowserProvider | any;
+export type WalletSigner = JsonRpcSigner | { getAddress: () => Promise<string> } | unknown;
+export type WalletProvider = BrowserProvider | { getNetwork: () => Promise<any> } | unknown;
 
 export interface ProposalEngineContext {
     chain: ChainKind;
     account: string;
     signer?: WalletSigner;
     provider?: WalletProvider;
+    onProgress?: (status: { state: string; txHash?: string; message?: string }) => void;
 }
 
 export interface TxResult {

@@ -9,6 +9,13 @@ export const translations = {
     explore: "Explore",
     proposals: "Proposals",
     exploreProposals: "Explore proposals",
+    resources: "Resources",
+    about: "About KASTJ",
+    docs: "Docs",
+    kaspa: "Kaspa",
+    security: "Security / Escrow",
+    contact: "Contact",
+    dashboard: "Dashboard",
 
     active: "Active",
     succeeded: "Funded",
@@ -112,6 +119,7 @@ export const translations = {
     succeededStatus: "Funded",
     failedStatus: "Unfunded",
     unknownStatus: "Unknown status",
+    fundedStatus: "Funded",
 
     noTitle: "Untitled proposal",
     noDescription: "No description available.",
@@ -139,6 +147,7 @@ export const translations = {
     systemActor: "System",
     raisedLabel: "Raised",
     ofLabel: "of",
+    messages: "Messages",
     minLabel: "Min:",
     goalAsideLabel: "Goal:",
     yourContribution: "Your contribution",
@@ -150,6 +159,7 @@ export const translations = {
     fundsDistributedSuccess: "Funds distributed successfully",
     withdrawingButton: "Withdrawing...",
     withdrawButton: "Withdraw",
+    fundsWithdrawn: "Funds withdrawn successfully!",
     linkCopied: "Link copied",
     shareProposal: "Share proposal",
 
@@ -173,6 +183,7 @@ export const translations = {
     day1: "1 day",
     days7: "7 days",
     days30: "30 days",
+    days90: "90 days",
 
     comment: "Comment",
     question: "Question",
@@ -292,6 +303,22 @@ export const translations = {
 
     syncingWithBlockchain: "Syncing with the blockchain...",
     syncingDesc: "We detected your transaction. Kastj is indexing the data; this should only take a few seconds.",
+    
+    summaryRequired: "Add a short summary",
+    summaryTooLong: "Summary cannot exceed 200 characters",
+    shortSummary: "Short summary",
+    coverImage: "Cover image",
+    draft: "Draft",
+    readyToPublish: "Ready to publish",
+    step1Edit: "Edit proposal",
+    step2Preview: "Preview & publish",
+    preview: "Preview",
+    publish: "Publish",
+    daysLeft: "days left",
+    hoursLeft: "hours left",
+    minutesLeft: "minutes left",
+    lessThanMinute: "less than a minute left",
+    percentageFunded: "funded",
   },
 
   es: {
@@ -300,6 +327,13 @@ export const translations = {
     explore: "Explorar",
     exploreProposals: "Explorar propuestas",
     proposals: "Propuestas",
+    resources: "Recursos",
+    about: "Sobre KASTJ",
+    docs: "Docs",
+    kaspa: "Kaspa",
+    security: "Seguridad / Escrow",
+    contact: "Contacto",
+    dashboard: "Panel",
 
     active: "Activas",
     succeeded: "Financiadas",
@@ -403,6 +437,7 @@ export const translations = {
     succeededStatus: "Financiada",
     failedStatus: "No financiada",
     unknownStatus: "Estado desconocido",
+    fundedStatus: "Financiadas",
 
     noTitle: "Propuesta sin título",
     noDescription: "No hay descripción disponible.",
@@ -430,6 +465,7 @@ export const translations = {
     systemActor: "Sistema",
     raisedLabel: "Recaudado",
     ofLabel: "de",
+    messages: "Mensajes",
     minLabel: "Mín.:",
     goalAsideLabel: "Objetivo:",
     yourContribution: "Tu aportación",
@@ -441,6 +477,7 @@ export const translations = {
     fundsDistributedSuccess: "Fondos distribuidos correctamente",
     withdrawingButton: "Retirando...",
     withdrawButton: "Retirar",
+    fundsWithdrawn: "Fondos retirados con éxito!",
     linkCopied: "Enlace copiado",
     shareProposal: "Compartir propuesta",
 
@@ -464,6 +501,7 @@ export const translations = {
     day1: "1 día",
     days7: "7 días",
     days30: "30 días",
+    days90: "90 días",
 
     comment: "Comentario",
     question: "Pregunta",
@@ -583,5 +621,21 @@ export const translations = {
 
     syncingWithBlockchain: "Sincronizando con la blockchain...",
     syncingDesc: "Hemos detectado tu transacción. Estamos indexando los datos en Kastj; debería tardar solo unos segundos.",
+    
+    summaryRequired: "Añade un resumen corto",
+    summaryTooLong: "El resumen no puede superar los 200 caracteres",
+    shortSummary: "Resumen corto",
+    coverImage: "Imagen de portada",
+    draft: "Borrador",
+    readyToPublish: "Listo para publicar",
+    step1Edit: "Editar propuesta",
+    step2Preview: "Previsualizar y publicar",
+    preview: "Vista previa",
+    publish: "Publicar",
+    daysLeft: "días restantes",
+    hoursLeft: "horas restantes",
+    minutesLeft: "minutos restantes",
+    lessThanMinute: "menos de un minuto",
+    percentageFunded: "financiado",
   },
 };

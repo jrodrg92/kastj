@@ -118,7 +118,7 @@ export class VProgsProposalEngine implements ProposalEngine {
         // vProgs are the prime candidate for client-side verification
         try {
             const verifier = new VProgVerifier();
-            const isValid = verifier.verifyEscrowAddress(proposal.recipient, {
+            const isValid = await verifier.verifyEscrowAddress(proposal.recipient, {
                 creator: proposal.creator,
                 recipient: proposal.recipient,
                 goal: BigInt(proposal.goal.raw),

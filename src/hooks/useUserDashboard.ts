@@ -35,9 +35,9 @@ async function fetchDashboard(
   const [fundingsRes, createdRes] = await Promise.all([
     supabase
       .from("fundings")
-      .select(`proposal_id, amount, proposals ( id, status )`)
-      .eq("supporter", address),
-    supabase.from("proposals").select("id").eq("creator", address),
+      .select(`proposal_id, amount, withdrawn, proposals ( id, status )`)
+      .eq("supporter", address.toLowerCase()),
+    supabase.from("proposals").select("id").eq("creator", address.toLowerCase()),
   ]);
 
   if (fundingsRes.error) throw fundingsRes.error;
@@ -60,16 +60,19 @@ async function fetchDashboard(
       ? linked[0]?.status
       : linked?.status;
 
+    const isWithdrawn = Boolean(funding.withdrawn);
     total += amount;
     supportedIds.add(Number(funding.proposal_id));
 
-    if (proposalStatus === "active") {
-      active += amount;
-    }
+    if (!isWithdrawn) {
+      if (proposalStatus === "active") {
+        active += amount;
+      }
 
-    if (proposalStatus === "failed") {
-      withdrawable += amount;
-      withdrawableIds.push(Number(funding.proposal_id));
+      if (proposalStatus === "failed") {
+        withdrawable += amount;
+        withdrawableIds.push(Number(funding.proposal_id));
+      }
     }
   }
 

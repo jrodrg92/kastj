@@ -1,4 +1,4 @@
-import type { UTXO, UTXOScriptConditions, UTXOTransactionBuilder } from "../engines/utxo";
+import type { UTXO, UTXOScriptConditions, UTXOTransactionBuilder } from "../../engines/utxo";
 
 /**
  * Implementation of UTXOTransactionBuilder using the Kaspa WASM SDK.

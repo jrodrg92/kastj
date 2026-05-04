@@ -106,11 +106,15 @@ export class ZkEvmProposalEngine implements ProposalEngine {
             signer,
         );
 
+        ctx.onProgress?.({ state: "approving" });
         const approveTx = await token.approve(CONTRACTS.vault, amount);
+        
+        ctx.onProgress?.({ state: "approving", txHash: approveTx.hash });
         // We wait for approval because the next tx depends on it, 
         // but the main action (funding) will return immediately.
         await approveTx.wait();
 
+        ctx.onProgress?.({ state: "processing" });
         const fundTx = await manager.fundKrc20(input.proposalId, amount);
         return { txId: fundTx.hash };
     }
@@ -148,12 +152,12 @@ export class ZkEvmProposalEngine implements ProposalEngine {
     // Read methods — app reads from Supabase, not from chain directly.
     // These exist to satisfy the interface for testing/future use.
 
-    async getProposal(proposalId: ProposalId, provider?: any): Promise<ProposalView> {
+    async getProposal(proposalId: ProposalId, provider?: unknown): Promise<ProposalView> {
         if (!provider) {
             throw new Error("ZkEVM engine: provider required for on-chain read");
         }
 
-        const manager = new Contract(CONTRACTS.manager, ProposalManagerAbi, provider);
+        const manager = new Contract(CONTRACTS.manager, ProposalManagerAbi, provider as any);
         const p = await manager.proposals(proposalId);
 
         if (p.creator === ZeroAddress) {
@@ -167,12 +171,9 @@ export class ZkEvmProposalEngine implements ProposalEngine {
             id: Number(proposalId),
             creator: p.creator,
             recipient: p.recipient,
-            asset: { 
-                type: p.token === ZeroAddress ? "native" : "krc20",
-                tokenAddress: p.token,
-                symbol: p.token === ZeroAddress ? "KAS" : "UNKNOWN",
-                decimals
-            },
+            asset: p.token === ZeroAddress 
+                ? { type: "native", symbol: "KAS", decimals }
+                : { type: "krc20", tokenAddress: p.token as `0x${string}`, symbol: "UNKNOWN", decimals },
             goal: {
                 value: formatUnits(p.goalAmount, decimals),
                 raw: BigInt(p.goalAmount).toString(),
@@ -209,7 +210,7 @@ export class ZkEvmProposalEngine implements ProposalEngine {
      * Real integrity check: compares local (Supabase) state with on-chain truth.
      * Returns a detailed result with the specific checks performed.
      */
-    async verifyProposal(proposal: ProposalView, provider?: any): Promise<VerificationResult> {
+    async verifyProposal(proposal: ProposalView, provider?: unknown): Promise<VerificationResult> {
         const timestamp = Date.now();
         try {
             const onChain = await this.getProposal(proposal.id, provider);
@@ -249,9 +250,10 @@ export class ZkEvmProposalEngine implements ProposalEngine {
                 checks,
                 timestamp 
             };
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error("Verification failed:", e);
-            return { status: "failed", reason: `On-chain query failed: ${e.message}`, timestamp };
+            const msg = e instanceof Error ? e.message : String(e);
+            return { status: "failed", reason: `On-chain query failed: ${msg}`, timestamp };
         }
     }
 }

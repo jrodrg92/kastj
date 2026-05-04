@@ -3,7 +3,7 @@ import type {
     FundProposalInput,
     ProposalId,
     TxResult,
-} from "../engines/types";
+} from "../../engines/proposal-engine.interface";
 
 /**
  * Port for submitting transactions to the blockchain.

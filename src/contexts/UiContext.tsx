@@ -9,6 +9,7 @@ type TranslationKeys = (typeof translations)["en"];
 export type TransactionStatus = 
   | { state: "idle" }
   | { state: "signing"; message?: string }
+  | { state: "approving"; txHash?: string }
   | { state: "processing"; txHash?: string }
   | { state: "success"; txHash: string; message?: string }
   | { state: "error"; message: string };

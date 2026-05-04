@@ -86,7 +86,7 @@ export function ProposalMessageItem({
       <div className="mb-4 flex items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <div 
-            className="h-8 w-8 rounded-full border border-white/10 shadow-sm shrink-0 flex items-center justify-center text-[10px] font-bold text-white uppercase"
+            className="h-8 w-8 rounded-full border border-border shadow-sm shrink-0 flex items-center justify-center text-[10px] font-bold text-white uppercase"
             style={{ background: getDeterministicGradient(message.authorWallet) }}
           >
             {message.authorWallet.slice(2, 4)}

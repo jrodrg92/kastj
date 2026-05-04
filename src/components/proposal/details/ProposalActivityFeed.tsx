@@ -39,23 +39,23 @@ export function ProposalActivityFeed({
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-500">
             <History size={20} />
           </div>
-          <h2 className="text-xl font-bold text-white">{t.recentActivity || "Recent Activity"}</h2>
+          <h2 className="text-xl font-bold text-foreground">{t.recentActivity || "Recent Activity"}</h2>
         </div>
 
         <div className="space-y-4">
           {activity.length === 0 ? (
-            <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-8 text-center">
+            <div className="rounded-2xl border border-border bg-muted/30 p-8 text-center">
               <p className="text-muted-foreground">{t.noActivityYet || "No activity recorded yet"}</p>
             </div>
           ) : (
-            <div className="relative space-y-6 before:absolute before:left-[11px] before:top-2 before:h-[calc(100%-16px)] before:w-[2px] before:bg-white/5">
+            <div className="relative space-y-6 before:absolute before:left-[11px] before:top-2 before:h-[calc(100%-16px)] before:w-[2px] before:bg-border">
               {activity.slice(0, 10).map((item, idx) => (
                 <div key={item.id || idx} className="relative pl-10">
-                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#0f172a] text-xs shadow-[0_0_0_4px_rgba(15,23,42,1)]">
+                  <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-background text-xs shadow-[0_0_0_4px_var(--background)]">
                     {activityIcon(item.type)}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-foreground">
                       {item.message || (item.type === "funded" ? `Support of ${formatUnits(item.amount, 18)} KAS` : item.type)}
                     </p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">

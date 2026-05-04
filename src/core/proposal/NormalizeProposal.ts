@@ -26,12 +26,20 @@ export function normalizeProposalView(
             isActive: proposal.status === "active",
             isSucceeded: proposal.status === "succeeded",
             isFailed: proposal.status === "failed",
-            isExpired: proposal.deadline.getTime() <= now.getTime(),
+            isExpired: proposal.deadline <= now.getTime(),
             progressPercent: rawGoal > 0n 
                 ? Number((rawRaised * 100n) / rawGoal) 
                 : 0,
-            canFinalize: canFinalizeProposal(proposal, now),
-            canWithdraw: canWithdrawFromProposal(proposal),
+            canFinalize: canFinalizeProposal({
+                status: proposal.status,
+                totalRaised: rawRaised,
+                goalAmount: rawGoal,
+                minThreshold: BigInt(proposal.minThreshold.raw),
+                deadlineMs: proposal.deadline,
+                nowMs: now.getTime(),
+                settlementMode: "deadline-only",
+            }),
+            canWithdraw: canWithdrawFromProposal({ status: proposal.status }),
         },
     };
 }

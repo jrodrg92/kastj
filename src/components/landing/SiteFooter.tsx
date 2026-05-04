@@ -22,14 +22,6 @@ export function SiteFooter() {
           <Link href="/#how-it-works" className="transition-colors hover:text-foreground">
             {t.howItWorks}
           </Link>
-          <a
-            href="https://kaspa.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition-colors hover:text-foreground"
-          >
-            {t.community}
-          </a>
         </nav>
 
         {/* Closing line */}

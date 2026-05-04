@@ -17,7 +17,12 @@ export const metadata: Metadata = {
     title: "Kastj | Conditional Crowdfunding on Kaspa",
     description: "Transparent, secure, and conditional crowdfunding.",
     images: ["/og-image.png"],
-  }
+  },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

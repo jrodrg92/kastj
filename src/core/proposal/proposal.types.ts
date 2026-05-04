@@ -40,6 +40,8 @@ export interface ProposalView {
     
     // Extra metadata from DB (optional)
     title?: string | null;
+    summary?: string | null;
     description?: string | null;
+    imageUrl?: string | null;
     txHash?: string | null;
 }

@@ -45,16 +45,6 @@ export default function ProfilePage() {
         [proposalsQuery.data],
     );
 
-    const myProposals = useMemo(
-        () =>
-            allProposals.filter(
-                (p) =>
-                    p.creator.toLowerCase() ===
-                    wallet.address?.toLowerCase(),
-            ),
-        [allProposals, wallet.address],
-    );
-
     const myActivity = useMemo(
         () =>
             feed.activity.filter(
@@ -254,75 +244,9 @@ export default function ProfilePage() {
                     </div>
                 </ScrollReveal>
 
-                {/* ─── Two Column Layout for Lists ─── */}
-                <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-start">
-                    
-                    {/* ─── User Proposals ─── */}
-                    <ScrollReveal delay={200}>
-                        <div className="premium-glass rounded-[2rem] p-6 md:p-8">
-                            <div className="mb-6 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-500">
-                                        <FileText size={20} />
-                                    </div>
-                                    <h2 className="text-xl font-bold tracking-tight text-foreground">{t.crtdByMe}</h2>
-                                </div>
-                                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                    {myProposals.length} {t.proposals}
-                                </span>
-                            </div>
-
-                            <div className="space-y-4">
-                                {myProposals.length === 0 ? (
-                                    <div className="rounded-2xl border border-white/[0.06] bg-background/30 p-8 text-center">
-                                        <p className="text-sm text-muted-foreground">You haven't created any proposals yet.</p>
-                                        <Link href="/#create" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-cyan-500 hover:text-cyan-400">
-                                            Create your first proposal <ArrowRight size={16} />
-                                        </Link>
-                                    </div>
-                                ) : (
-                                    myProposals.map((p) => {
-                                        const statusColor = p.status === 0 ? "text-cyan-400 border-cyan-500/20 bg-cyan-500/10" 
-                                            : p.status === 1 ? "text-cyan-400 border-cyan-500/20 bg-cyan-500/10" 
-                                            : "text-rose-400 border-rose-500/20 bg-rose-500/10";
-                                        
-                                        const statusText = p.status === 0 ? t.activeStatus : p.status === 1 ? t.succeededStatus : t.failedStatus;
-
-                                        return (
-                                            <Link
-                                                key={p.id}
-                                                href={`/proposal/${p.id}`}
-                                                className="group flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-background/40 p-5 transition-all hover:bg-card hover:border-cyan-500/30 hover:shadow-lg"
-                                            >
-                                                <div className="flex items-start justify-between gap-4">
-                                                    <div>
-                                                        <p className="font-semibold text-foreground group-hover:text-cyan-400 transition-colors">
-                                                            Proposal #{p.id}
-                                                        </p>
-                                                        <p className="mt-1 text-xs text-muted-foreground">
-                                                            {Number(p.totalRaised).toFixed(0)} / {Number(p.goal).toFixed(0)} {NETWORK.currency}
-                                                        </p>
-                                                    </div>
-                                                    <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                                                        {statusText}
-                                                    </span>
-                                                </div>
-                                                <div className="relative h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
-                                                    <div 
-                                                        className={`h-full rounded-full transition-all duration-500 ${p.status === 0 ? 'bg-cyan-500' : p.status === 1 ? 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]' : 'bg-rose-500'}`} 
-                                                        style={{ width: `${Math.min((Number(p.totalRaised) / Number(p.goal)) * 100, 100)}%` }}
-                                                    />
-                                                </div>
-                                            </Link>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </div>
-                    </ScrollReveal>
-
-                    {/* ─── Activity Feed ─── */}
-                    <ScrollReveal delay={300}>
+                {/* ─── Activity Feed ─── */}
+                <ScrollReveal delay={300}>
+                    <div className="mx-auto max-w-2xl">
                         <div className="premium-glass rounded-[2rem] p-6 md:p-8">
                             <div className="mb-6 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -385,9 +309,8 @@ export default function ProfilePage() {
                                 )}
                             </div>
                         </div>
-                    </ScrollReveal>
-                </div>
-
+                    </div>
+                </ScrollReveal>
             </div>
         </main>
     );

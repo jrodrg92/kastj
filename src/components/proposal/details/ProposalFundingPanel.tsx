@@ -38,9 +38,9 @@ export function ProposalFundingPanel({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0.00"
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-xl font-bold text-white outline-none transition-all focus:border-cyan-500/50 focus:bg-white/10"
+          className="w-full rounded-2xl border border-border bg-muted/50 px-5 py-4 text-xl font-bold text-foreground outline-none transition-all focus:border-cyan-500/50 focus:bg-muted"
         />
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg bg-white/10 px-3 py-1 text-xs font-bold text-muted-foreground">
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg bg-border/30 px-3 py-1 text-xs font-bold text-muted-foreground">
           KAS
         </div>
       </div>

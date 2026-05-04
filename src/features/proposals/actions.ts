@@ -28,23 +28,20 @@ export async function prepareProposalMetadata(
     const metadata = {
       title: validated.data.title,
       description: validated.data.description,
-      createdAt: Date.now(), // Usamos timestamp numérico para consistencia
+      coverImage: validated.data.coverImage,
+      createdAt: Date.now(), 
     };
     metadataURI = `local://${encodeURIComponent(JSON.stringify(metadata))}`;
   }
 
   const tempId = -Math.abs(Math.floor(Date.now() / 1000));
-  const decimals = 18; // ZK-EVM default
+  const decimals = 18; 
 
-  // 3. Save to DB using Admin Client (Bypass RLS)
-  // Siempre escalamos los montos a 18 decimales para que el indexador y la UI los vean bien
   const goalUnits = parseUnits(validated.data.goal, decimals).toString();
   const minThresholdUnits = parseUnits(validated.data.minThreshold, decimals).toString();
 
   const supabase = createAdminClient();
   
-  // Si tenemos txHash, intentamos actualizar o insertar. 
-  // Si NO tenemos txHash, insertamos como registro base para evitar la carrera de fondo.
   const { data: saved, error } = await supabase.from("proposals").upsert({
     id: tempId,
     creator: creatorAddress.toLowerCase(),
@@ -57,6 +54,7 @@ export async function prepareProposalMetadata(
     status: "pending",
     title: validated.data.title,
     description: validated.data.description,
+    image_url: validated.data.coverImage,
     metadata_uri: metadataURI,
     tx_hash: txHash ? txHash.toLowerCase() : null,
     created_at: Math.floor(Date.now() / 1000)

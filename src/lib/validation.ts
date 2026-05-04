@@ -7,10 +7,14 @@ export const createProposalSchema = z.object({
         .string()
         .min(1, "titleRequired")
         .max(120, "titleTooLong"),
+    coverImage: z
+        .string()
+        .optional()
+        .nullable(),
     description: z
         .string()
         .min(1, "descriptionRequired")
-        .max(2000, "descriptionTooLong"),
+        .max(5000, "descriptionTooLong"),
     recipient: z
         .string()
         .regex(/^0x[a-fA-F0-9]{40}$/, "invalidRecipient"),

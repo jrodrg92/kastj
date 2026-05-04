@@ -77,6 +77,7 @@ function parseMetadata(uri) {
     return {
       title: sanitize(parsed.title) || "Sin título",
       description: sanitize(parsed.description) || "Sin descripción",
+      imageUrl: sanitize(parsed.coverImage) || null,
       createdAt: parsed.createdAt || Date.now(),
     };
   } catch (e) {
@@ -181,6 +182,7 @@ async function upsertProposal(proposalId, onChainData = null, txHash = null) {
       metadata_uri: cleanMetadataUri,
       title: sanitize(metadata.title),
       description: sanitize(metadata.description),
+      image_url: metadata.imageUrl,
       tx_hash: txHash ? txHash.toLowerCase() : null,
       created_at: Number(metadata.createdAt) || Date.now(),
     }, { onConflict: 'id' });

@@ -3,8 +3,10 @@
  */
 export interface ProposalMetadata {
   title: string;
+  summary?: string;
   description: string;
   image?: string;
+  coverImage?: string; // Adding for compatibility with both field names
 }
 
 /**
@@ -25,7 +27,14 @@ export function parseMetadataUri(uri: string | undefined | null): ProposalMetada
   try {
     const protocol = cleanUri.includes("local://") ? "local://" : "supabase://";
     const raw = cleanUri.split(protocol)[1];
-    return JSON.parse(decodeURIComponent(raw)) as ProposalMetadata;
+    const parsed = JSON.parse(decodeURIComponent(raw));
+    return {
+      title: parsed.title,
+      summary: parsed.summary,
+      description: parsed.description,
+      image: parsed.image || parsed.coverImage,
+      coverImage: parsed.coverImage || parsed.image,
+    } as ProposalMetadata;
   } catch {
     return null;
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Coins, Target, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Coins, Target, Loader2, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
 import { parseUnits } from "@/lib/currencyUtils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
@@ -33,7 +33,10 @@ export function ProposalActionCard({
   t,
   onFund,
   onFinalize,
-  onWithdraw
+  onWithdraw,
+  onVerify,
+  isVerifying,
+  isVerified
 }: ProposalActionCardProps) {
   const [amount, setAmount] = useState("");
 

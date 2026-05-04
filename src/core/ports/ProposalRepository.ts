@@ -1,4 +1,4 @@
-import type { ProposalId, ProposalAsset } from "../engines/types";
+import type { ProposalId, ProposalAsset } from "../../engines/proposal-engine.interface";
 import type { DbProposal, DbFunding, DbActivity } from "../../types/supabase";
 
 /**

@@ -49,14 +49,14 @@ export function ProposalHeader({ title, creator, status, t }: ProposalHeaderProp
               By <span className="font-mono text-foreground">{creator.slice(0, 6)}...{creator.slice(-4)}</span>
             </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white md:text-5xl">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-5xl">
             {title}
           </h1>
         </div>
 
         <button
           onClick={copyLink}
-          className="flex items-center gap-2 self-start rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-white/10"
+          className="flex items-center gap-2 self-start rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-muted"
         >
           {copied ? <Check size={16} className="text-green-500" /> : <Share2 size={16} />}
           {t.share || "Share"}

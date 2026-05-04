@@ -175,7 +175,7 @@ export class KaspaL1ProposalEngine implements ProposalEngine {
         
         try {
             const verifier = new VProgVerifier();
-            const isValid = verifier.verifyEscrowAddress(proposal.recipient, {
+            const isValid = await verifier.verifyEscrowAddress(proposal.recipient, {
                 creator: proposal.creator,
                 recipient: proposal.recipient,
                 goal: BigInt(proposal.goal.raw),

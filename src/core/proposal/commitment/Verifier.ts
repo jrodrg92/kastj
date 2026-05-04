@@ -1,4 +1,4 @@
-import { Address } from "../engines/types";
+import { Address } from "../proposal.types";
 
 export interface VProgEscrowConditions {
   creator: string;

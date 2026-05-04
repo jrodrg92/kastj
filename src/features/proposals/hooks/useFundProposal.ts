@@ -20,7 +20,14 @@ export function useFundProposal(ctx: ProposalEngineContext | null) {
       setTxStatus({ state: "signing" });
       
       const engine = getProposalEngine();
-      const result = await engine.submit(ctx, { 
+      
+      // Inject progress callback to update global UI state
+      const ctxWithProgress: ProposalEngineContext = {
+        ...ctx,
+        onProgress: (p) => setTxStatus(p as any)
+      };
+
+      const result = await engine.submit(ctxWithProgress, { 
         type: "FundProposal", 
         proposalId: input.proposalId,
         amount: input.amount,

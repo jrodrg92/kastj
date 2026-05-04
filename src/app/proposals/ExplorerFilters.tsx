@@ -1,16 +1,16 @@
 "use client";
 
 import { Search, Coins, RefreshCw } from "lucide-react";
-import { SortDropdown } from "@/components/ui/SortDropdown";
+import { SortDropdown, SortOption } from "@/components/ui/SortDropdown";
 import { NETWORK } from "@/lib/network";
 
 interface Props {
-  filter: string;
+  filter: "all" | "active" | "mine" | "supported" | "succeeded" | "failed";
   setFilter: (f: any) => void;
   search: string;
   setSearch: (s: string) => void;
-  sort: string;
-  setSort: (s: any) => void;
+  sort: SortOption;
+  setSort: (s: SortOption) => void;
   fundAmount: string;
   setFundAmount: (a: string) => void;
   isFetching: boolean;
@@ -33,21 +33,22 @@ export function ExplorerFilters({
 }: Props) {
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2 p-1 rounded-2xl bg-white/[0.03] border border-white/[0.05] w-fit">
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white/[0.02] border border-white/5 w-fit">
         {[
           { key: "all", label: t.all },
           { key: "active", label: t.active },
-          { key: "mine", label: t.mine },
-          { key: "supported", label: t.sup },
+          { key: "mine", label: t.mine || "Mine" },
+          { key: "supported", label: t.supported || "Supported" },
           { key: "succeeded", label: t.succeeded },
           { key: "failed", label: t.failed },
         ].map((item) => (
           <button
             key={item.key}
             onClick={() => setFilter(item.key)}
-            className={`px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all ${filter === item.key
-              ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-              : "text-muted-foreground hover:text-foreground hover:bg-white/[0.05]"
+            className={`px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+              filter === item.key
+              ? "bg-cyan-500 text-black shadow-[0_10px_20px_rgba(6,182,212,0.2)]"
+              : "text-muted-foreground hover:text-foreground hover:bg-white/5"
               }`}
           >
             {item.label}
