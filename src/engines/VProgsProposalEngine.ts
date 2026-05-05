@@ -104,6 +104,14 @@ export class VProgsProposalEngine implements ProposalEngine {
         return { status: "unsupported", reason: "vProgs Verification requires proposal metadata" };
     }
 
+    validateAddress(address: string): { valid: boolean; error?: string } {
+        // vProgs identifiers can be varied, for now we support kaspa: or hash-like strings
+        if (address.startsWith("kaspa:") || address.length === 64) {
+            return { valid: true };
+        }
+        return { valid: false, error: "Invalid vProg identifier (must be kaspa: address or 64-char hash)" };
+    }
+
     // Read methods (legacy/internal)
     async getProposal(_proposalId: ProposalId): Promise<ProposalView> {
         throw new Error(

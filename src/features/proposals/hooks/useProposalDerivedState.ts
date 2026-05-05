@@ -2,8 +2,16 @@
 
 import { useMemo } from "react";
 import { canFinalizeProposal, isExpired as checkExpired } from "@/core/proposal/proposal.rules";
+import { VerificationResult } from "@/engines/proposal-engine.interface";
 
-export function useProposalDerivedState(proposal: any, fundings: any[], wallet: any) {
+export type TrustState = "indexed" | "pending" | "verified" | "mismatch";
+
+export function useProposalDerivedState(
+  proposal: any, 
+  fundings: any[], 
+  wallet: any,
+  verification: VerificationResult | null
+) {
   return useMemo(() => {
     if (!proposal) return null;
 
@@ -27,7 +35,14 @@ export function useProposalDerivedState(proposal: any, fundings: any[], wallet: 
       
     const isExpired = checkExpired({ deadlineMs, nowMs });
 
-    // 4. Check business rules
+    // 4. Trust State
+    let trustState: TrustState = "indexed";
+    if (verification) {
+      if (verification.status === "verified") trustState = "verified";
+      else if (verification.status === "failed") trustState = "mismatch";
+    }
+
+    // 5. Check business rules
     const canFinalize = canFinalizeProposal({
       status: proposal.status as any,
       totalRaised: realTimeRaisedRaw,
@@ -35,21 +50,25 @@ export function useProposalDerivedState(proposal: any, fundings: any[], wallet: 
       minThreshold: minThresholdRaw,
       deadlineMs,
       nowMs,
-      settlementMode: proposal.settlementMode || "deadline-only"
-    });
+      settlementMode: proposal.settlementMode || "DeadlineOnly"
+    }) && trustState !== "mismatch"; // Block if mismatch
 
-    // 5. Withdrawal rules (simplified for now)
+    // 6. Withdrawal rules
     const isCreator = wallet?.address?.toLowerCase() === proposal.creator?.toLowerCase();
-    const canWithdraw = (proposal.status === "succeeded" && isCreator) || 
-                       (proposal.status === "failed");
+    const canWithdraw = ((proposal.status === "succeeded" && isCreator) || 
+                        (proposal.status === "failed")) && trustState !== "mismatch";
+
+    const canFund = proposal.status === "active" && !isExpired && trustState !== "mismatch";
 
     return {
       progress,
       isExpired,
       canFinalize,
       canWithdraw,
+      canFund,
+      trustState,
       realTimeRaisedRaw,
       deadlineMs
     };
-  }, [proposal, fundings, wallet?.address]);
+  }, [proposal, fundings, wallet?.address, verification]);
 }

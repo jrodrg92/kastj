@@ -156,6 +156,12 @@ export class MockProposalEngine implements ProposalEngine {
         };
     }
 
+    validateAddress(address: string): { valid: boolean; error?: string } {
+        // Mock accepts anything non-empty
+        if (address.trim().length > 0) return { valid: true };
+        return { valid: false, error: "Mock address cannot be empty" };
+    }
+
     async getProposal(proposalId: ProposalId): Promise<ProposalView> {
         const proposal = this.proposals.find((p) => p.id === Number(proposalId));
 

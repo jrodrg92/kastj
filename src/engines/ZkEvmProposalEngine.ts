@@ -93,7 +93,7 @@ export class ZkEvmProposalEngine implements ProposalEngine {
             parseUnits(input.goal, input.asset.decimals),
             parseUnits(input.minThreshold, input.asset.decimals),
             input.durationSeconds,
-            0,      // SettlementMode.DeadlineOnly
+            input.settlementMode === "EarlyIfGoalReached" ? 1 : 0,
             input.allowOverfunding ?? false,
             input.metadataURI,
         );
@@ -186,6 +186,15 @@ export class ZkEvmProposalEngine implements ProposalEngine {
         } catch (e: any) {
             return { status: "failed", reason: e.message, timestamp };
         }
+    }
+    validateAddress(address: string): { valid: boolean; error?: string } {
+        if (!address.startsWith("0x")) {
+            return { valid: false, error: "EVM address must start with 0x" };
+        }
+        if (address.length !== 42) {
+            return { valid: false, error: "EVM address must be 42 characters long" };
+        }
+        return { valid: true };
     }
 
     // Read methods (legacy/internal)

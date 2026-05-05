@@ -10,8 +10,6 @@ contract EscrowVault {
     }
 
     uint16 public constant BPS_DENOMINATOR = 10_000;
-    uint16 public constant CREATOR_REWARD_BPS = 500;
-    uint16 public constant PLATFORM_FEE_BPS = 200;
 
     address public owner;
     address public pendingOwner;
@@ -163,7 +161,7 @@ contract EscrowVault {
         emit Deposited(proposalId, supporter, token, actualAmount);
     }
 
-    function enableWithdrawals(uint256 proposalId) external onlyManager whenNotPaused {
+    function enableWithdrawals(uint256 proposalId) external onlyManager {
         require(!released[proposalId], "Already released");
 
         withdrawalsEnabled[proposalId] = true;
@@ -171,7 +169,7 @@ contract EscrowVault {
         emit WithdrawalsEnabled(proposalId);
     }
 
-    function withdraw(uint256 proposalId) public whenNotPaused nonReentrant {
+    function withdraw(uint256 proposalId) public nonReentrant {
         require(withdrawalsEnabled[proposalId], "Not allowed");
         require(!released[proposalId], "Already released");
 
@@ -204,8 +202,10 @@ contract EscrowVault {
         uint256 proposalId,
         address recipient,
         address creator,
-        address treasury
-    ) external onlyManager whenNotPaused nonReentrant {
+        address treasury,
+        uint16 creatorRewardBps,
+        uint16 platformFeeBps
+    ) external onlyManager nonReentrant {
         require(!released[proposalId], "Already released");
         require(!withdrawalsEnabled[proposalId], "Withdrawals enabled");
         require(recipient != address(0), "Invalid recipient");
@@ -223,10 +223,10 @@ contract EscrowVault {
         uint256 creatorReward = 0;
 
         if (creator != recipient) {
-            creatorReward = (totalAmount * CREATOR_REWARD_BPS) / BPS_DENOMINATOR;
+            creatorReward = (totalAmount * uint256(creatorRewardBps)) / BPS_DENOMINATOR;
         }
 
-        uint256 platformFee = (totalAmount * PLATFORM_FEE_BPS) / BPS_DENOMINATOR;
+        uint256 platformFee = (totalAmount * uint256(platformFeeBps)) / BPS_DENOMINATOR;
         uint256 recipientPayout = totalAmount - creatorReward - platformFee;
 
         _payout(token, recipient, recipientPayout);

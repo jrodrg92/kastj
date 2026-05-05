@@ -73,7 +73,7 @@ export default function ProposalClient() {
   const isMutating = fundMutation.isPending || finalizeMutation.isPending || withdrawMutation.isPending;
 
   // 4. Derived State
-  const derived = useProposalDerivedState(proposal, fundings, wallet);
+  const derived = useProposalDerivedState(proposal, fundings, wallet, result);
 
   const displayMetadata = useMemo(() => {
     if (proposal) return {
@@ -152,7 +152,7 @@ export default function ProposalClient() {
                       {proposal.imageUrl ? (
                         <img 
                           src={proposal.imageUrl} 
-                          alt={proposal.title}
+                          alt={proposal.title || "Proposal"}
                           className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
                         />
                       ) : (
@@ -211,6 +211,8 @@ export default function ProposalClient() {
                       isMutating={isMutating || isPending}
                       walletConnected={wallet.connected}
                       isVerified={isVerified}
+                      trustState={derived.trustState}
+                      canFund={derived.canFund}
                       t={t}
                       onFund={(amount) => {
                         if (isPending) return;

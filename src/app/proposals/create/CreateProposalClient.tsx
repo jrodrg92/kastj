@@ -14,6 +14,8 @@ import { useCreateProposal } from "@/features/proposals/hooks/useCreateProposal"
 import { prepareProposalMetadata, updateProposalTxHash } from "@/features/proposals/actions";
 import { calculateMinThreshold } from "@/core/proposal/proposal.thresholds";
 import { parseUnits, formatUnits, DECIMALS } from "@/lib/currencyUtils";
+import { SettlementMode } from "@/core/proposal/proposal.types";
+import { AssetRegistry } from "@/core/assets/AssetRegistry";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -50,6 +52,7 @@ export default function CreateProposalClient() {
   const [goal, setGoal] = useState("10000");
   const [duration, setDuration] = useState("604800"); // 7 days default
   const [minThreshold, setMinThreshold] = useState("");
+  const [settlementMode, setSettlementMode] = useState<SettlementMode>("DeadlineOnly");
 
   const autoThresholdStr = useMemo(() => {
     try {
@@ -86,17 +89,14 @@ export default function CreateProposalClient() {
         duration,
       }, wallet.address || "");
 
-      const result = await createMutation.mutateAsync({
+        const result = await createMutation.mutateAsync({
         recipient: prepared.recipient,
-        asset: { 
-          type: "native", 
-          symbol: "KAS", 
-          decimals: ctx?.chain === "kasplex-zkevm" ? DECIMALS.IKAS_L2 : DECIMALS.KAS_L1 
-        },
+        asset: AssetRegistry.getNativeAsset(ctx?.chain || "mock"),
         goal: prepared.goal,
         minThreshold: prepared.minThreshold,
         durationSeconds: prepared.durationSeconds,
         metadataURI: prepared.metadataURI,
+        settlementMode: settlementMode,
       });
 
       if (result?.txId) {
@@ -189,6 +189,8 @@ export default function CreateProposalClient() {
                 onGoalChange={setGoal}
                 onMinThresholdChange={setMinThreshold}
                 onDurationChange={setDuration}
+                settlementMode={settlementMode}
+                onSettlementModeChange={setSettlementMode}
                 onCreate={handleCreate}
                 descriptionPlaceholder={DESCRIPTION_TEMPLATE}
               />

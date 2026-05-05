@@ -16,6 +16,11 @@ contract ProposalManager {
         EarlyIfGoalReached 
     }
 
+    struct FeePolicy {
+        uint16 platformFeeBps;
+        uint16 creatorRewardBps;
+    }
+
     struct Proposal {
         uint256 id;
         address creator;
@@ -28,8 +33,12 @@ contract ProposalManager {
         ProposalStatus status;
         SettlementMode settlementMode;
         bool finalized;
-        bool allowOverfunding; // New: explicit decision on overfunding
+        bool allowOverfunding;
         string metadataURI;
+        uint8 assetDecimals;
+        uint16 platformFeeBps;
+        uint16 creatorRewardBps;
+        address treasury;
     }
 
     uint256 public proposalCount;
@@ -39,6 +48,11 @@ contract ProposalManager {
     address public treasury;
     EscrowVault public vault;
     bool public paused;
+
+    uint16 public defaultPlatformFeeBps = 200;
+    uint16 public defaultCreatorRewardBps = 500;
+    uint16 public constant MAX_TOTAL_FEE_BPS = 1000;
+    uint256 public constant FINALIZATION_GRACE_PERIOD = 7 days;
 
     mapping(uint256 => Proposal) public proposals;
     mapping(address => uint8) public tokenDecimals;
@@ -59,7 +73,11 @@ contract ProposalManager {
         uint256 deadline,
         SettlementMode settlementMode,
         bool allowOverfunding,
-        string metadataURI
+        string metadataURI,
+        uint8 assetDecimals,
+        uint16 platformFeeBps,
+        uint16 creatorRewardBps,
+        address treasury
     );
 
     event ProposalFunded(
@@ -104,6 +122,12 @@ contract ProposalManager {
         require(token != address(0), "Native KAS is fixed");
         require(decimals > 0, "Invalid decimals");
         tokenDecimals[token] = decimals;
+    }
+
+    function setFees(uint16 _platformFee, uint16 _creatorReward) external onlyOwner {
+        require(_platformFee + _creatorReward <= MAX_TOTAL_FEE_BPS, "Total fee too high");
+        defaultPlatformFeeBps = _platformFee;
+        defaultCreatorRewardBps = _creatorReward;
     }
 
     function _calculateMinThreshold(
@@ -206,7 +230,11 @@ contract ProposalManager {
             settlementMode: settlementMode,
             finalized: false,
             allowOverfunding: allowOverfunding,
-            metadataURI: metadataURI
+            metadataURI: metadataURI,
+            assetDecimals: decimals,
+            platformFeeBps: defaultPlatformFeeBps,
+            creatorRewardBps: defaultCreatorRewardBps,
+            treasury: treasury
         });
 
         vault.registerProposal(proposalId, token);
@@ -221,7 +249,11 @@ contract ProposalManager {
             deadline,
             settlementMode,
             allowOverfunding,
-            metadataURI
+            metadataURI,
+            decimals,
+            defaultPlatformFeeBps,
+            defaultCreatorRewardBps,
+            treasury
         );
 
         return proposalId;
@@ -267,7 +299,7 @@ contract ProposalManager {
         emit ProposalFunded(proposalId, msg.sender, p.token, amount, p.totalRaised);
     }
 
-    function finalizeProposal(uint256 proposalId) external proposalExists(proposalId) whenNotPaused {
+    function finalizeProposal(uint256 proposalId) external proposalExists(proposalId) {
         Proposal storage p = proposals[proposalId];
 
         require(p.status == ProposalStatus.Active, "Not active");
@@ -287,12 +319,34 @@ contract ProposalManager {
         if (p.totalRaised >= p.minThreshold) {
             p.status = ProposalStatus.Succeeded;
 
-            vault.releaseSuccess(proposalId, p.recipient, p.creator, treasury);
+            vault.releaseSuccess(
+                proposalId, 
+                p.recipient, 
+                p.creator, 
+                p.treasury, 
+                p.creatorRewardBps, 
+                p.platformFeeBps
+            );
         } else {
             p.status = ProposalStatus.Failed;
 
             vault.enableWithdrawals(proposalId);
         }
+
+        emit ProposalFinalized(proposalId, p.status, p.totalRaised);
+    }
+
+    function triggerEmergencyRefund(uint256 proposalId) external proposalExists(proposalId) {
+        Proposal storage p = proposals[proposalId];
+
+        require(p.status == ProposalStatus.Active, "Not active");
+        require(!p.finalized, "Already finalized");
+        require(block.timestamp > p.deadline + FINALIZATION_GRACE_PERIOD, "Grace period not elapsed");
+
+        p.finalized = true;
+        p.status = ProposalStatus.Failed;
+
+        vault.enableWithdrawals(proposalId);
 
         emit ProposalFinalized(proposalId, p.status, p.totalRaised);
     }

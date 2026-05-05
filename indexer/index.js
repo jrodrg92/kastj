@@ -15,12 +15,12 @@ const supabase = createClient(
 );
 
 const ABI = [
-  "event ProposalCreated(uint256 indexed proposalId,address indexed creator,address indexed recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,uint8 settlementMode,bool allowOverfunding,string metadataURI)",
+  "event ProposalCreated(uint256 indexed proposalId,address indexed creator,address indexed recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,uint8 settlementMode,bool allowOverfunding,string metadataURI,uint8 assetDecimals,uint16 platformFeeBps,uint16 creatorRewardBps,address treasury)",
   "event ProposalFunded(uint256 indexed proposalId, address indexed supporter, address token, uint256 amount, uint256 totalRaised)",
   "event ProposalFinalized(uint256 indexed proposalId,uint8 status,uint256 totalRaised)",
   "function finalizeProposal(uint256 proposalId) external",
   "function proposalCount() view returns (uint256)",
-  "function getProposal(uint256 proposalId) view returns ((uint256 id,address creator,address recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,uint256 totalRaised,uint8 status,uint8 settlementMode,bool finalized,bool allowOverfunding,string metadataURI))",
+  "function getProposal(uint256 proposalId) view returns ((uint256 id,address creator,address recipient,address token,uint256 goalAmount,uint256 minThreshold,uint256 deadline,uint256 totalRaised,uint8 status,uint8 settlementMode,bool finalized,bool allowOverfunding,string metadataURI,uint8 assetDecimals,uint16 platformFeeBps,uint16 creatorRewardBps,address treasury))",
 ];
 
 const contract = new ethers.Contract(

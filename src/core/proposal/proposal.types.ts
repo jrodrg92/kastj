@@ -4,7 +4,9 @@ export type ChainKind = "mock" | "kasplex-zkevm" | "kaspa-l1" | "vprogs";
 
 export type ProposalId = string | number;
 
-export type Address = `0x${string}`;
+export type Address = string; // No longer restricted to 0x
+
+export type SettlementMode = "DeadlineOnly" | "EarlyIfGoalReached";
 
 export type ProposalAsset =
     | { type: "native"; symbol: "KAS"; decimals: number }
@@ -32,6 +34,7 @@ export interface ProposalView {
     totalRaised: ProposalAmount;
     deadline: number; // timestamp in MS
     status: ProposalStatus;
+    settlementMode?: SettlementMode;
     metadataURI?: string | null;
     
     // UI derivation flags

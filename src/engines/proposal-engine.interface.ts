@@ -2,7 +2,8 @@ import type {
     ChainKind, 
     ProposalId, 
     ProposalView, 
-    ProposalAsset 
+    ProposalAsset,
+    SettlementMode
 } from "@/core/proposal/proposal.types";
 
 import type { JsonRpcSigner, BrowserProvider } from "ethers";
@@ -43,6 +44,7 @@ export interface CreateProposalInput {
     durationSeconds: number;
     metadataURI: string;
     allowOverfunding?: boolean;
+    settlementMode?: SettlementMode;
 }
 
 export interface FundProposalInput {
@@ -96,13 +98,15 @@ export interface ProposalEngine {
         command: ProposalCommand,
     ): Promise<TxResult>;
 
-    /**
-     * Verifies the integrity of a proposal against on-chain state.
-     */
     verify(
         proposalId: ProposalId, 
         provider?: any
     ): Promise<VerificationResult>;
+
+    /**
+     * Validates an address format according to engine rules.
+     */
+    validateAddress(address: string): { valid: boolean; error?: string };
 
     // --- Legacy compatibility (deprecated) ---
     getProposal?(proposalId: ProposalId, provider?: any): Promise<ProposalView>;

@@ -157,6 +157,16 @@ export class KaspaL1ProposalEngine implements ProposalEngine {
         return { status: "unsupported", reason: "L1 Verification requires proposal metadata" };
     }
 
+    validateAddress(address: string): { valid: boolean; error?: string } {
+        if (!address.startsWith("kaspa:")) {
+            return { valid: false, error: "Kaspa address must start with kaspa:" };
+        }
+        if (address.length < 40) {
+            return { valid: false, error: "Invalid Kaspa address length" };
+        }
+        return { valid: true };
+    }
+
     // Read methods (legacy/internal)
     async getProposal(_proposalId: ProposalId): Promise<ProposalView> {
         throw new Error(

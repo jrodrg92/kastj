@@ -19,7 +19,8 @@ import {
   Clock,
   Layout,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NETWORK } from "../../lib/network";
@@ -27,6 +28,8 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import ReactMarkdown from "react-markdown";
 import { uploadProposalImage } from "../../lib/upload";
 import { cn } from "../../lib/utils";
+import { SettlementMode } from "@/core/proposal/proposal.types";
+import { getProposalEngine } from "@/engines/ProposalEngineFactory";
 
 type Props = {
   title: string;
@@ -46,6 +49,8 @@ type Props = {
   onGoalChange: (value: string) => void;
   onMinThresholdChange: (value: string) => void;
   onDurationChange?: (value: string) => void;
+  settlementMode?: SettlementMode;
+  onSettlementModeChange?: (value: SettlementMode) => void;
   onCreate: () => Promise<void>;
   descriptionPlaceholder?: string;
 };
@@ -68,6 +73,8 @@ export function CreateProposalForm({
   onGoalChange,
   onMinThresholdChange,
   onDurationChange,
+  settlementMode = "DeadlineOnly",
+  onSettlementModeChange,
   onCreate,
   descriptionPlaceholder,
 }: Props) {
@@ -122,7 +129,13 @@ export function CreateProposalForm({
   const validate = () => {
     if (!title.trim()) return t.titleRequired;
     if (!description.trim()) return t.descriptionRequired;
-    if (!recipient.trim() || !recipient.startsWith("0x")) return t.invalidRecipient;
+    
+    const engine = getProposalEngine();
+    const addressValidation = engine.validateAddress(recipient);
+    if (!recipient.trim() || !addressValidation.valid) {
+      return addressValidation.error || t.invalidRecipient;
+    }
+    
     if (!goal || Number(goal) <= 0) return t.invalidGoal;
     if (!minThreshold || Number(minThreshold) <= 0) return t.invalidThreshold;
     return null;
@@ -420,12 +433,56 @@ export function CreateProposalForm({
                         onChange={(e) => onMinThresholdChange(e.target.value)}
                       />
                     </div>
-                    <div className="rounded-xl bg-muted/10 p-4 flex items-start gap-3 border border-border">
-                       <Info size={14} className="text-cyan-500/60 mt-0.5" />
-                       <p className="text-[10px] text-muted-foreground leading-relaxed italic">
-                         If this goal is not reached by the deadline, all contributors receive a full refund. 
-                         Kastj never holds funds—they stay in the proposal escrow.
-                       </p>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t border-border">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                      Settlement Mode
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => onSettlementModeChange?.("DeadlineOnly")}
+                        className={cn(
+                          "flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 text-left",
+                          settlementMode === "DeadlineOnly" 
+                            ? "bg-cyan-500/10 border-cyan-500/50 text-foreground shadow-[0_0_20px_rgba(6,182,212,0.15)]" 
+                            : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/30 hover:border-muted-foreground/30"
+                        )}
+                      >
+                        <div className={cn(
+                          "h-10 w-10 rounded-xl flex items-center justify-center transition-colors",
+                          settlementMode === "DeadlineOnly" ? "bg-cyan-500 text-white" : "bg-muted text-muted-foreground"
+                        )}>
+                          <Clock size={20} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest">Deadline Only</p>
+                          <p className="text-[9px] opacity-60">Wait until deadline ends</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onSettlementModeChange?.("EarlyIfGoalReached")}
+                        className={cn(
+                          "flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 text-left",
+                          settlementMode === "EarlyIfGoalReached" 
+                            ? "bg-emerald-500/10 border-emerald-500/50 text-foreground shadow-[0_0_20px_rgba(16,185,129,0.15)]" 
+                            : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/30 hover:border-muted-foreground/30"
+                        )}
+                      >
+                        <div className={cn(
+                          "h-10 w-10 rounded-xl flex items-center justify-center transition-colors",
+                          settlementMode === "EarlyIfGoalReached" ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"
+                        )}>
+                          <Zap size={20} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest">Early Settlement</p>
+                          <p className="text-[9px] opacity-60">Release once goal is met</p>
+                        </div>
+                      </button>
                     </div>
                   </div>
                 </div>
