@@ -19,6 +19,7 @@ import { AssetRegistry } from "@/core/assets/AssetRegistry";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { CampaignType, validateNoFinancialPromises } from "@/lib/compliance";
 
 const DESCRIPTION_TEMPLATE = `## About
 What are you proposing?
@@ -53,6 +54,8 @@ export default function CreateProposalClient() {
   const [duration, setDuration] = useState("604800"); // 7 days default
   const [minThreshold, setMinThreshold] = useState("");
   const [settlementMode, setSettlementMode] = useState<SettlementMode>("DeadlineOnly");
+  const [campaignType, setCampaignType] = useState<CampaignType | "">("");
+  const [creatorComplianceAccepted, setCreatorComplianceAccepted] = useState(false);
 
   const autoThresholdStr = useMemo(() => {
     try {
@@ -78,6 +81,16 @@ export default function CreateProposalClient() {
       return;
     }
 
+    if (!campaignType) {
+      toast.error(t.campaignTypeRequired || "Campaign type is required");
+      return;
+    }
+
+    if (!creatorComplianceAccepted) {
+      toast.error(t.complianceCreatorCheckbox);
+      return;
+    }
+
     try {
       const prepared = await prepareProposalMetadata({
         title,
@@ -87,9 +100,13 @@ export default function CreateProposalClient() {
         goal,
         minThreshold,
         duration,
+        campaignType,
+        creatorComplianceAccepted: true,
+        creatorComplianceAcceptedAt: new Date().toISOString(),
+        complianceVersion: "2026-05-05",
       }, wallet.address || "");
 
-        const result = await createMutation.mutateAsync({
+      const result = await createMutation.mutateAsync({
         recipient: prepared.recipient,
         asset: AssetRegistry.getNativeAsset(ctx?.chain || "mock"),
         goal: prepared.goal,
@@ -191,6 +208,10 @@ export default function CreateProposalClient() {
                 onDurationChange={setDuration}
                 settlementMode={settlementMode}
                 onSettlementModeChange={setSettlementMode}
+                campaignType={campaignType}
+                onCampaignTypeChange={setCampaignType}
+                creatorComplianceAccepted={creatorComplianceAccepted}
+                onCreatorComplianceAcceptedChange={setCreatorComplianceAccepted}
                 onCreate={handleCreate}
                 descriptionPlaceholder={DESCRIPTION_TEMPLATE}
               />

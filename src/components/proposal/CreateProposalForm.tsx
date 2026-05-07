@@ -30,6 +30,14 @@ import { uploadProposalImage } from "../../lib/upload";
 import { cn } from "../../lib/utils";
 import { SettlementMode } from "@/core/proposal/proposal.types";
 import { getProposalEngine } from "@/engines/ProposalEngineFactory";
+import { CampaignType, validateNoFinancialPromises } from "@/lib/compliance";
+import { 
+  Heart, 
+  ShoppingCart, 
+  Gift, 
+  AlertCircle,
+  CheckCircle2
+} from "lucide-react";
 
 type Props = {
   title: string;
@@ -53,6 +61,10 @@ type Props = {
   onSettlementModeChange?: (value: SettlementMode) => void;
   onCreate: () => Promise<void>;
   descriptionPlaceholder?: string;
+  campaignType: CampaignType | "";
+  onCampaignTypeChange: (value: CampaignType) => void;
+  creatorComplianceAccepted: boolean;
+  onCreatorComplianceAcceptedChange: (value: boolean) => void;
 };
 
 export function CreateProposalForm({
@@ -77,6 +89,10 @@ export function CreateProposalForm({
   onSettlementModeChange,
   onCreate,
   descriptionPlaceholder,
+  campaignType,
+  onCampaignTypeChange,
+  creatorComplianceAccepted,
+  onCreatorComplianceAcceptedChange,
 }: Props) {
   const { t } = useLanguage();
   const [step, setStep] = useState(1); // 1: Edit, 2: Preview
@@ -138,6 +154,14 @@ export function CreateProposalForm({
     
     if (!goal || Number(goal) <= 0) return t.invalidGoal;
     if (!minThreshold || Number(minThreshold) <= 0) return t.invalidThreshold;
+    
+    if (!campaignType) return t.campaignTypeRequired || "Campaign type is required";
+    
+    const compliance = validateNoFinancialPromises({ title, description });
+    if (!compliance.valid) {
+      return t.complianceErrorProhibitedTerms.replace("{{terms}}", compliance.terms.join(", "));
+    }
+
     return null;
   };
 
@@ -154,6 +178,10 @@ export function CreateProposalForm({
   async function handleSubmit() {
     if (!connected) {
       toast.error(t.connectWalletFirst);
+      return;
+    }
+    if (!creatorComplianceAccepted) {
+      toast.error(t.complianceCreatorCheckbox);
       return;
     }
     await onCreate();
@@ -276,6 +304,60 @@ export function CreateProposalForm({
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* ─── Campaign Type Selector ─── */}
+                <div className="space-y-6 pt-4 border-t border-border/50">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                      <Sparkles size={20} />
+                    </div>
+                    <h3 className="text-xl font-black text-foreground">{t.campaignType}</h3>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {[
+                      { id: "donation", label: t.donation, icon: Heart, color: "rose" },
+                      { id: "collective_purchase", label: t.collective_purchase, icon: ShoppingCart, color: "blue" },
+                      { id: "non_financial_reward", label: t.non_financial_reward, icon: Gift, color: "amber" }
+                    ].map((type) => (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => onCampaignTypeChange(type.id as CampaignType)}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-4 p-6 rounded-3xl border-2 transition-all duration-500",
+                          campaignType === type.id 
+                            ? `border-${type.color}-500 bg-${type.color}-500/10 text-${type.color}-500 shadow-lg shadow-${type.color}-500/10` 
+                            : "border-border bg-muted/10 text-muted-foreground hover:border-border-foreground hover:bg-muted/20"
+                        )}
+                      >
+                        <type.icon size={24} />
+                        <span className="text-xs font-black uppercase tracking-widest text-center">{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Dynamic Legal Warning */}
+                  <AnimatePresence mode="wait">
+                    {campaignType && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 flex items-start gap-4 rounded-2xl bg-amber-500/5 p-6 border border-amber-500/20">
+                          <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                          <p className="text-xs font-medium leading-relaxed text-amber-500/90 italic">
+                            {campaignType === "donation" && t.complianceWarningDonation}
+                            {campaignType === "collective_purchase" && t.complianceWarningCollectivePurchase}
+                            {campaignType === "non_financial_reward" && t.complianceWarningNonFinancialReward}
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             </div>
@@ -632,11 +714,40 @@ export function CreateProposalForm({
                     </p>
                   </div>
 
-                  <div className="flex flex-col items-center gap-8 z-10">
+                  <div className="flex flex-col items-center gap-8 z-10 w-full lg:w-auto">
+                    {/* Compliance Checkbox */}
+                    <div 
+                      onClick={() => onCreatorComplianceAcceptedChange(!creatorComplianceAccepted)}
+                      className={cn(
+                        "w-full max-w-md flex items-start gap-4 p-5 rounded-2xl border-2 transition-all cursor-pointer group",
+                        creatorComplianceAccepted 
+                          ? "border-emerald-500 bg-emerald-500/5 shadow-[0_0_20px_rgba(16,185,129,0.1)]" 
+                          : "border-border bg-muted/10 hover:border-muted-foreground/30"
+                      )}
+                    >
+                       <div className={cn(
+                         "h-5 w-5 shrink-0 rounded-lg border-2 flex items-center justify-center transition-all",
+                         creatorComplianceAccepted ? "bg-emerald-500 border-emerald-500 text-white" : "border-muted-foreground/30 group-hover:border-muted-foreground/50"
+                       )}>
+                          {creatorComplianceAccepted && <Check size={12} strokeWidth={4} />}
+                       </div>
+                       <p className={cn(
+                         "text-[10px] font-bold leading-relaxed transition-colors",
+                         creatorComplianceAccepted ? "text-foreground" : "text-muted-foreground"
+                       )}>
+                         {t.complianceCreatorCheckbox}
+                       </p>
+                    </div>
+
                     <button
                       onClick={handleSubmit}
-                      disabled={loading || !connected}
-                      className="group relative flex h-20 items-center gap-6 rounded-[1.5rem] bg-cyan-500 px-16 text-xl font-black text-white transition-all hover:bg-cyan-600 hover:scale-[1.05] active:scale-95 shadow-[0_30px_60px_-15px_rgba(6,182,212,0.4)] disabled:opacity-30 disabled:scale-100 disabled:grayscale"
+                      disabled={loading || !connected || !creatorComplianceAccepted}
+                      className={cn(
+                        "group relative flex h-20 items-center gap-6 rounded-[1.5rem] px-16 text-xl font-black text-white transition-all duration-500",
+                        creatorComplianceAccepted && connected
+                          ? "bg-cyan-500 shadow-[0_30px_60px_-15px_rgba(6,182,212,0.4)] hover:bg-cyan-600 hover:scale-[1.05] active:scale-95"
+                          : "bg-muted text-muted-foreground cursor-not-allowed opacity-30 grayscale"
+                      )}
                     >
                       {loading ? (
                         <>

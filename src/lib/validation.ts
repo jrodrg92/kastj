@@ -10,14 +10,15 @@ export const createProposalSchema = z.object({
     coverImage: z
         .string()
         .optional()
-        .nullable(),
+        .nullable()
+        .or(z.literal("")),
     description: z
         .string()
         .min(1, "descriptionRequired")
         .max(5000, "descriptionTooLong"),
     recipient: z
         .string()
-        .regex(/^0x[a-fA-F0-9]{40}$/, "invalidRecipient"),
+        .min(1, "invalidRecipient"),
     goal: z
         .string()
         .refine((v) => {
@@ -33,6 +34,10 @@ export const createProposalSchema = z.object({
                 return Number(v) >= 600;
             } catch { return false; }
         }, "durationTooShort"),
+    campaignType: z.enum(["donation", "collective_purchase", "non_financial_reward"]),
+    creatorComplianceAccepted: z.boolean().refine(v => v === true, "complianceRequired"),
+    creatorComplianceAcceptedAt: z.string().optional(),
+    complianceVersion: z.string().optional(),
 }).refine(
     (data) => {
         try {

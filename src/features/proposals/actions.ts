@@ -29,6 +29,10 @@ export async function prepareProposalMetadata(
       title: validated.data.title,
       description: validated.data.description,
       coverImage: validated.data.coverImage,
+      campaignType: validated.data.campaignType,
+      creatorComplianceAccepted: validated.data.creatorComplianceAccepted,
+      creatorComplianceAcceptedAt: validated.data.creatorComplianceAcceptedAt,
+      complianceVersion: validated.data.complianceVersion,
       createdAt: Date.now(), 
     };
     metadataURI = `local://${encodeURIComponent(JSON.stringify(metadata))}`;
@@ -57,7 +61,9 @@ export async function prepareProposalMetadata(
     image_url: validated.data.coverImage,
     metadata_uri: metadataURI,
     tx_hash: txHash ? txHash.toLowerCase() : null,
-    created_at: Math.floor(Date.now() / 1000)
+    created_at: Math.floor(Date.now() / 1000),
+    campaign_type: validated.data.campaignType,
+    compliance_accepted: validated.data.creatorComplianceAccepted
   }, { onConflict: 'id' }).select().single();
 
   if (error) {

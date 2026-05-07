@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ProposalFundingPanelProps {
   status: string;
@@ -27,8 +28,9 @@ export function ProposalFundingPanel({
   onFund
 }: ProposalFundingPanelProps) {
   const [amount, setAmount] = useState("");
+  const [contributorComplianceAccepted, setContributorComplianceAccepted] = useState(false);
 
-  const isDisabled = isMutating || !amount || !walletConnected || !canFund;
+  const isDisabled = isMutating || !amount || !walletConnected || !canFund || !contributorComplianceAccepted;
 
   const handleFund = () => {
     if (isDisabled) return;
@@ -66,17 +68,46 @@ export function ProposalFundingPanel({
         </div>
       </div>
 
+      {/* Contributor Compliance Checkbox */}
+      <div 
+        onClick={() => setContributorComplianceAccepted(!contributorComplianceAccepted)}
+        className={cn(
+          "flex items-start gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer group",
+          contributorComplianceAccepted 
+            ? "border-emerald-500 bg-emerald-500/5 shadow-[0_0_15px_rgba(16,185,129,0.05)]" 
+            : "border-border bg-muted/30 hover:border-muted-foreground/20"
+        )}
+      >
+         <div className={cn(
+           "h-4 w-4 shrink-0 rounded-md border-2 flex items-center justify-center transition-all",
+           contributorComplianceAccepted ? "bg-emerald-500 border-emerald-500 text-white" : "border-muted-foreground/30 group-hover:border-muted-foreground/50"
+         )}>
+            {contributorComplianceAccepted && <Check size={10} strokeWidth={4} />}
+         </div>
+         <p className={cn(
+           "text-[9px] font-bold leading-relaxed transition-colors",
+           contributorComplianceAccepted ? "text-foreground" : "text-muted-foreground"
+         )}>
+           {t.complianceContributorCheckbox}
+         </p>
+      </div>
+
       <button
         onClick={handleFund}
         disabled={isDisabled}
-        className="group relative w-full overflow-hidden rounded-2xl bg-cyan-600 py-4 font-bold text-white transition-all hover:bg-cyan-500 disabled:opacity-50 disabled:grayscale"
+        className={cn(
+          "group relative w-full overflow-hidden rounded-2xl py-4 font-bold text-white transition-all",
+          !isDisabled 
+            ? "bg-cyan-600 hover:bg-cyan-500 shadow-lg shadow-cyan-500/20" 
+            : "bg-muted text-muted-foreground grayscale cursor-not-allowed"
+        )}
       >
-        {isMutating ? <Loader2 className="mx-auto animate-spin" /> : t.supportThisProject || "Support Project"}
+        {isMutating ? <Loader2 className="mx-auto animate-spin" /> : t.supp || "Support"}
       </button>
       
       {!walletConnected && (
         <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-          Connect wallet to participate
+          {t.connectWalletFirst}
         </p>
       )}
     </div>

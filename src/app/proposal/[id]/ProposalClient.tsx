@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 // Contexts & Hooks
 import { useWalletContext } from "@/contexts/WalletContext";
@@ -203,6 +203,14 @@ export default function ProposalClient() {
                       contributors={fundings.length}
                       t={t}
                     />
+
+                    {/* Compliance Permanent Notice */}
+                    <div className="rounded-2xl bg-amber-500/5 p-5 border border-amber-500/20 flex items-start gap-4">
+                       <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={16} />
+                       <p className="text-[10px] font-bold text-amber-500/90 leading-relaxed italic uppercase tracking-wider">
+                         {t.compliancePermanentNotice}
+                       </p>
+                    </div>
 
                     {/* Funding Panel */}
                     <ProposalFundingPanel
