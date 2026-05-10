@@ -1,5 +1,0 @@
-export const CONTRACTS = {
-  treasury: "0xdc64a140aa3e981100a9beca4e685f962f0cf6c9",
-  vault: "0x5fc8d32690cc91d4c39d9d3abcbd16989f875707",
-  manager: "0x0165878a594ca255338adfa4d48449f69242eb8f",
-} as const;
